@@ -14,15 +14,15 @@ import {
   appendToSyncOutbox,
   getSyncOutboxSize,
   storeSyncCursor,
-} from "@/utils/syncClient";
-import type { SyncPushPayload } from "@/utils/syncClient";
+} from "@/lib/sync/syncClient";
+import type { SyncPushPayload } from "@/lib/sync/syncClient";
 import {
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
   getSyncQuarantineKey,
-} from "@/constants/storageKeys";
+} from "@/config/storageKeys";
 
 const mockFetch = vi.fn();
 

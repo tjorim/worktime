@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { shiftColors, ShiftBadge } from "@/components/shared/ShiftBadge";
-import type { ShiftResult } from "@/utils/shiftCalculations";
-import type { ScheduleOption } from "@/data/rosters";
-import { getAllTeamsShifts } from "@/utils/shiftCalculations";
-import { getTeamCountForOption } from "@/utils/scheduleUtils";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
+import { getAllTeamsShifts } from "@/lib/schedule/shiftCalculations";
+import { getTeamCountForOption } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface TimelineData {

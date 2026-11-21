@@ -8,10 +8,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { server } from "@/mocks/server";
-import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";
 import * as m from "@/paraglide/messages.js";
 import { TestProviders } from "@tests/utils/testProviders";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 // Stub <Link> so tests don't need a RouterProvider context.
 vi.mock("@tanstack/react-router", async (importOriginal) => {

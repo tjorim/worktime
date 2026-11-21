@@ -1,4 +1,4 @@
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { TimeOffEntry, TimeOffEntryFlag } from "./types";
 import {
   getTimeOffEntryIdentityKey,

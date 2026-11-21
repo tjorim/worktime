@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
+import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
 import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 import * as m from "@/paraglide/messages.js";
 import type { LongWeekend } from "@/api-types";
 import type { LongWeekendDayInfo } from "@/types/longWeekend";
-import { ApiError } from "@/utils/apiError";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { ApiError } from "@/lib/api/apiError";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 function isValidLongWeekend(item: unknown): item is LongWeekend {
   if (typeof item !== "object" || item === null) return false;

@@ -31,9 +31,9 @@
 
 import { EventSourceParserStream } from "eventsource-parser/stream";
 import { useEffect, useRef } from "react";
-import { getSyncCursorKey } from "@/constants/storageKeys";
+import { getSyncCursorKey } from "@/config/storageKeys";
 import type { TriggerPullFn } from "@/app/providers/useOngoingSync";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Transport abstraction

@@ -1,9 +1,9 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { buildLabelNameMap, type Label } from "@/lib/timeTracking/constants";
-import { actualTaskDurationHours } from "@/lib/timeTracking/timeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";
+import { actualTaskDurationHours } from "@/lib/time-tracking/timeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import * as m from "@/paraglide/messages.js";
 
 export type WeeklyOverviewRow = {

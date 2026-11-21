@@ -2,7 +2,7 @@ import type { VapidPublicKeyResponse, PushSubscriptionRead } from "@/api-types";
 import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { invalidatePushRegistration } from "@/utils/pushNotifications";
+import { invalidatePushRegistration } from "@/lib/push/pushNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useAuth } from "@/app/providers/AuthContext";

@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimelineProgressBar } from "@/features/timeTracking/TimelineProgressBar";
-import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import type { Label } from "@/lib/timeTracking/constants";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 const TEST_LABELS: Label[] = [{ id: "Support", name: "Support", color: "#c82333" }];
 

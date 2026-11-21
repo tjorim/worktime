@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
 import { useSettingsAuditTrail } from "@/pages/settings/hooks/useSettingsAuditTrail";
 
-vi.mock("@/db/collections", () => ({
+vi.mock("@/lib/db/collections", () => ({
   tasksCollection: { toArray: [{ id: "entry-30", text: "Write report" }] },
   ganttTasksCollection: { toArray: [] },
   labelsCollection: { toArray: [] },

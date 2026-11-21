@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
 import * as m from "@/paraglide/messages.js";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import type { Shift } from "@/utils/shiftCalculations";
+import type { Shift } from "@/lib/schedule/shiftCalculations";
 
 type CalendarLegendProps = {
   showEventTypes?: boolean;

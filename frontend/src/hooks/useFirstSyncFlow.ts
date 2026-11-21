@@ -50,12 +50,12 @@ import {
   type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
-} from "@/utils/syncClient";
+} from "@/lib/sync/syncClient";
 import {
   applyPullToCollections,
   mergePullIntoCollections,
   preloadSyncCollections,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_STORAGE_KEY,
@@ -65,9 +65,9 @@ import {
   SYNC_DISMISSED_SESSION_KEY_PREFIX,
   getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
-} from "@/constants/storageKeys";
-import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
-import { logger } from "@/utils/logger";
+} from "@/config/storageKeys";
+import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
+import { logger } from "@/lib/logger";
 import {
   countSyncPayloadEntities,
   createSyncAttemptDiagnostics,

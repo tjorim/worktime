@@ -1,6 +1,6 @@
-import { dayjs } from "@/utils/dateTimeUtils";
-import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import * as m from "@/paraglide/messages.js";
 
 export function getLoggedMinutes(

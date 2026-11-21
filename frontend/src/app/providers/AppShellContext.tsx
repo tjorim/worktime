@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
 import type { WizardStep } from "@/components/wizardStepConfig";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import type { TabKey } from "@/app/providers/SettingsContext";
 import type { ConflictChoice, FirstSyncConflictCounts } from "@/hooks/useFirstSyncFlow";
 

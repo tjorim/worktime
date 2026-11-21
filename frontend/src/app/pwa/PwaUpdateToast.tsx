@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 /**
  * Registers the app's service worker and, once a new version has been

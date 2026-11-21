@@ -1,13 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
-import { formatYYWWD } from "@/utils/dateTimeUtils";
+import { formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import {
   calculateShift,
   getCurrentShiftDay,
   getNextShift,
   getShiftCode,
-} from "@/utils/shiftCalculations";
+} from "@/lib/schedule/shiftCalculations";
 
 describe("useLiveShiftStatus", () => {
   beforeEach(() => {

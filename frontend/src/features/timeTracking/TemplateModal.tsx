@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { SearchSelect } from "@/components/shared/SearchSelect";
 import { useForm, useSelector } from "@tanstack/react-form";
-import type { Label } from "@/lib/timeTracking/constants";
+import type { Label } from "@/lib/time-tracking/constants";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
 import * as m from "@/paraglide/messages.js";
 

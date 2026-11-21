@@ -19,9 +19,9 @@ import {
   setSyncCollectionAuthResolving,
   setSyncCollectionTriggerPull,
   tasksCollection,
-} from "@/db/collections";
-import { setSyncTaskRejectionHandler, getSyncOutboxSize } from "@/utils/syncClient";
-import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
+} from "@/lib/db/collections";
+import { setSyncTaskRejectionHandler, getSyncOutboxSize } from "@/lib/sync/syncClient";
+import { SYNC_PENDING_OUTBOX_KEY } from "@/config/storageKeys";
 
 const TEST_USER_ID = "user-trigger-pull-1";
 

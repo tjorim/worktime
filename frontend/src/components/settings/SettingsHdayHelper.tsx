@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { SettingsHeading, SettingsHint } from "@/components/settings/SettingsParts";
 import { useHdayHelper, type HdayHelperStatus } from "@/app/providers/HdayHelperContext";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
+import { isHdayHelperMixedContentBlocked } from "@/lib/hday-helper/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 
 function statusBadge(status: HdayHelperStatus) {

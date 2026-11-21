@@ -1,7 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { AppLayout } from "@/app/layout/AppLayout";
 import { RouteError, RoutePending } from "@/app/router/RouteStatus";
-import { preloadSyncCollections } from "@/db/collections";
+import { preloadSyncCollections } from "@/lib/db/collections";
 import { lazyRoute } from "@/app/router/lazyRoute";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
 import { NotFoundPage } from "@/app/router/NotFoundPage";

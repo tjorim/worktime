@@ -1,4 +1,4 @@
-import type { ShiftResult } from "@/utils/shiftCalculations";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 
 interface ShiftTimeDisplayProps {

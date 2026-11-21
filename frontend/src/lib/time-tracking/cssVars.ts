@@ -2,7 +2,7 @@ import {
   getContrastingTextColor,
   getDefaultLabelColor,
   isHexColor,
-} from "@/lib/timeTracking/constants";
+} from "@/lib/time-tracking/constants";
 
 /**
  * Runtime values reach the DOM as custom properties (read by `bg-label`,

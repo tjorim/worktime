@@ -4,7 +4,7 @@ import {
   isValidRange,
   calculateDurationHours,
   overlaps,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 
 describe("Time Tracking Utils", () => {
   describe("timeToMinutes", () => {

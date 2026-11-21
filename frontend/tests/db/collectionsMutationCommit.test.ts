@@ -5,7 +5,7 @@
  * on TanStack DB's implicit post-handler refetch is deprecated.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { tasksCollection } from "@/db/collections";
+import { tasksCollection } from "@/lib/db/collections";
 
 const task = (id: string, text = "Task") => ({
   id,

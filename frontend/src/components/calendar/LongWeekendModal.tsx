@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { LongWeekend } from "@/api-types";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 interface LongWeekendModalProps {
   show: boolean;

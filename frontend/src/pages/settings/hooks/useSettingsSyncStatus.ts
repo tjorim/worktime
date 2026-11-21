@@ -7,7 +7,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
+import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface UseSettingsSyncStatusParams {

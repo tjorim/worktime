@@ -2,8 +2,8 @@ import type { Dayjs } from "dayjs";
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import {
   calculateShift,
   getAllTeamsShifts,
@@ -12,7 +12,7 @@ import {
   getShiftCode,
   type UpcomingShiftResult,
   type ShiftResult,
-} from "@/utils/shiftCalculations";
+} from "@/lib/schedule/shiftCalculations";
 
 export interface UseShiftCalculationReturn {
   myTeam: number | null; // The user's team from onboarding

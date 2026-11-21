@@ -6,7 +6,7 @@ import { IconButton } from "@/components/shared/IconButton";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 // Loaded on first open: it pulls in the country combobox, which would otherwise

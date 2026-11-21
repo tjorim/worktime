@@ -1,5 +1,5 @@
 import { test as setup } from "@playwright/test";
-import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 /**
  * Playwright's documented "authenticate once, reuse everywhere" pattern

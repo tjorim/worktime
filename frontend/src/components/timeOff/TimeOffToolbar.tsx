@@ -12,7 +12,7 @@ import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import type { TimeOffViewMode } from "@/data/timeoffConstants";
+import type { TimeOffViewMode } from "@/lib/time-off/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffToolbarProps = {

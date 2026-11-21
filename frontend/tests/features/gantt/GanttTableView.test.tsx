@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GanttTableView } from "@/features/gantt/GanttTableView";
-import { labelsCollection, tasksCollection } from "@/db/collections";
+import { labelsCollection, tasksCollection } from "@/lib/db/collections";
 import type { GanttTask } from "@/types/gantt";
 
 function clearTasksCollection() {

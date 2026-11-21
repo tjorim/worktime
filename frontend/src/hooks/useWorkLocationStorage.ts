@@ -3,12 +3,12 @@ import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 
 import { useSettings } from "@/app/providers/SettingsContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { toCountryCode } from "@/types/workLocation";
-import { workLocationsCollection } from "@/db/collections";
-import { logger } from "@/utils/logger";
+import { workLocationsCollection } from "@/lib/db/collections";
+import { logger } from "@/lib/logger";
 
 /**
  * Manages per-day work location storage backed by `workLocationsCollection`.

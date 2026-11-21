@@ -1,9 +1,9 @@
 import { type LucideIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { adminUserDeleteErrorMessages } from "@/utils/apiErrorCodes";
+import { logger } from "@/lib/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { adminUserDeleteErrorMessages } from "@/lib/api/apiErrorCodes";
 import type { UserRead, UserListResponse } from "@/api-types";
 
 interface UseSettingsAdminUsersParams {

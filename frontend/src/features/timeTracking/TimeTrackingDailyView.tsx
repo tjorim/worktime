@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { dayjs, formatTimeByPreference } from "@/utils/dateTimeUtils";
-import { hasFullDayTimeOffEvent } from "@/utils/workingDayUtils";
+import { dayjs, formatTimeByPreference } from "@/lib/dates/dateTimeUtils";
+import { hasFullDayTimeOffEvent } from "@/lib/schedule/workingDayUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import * as m from "@/paraglide/messages.js";
@@ -18,7 +18,7 @@ import { DailyTemplatePicker } from "./DailyTemplatePicker";
 import { DailyViewHeader } from "./DailyViewHeader";
 import { TimelineProgressBar } from "./TimelineProgressBar";
 import { TaskEntryForm } from "@/components/shared/TaskEntryForm";
-import { getTimerStart, rememberExactTimerStart } from "@/utils/timerStart";
+import { getTimerStart, rememberExactTimerStart } from "@/lib/time-tracking/timerStart";
 import { StopTimerConflictDialog } from "./StopTimerConflictDialog";
 import { LabelModal } from "./LabelModal";
 import {
@@ -29,15 +29,15 @@ import {
   normalizeLabelName,
   useDefaultLabelColor,
   type Label,
-} from "@/lib/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+} from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import {
   BREAK_DURATION_MINUTES,
   isValidRange,
   isValidTaskInterval,
   overlapsTaskInterval,
   taskStopTime,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 import { useDailyTaskSummary } from "./hooks/useDailyTaskSummary";
 
 type TimeTrackingDailyViewProps = {

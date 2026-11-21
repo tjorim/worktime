@@ -1,5 +1,5 @@
 import { ganttDependencyError } from "@/utils/ganttDependencies";
-import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
+import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import type { CSSProperties } from "react";
@@ -25,10 +25,10 @@ import {
   buildLabelNameMap,
   getContrastingTextColor,
   getDefaultLabelColor,
-} from "@/lib/timeTracking/constants";
+} from "@/lib/time-tracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
-import { formatDisplayDate as formatDate } from "@/utils/dateTimeUtils";
+import { formatDisplayDate as formatDate } from "@/lib/dates/dateTimeUtils";
 
 interface GanttTableViewProps {
   tasks: GanttTask[];

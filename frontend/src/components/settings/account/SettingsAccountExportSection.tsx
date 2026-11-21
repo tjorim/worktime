@@ -4,8 +4,8 @@ import { Icon } from "@/components/shared/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SettingsHint, SettingsSection } from "@/components/settings/SettingsParts";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { logger } from "@/utils/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { logger } from "@/lib/logger";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsAccountExportSectionProps {

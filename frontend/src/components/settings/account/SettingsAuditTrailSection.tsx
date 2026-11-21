@@ -10,7 +10,7 @@ import {
 } from "@/components/settings/SettingsParts";
 import type { AuditEntry } from "@/pages/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
-import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
+import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
 import {
   getAuditActionLabel,
   getAuditResourceLabel,

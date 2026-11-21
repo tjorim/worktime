@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;

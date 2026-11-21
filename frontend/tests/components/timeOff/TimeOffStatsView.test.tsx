@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import userEvent from "@testing-library/user-event";
 import { TimeOffStatsView } from "@/components/timeOff/TimeOffStatsView";
-import { buildTimeOffEntryForRange } from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange } from "@/lib/time-off/codecs";
 
 vi.mock("@/hooks/useStatisticsWorkingDays", () => ({
   useStatisticsWorkingDays: () => ({ team: 1, schedule: "9-5", holidays: new Map() }),

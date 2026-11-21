@@ -7,8 +7,8 @@ import {
   templatesCollection,
   replaceTimeTrackingSettings,
   setSyncCollectionAuth,
-} from "@/db/collections";
-import { getSyncOutboxSize } from "@/utils/syncClient";
+} from "@/lib/db/collections";
+import { getSyncOutboxSize } from "@/lib/sync/syncClient";
 afterEach(() => {
   setSyncCollectionAuth(null);
   vi.unstubAllGlobals();

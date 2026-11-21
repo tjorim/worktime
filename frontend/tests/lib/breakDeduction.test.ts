@@ -3,7 +3,7 @@ import {
   BREAK_DURATION_MINUTES,
   effectiveDurationHours,
   calculateBreakPosition,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 
 describe("Break Deduction", () => {
   describe("constants", () => {

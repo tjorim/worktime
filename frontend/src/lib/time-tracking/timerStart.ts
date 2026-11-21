@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
-import { TIMER_EXACT_START_STORAGE_KEY } from "@/constants/storageKeys";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { TIMER_EXACT_START_STORAGE_KEY } from "@/config/storageKeys";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 /**
  * Tasks are stored with minute precision, so a task started at 10:15:40 is stored as 10:15. The exact

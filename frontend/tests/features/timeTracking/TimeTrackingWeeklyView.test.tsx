@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 describe("TimeTrackingWeeklyView Component", () => {
   beforeEach(() => {

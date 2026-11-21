@@ -45,8 +45,8 @@ import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
-import { getSyncCursorKey, getSyncOutboxKey } from "@/constants/storageKeys";
-import { tasksCollection, setSyncCollectionAuth } from "@/db/collections";
+import { getSyncCursorKey, getSyncOutboxKey } from "@/config/storageKeys";
+import { tasksCollection, setSyncCollectionAuth } from "@/lib/db/collections";
 import {
   syncStore,
   populatedStatus,

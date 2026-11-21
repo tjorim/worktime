@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { apiFetch } from "@/utils/apiClient";
+import { apiFetch } from "@/lib/api/apiClient";
 
 /**
  * Hook that returns an `apiFetch` function for public endpoints.

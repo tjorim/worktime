@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
-import { dayjs, formatHdayDate } from "@/utils/dateTimeUtils";
+import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
+import { dayjs, formatHdayDate } from "@/lib/dates/dateTimeUtils";
 import { useOpenHolidays } from "./useOpenHolidays";
 
 import type { SchoolHoliday } from "@/api-types";

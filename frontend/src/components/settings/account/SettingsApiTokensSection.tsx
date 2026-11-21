@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/app/providers/ToastContext";
 import type { ApiToken, CreatedApiToken } from "@/api-types";
 import { API_TOKEN_NAME_MAX_LENGTH } from "@/pages/settings/hooks/useSettingsApiTokens";
-import { formatDisplayDate } from "@/utils/dateTimeUtils";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsApiTokensSectionProps {

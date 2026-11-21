@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { entriesOverlap, getOverlappingEntries } from "@/lib/timeOff/overlap";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { entriesOverlap, getOverlappingEntries } from "@/lib/time-off/overlap";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 const base = { id: "a", entryType: "vacation", entryFlag: "full_day", note: null } as const;
 const range: TimeOffEntry = { ...base, entryKind: "range", start: "2026-11-09", end: "2026-11-13" };
 const date: TimeOffEntry = { ...base, id: "b", entryKind: "date", date: "2026-11-13" };

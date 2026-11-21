@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
+import { normalizeTimeOffEntries } from "@/lib/time-off/storage";
 
 describe("normalizeTimeOffEntries", () => {
   it("returns an empty array for non-array input", () => {

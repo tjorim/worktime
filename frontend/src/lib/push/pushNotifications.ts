@@ -1,4 +1,4 @@
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 // Shared across hook instances: revocation must also cancel in-flight registration.
 let pushRegistrationGeneration = 0;

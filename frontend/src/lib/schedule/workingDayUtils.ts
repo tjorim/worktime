@@ -23,13 +23,13 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
 import { calculateShift } from "./shiftCalculations";
-import { dayjs, formatHdayDate } from "./dateTimeUtils";
-import { logger } from "@/utils/logger";
+import { dayjs, formatHdayDate } from "@/lib/dates/dateTimeUtils";
+import { logger } from "@/lib/logger";
 import * as m from "@/paraglide/messages.js";
 
 /**

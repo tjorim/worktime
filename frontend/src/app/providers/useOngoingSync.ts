@@ -46,9 +46,9 @@ import {
   type SyncPullResponse,
   type SyncPullResult,
   type SyncPushPayload,
-} from "@/utils/syncClient";
-import { getSyncCursorKey } from "@/constants/storageKeys";
-import { logger } from "@/utils/logger";
+} from "@/lib/sync/syncClient";
+import { getSyncCursorKey } from "@/config/storageKeys";
+import { logger } from "@/lib/logger";
 
 type BackgroundSafeRequestInit = RequestInit & {
   suppressUnauthorizedRedirect?: boolean;

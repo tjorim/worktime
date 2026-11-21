@@ -10,7 +10,7 @@
  * {@link getRequestId} to extract it from any Response for support/debugging.
  */
 
-import { ApiError } from "@/utils/apiError";
+import { ApiError } from "@/lib/api/apiError";
 
 export interface ApiClientOptions {
   /** Called when a 401 Unauthorized response is received. */

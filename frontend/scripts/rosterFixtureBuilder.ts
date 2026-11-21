@@ -1,6 +1,6 @@
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "../src/data/rosters.ts";
-import { dayjs } from "../src/utils/dateTimeUtils.ts";
-import { getShiftCode } from "../src/utils/shiftCalculations.ts";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "../src/lib/schedule/rosters.ts";
+import { dayjs } from "../src/lib/dates/dateTimeUtils.ts";
+import { getShiftCode } from "../src/lib/schedule/shiftCalculations.ts";
 
 // How many full cycles (plus a few days of padding on each side, to cover
 // cycle-boundary transitions) to sample shift codes for. Backend teams/dates

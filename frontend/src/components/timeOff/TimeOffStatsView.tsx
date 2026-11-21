@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
 import { getEventColorUtilities } from "@/lib/hday/presentation";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   EVENT_TYPE_ICONS,
   calculateVacationStats,

@@ -5,8 +5,8 @@ import {
   useSyncSignal,
   type SyncSignalTransport,
 } from "@/app/providers/useSyncSignal";
-import { storeSyncCursor } from "@/utils/syncClient";
-import { getSyncCursorKey } from "@/constants/storageKeys";
+import { storeSyncCursor } from "@/lib/sync/syncClient";
+import { getSyncCursorKey } from "@/config/storageKeys";
 
 /**
  * Create a mock transport that captures the onSignal callback so tests can

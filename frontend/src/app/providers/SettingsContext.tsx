@@ -1,7 +1,7 @@
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { LastUsedProvider, type LastUsedContextType } from "@/app/providers/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
@@ -11,14 +11,14 @@ import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
-} from "@/constants/storageKeys";
-import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
+} from "@/config/storageKeys";
+import { DEVICE_LOCAL_SETTING_KEYS } from "@/config/deviceLocalSettings";
 import {
   getPreferenceOwner,
   preservePreferenceOwner,
   withPreferenceLock,
-} from "@/utils/preferenceStorage";
-import { logger } from "@/utils/logger";
+} from "@/lib/storage/preferenceStorage";
+import { logger } from "@/lib/logger";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";

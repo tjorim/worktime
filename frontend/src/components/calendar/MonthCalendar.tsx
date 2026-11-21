@@ -1,4 +1,4 @@
-import { entriesOverlap } from "@/lib/timeOff/overlap";
+import { entriesOverlap } from "@/lib/time-off/overlap";
 import {
   BuildingIcon,
   ChevronLeftIcon,
@@ -14,14 +14,14 @@ import { Icon } from "@/components/shared/Icon";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { dayjs, getWeekdayName } from "@/utils/dateTimeUtils";
+import { dayjs, getWeekdayName } from "@/lib/dates/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
-import type { ShiftResult } from "@/utils/shiftCalculations";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
 import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import * as m from "@/paraglide/messages.js";

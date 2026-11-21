@@ -1,5 +1,5 @@
 import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
-import { getErrorMessage, type ErrorCodeMessages } from "@/utils/apiError";
+import { getErrorMessage, type ErrorCodeMessages } from "@/lib/api/apiError";
 import { TagsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useRef, useState } from "react";
@@ -19,9 +19,9 @@ import {
   normalizeLabelName,
   sanitizeLabels,
   type Label,
-} from "@/lib/timeTracking/constants";
+} from "@/lib/time-tracking/constants";
 import { LabelModal } from "./LabelModal";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";

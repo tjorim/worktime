@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { StopTimerConflictDialog } from "@/features/timeTracking/StopTimerConflictDialog";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 const running: StoredTimeTrackingTask = {
   id: "running",

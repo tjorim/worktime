@@ -1,5 +1,5 @@
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 /**
  * Aggregates all stored entries in workLocationMap into a grouped summary

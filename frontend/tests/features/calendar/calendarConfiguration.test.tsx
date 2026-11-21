@@ -3,7 +3,7 @@ import type { CalendarConfig } from "@schedule-x/calendar";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
 import { CalendarView } from "@/features/calendar/CalendarView";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { setLocale } from "@/paraglide/runtime.js";
 import { TestProviders } from "@tests/utils/testProviders";
 

@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { useSettingsResetFlow } from "@/pages/settings/hooks/useSettingsResetFlow";
-import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/utils/syncClient";
+import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/lib/sync/syncClient";
 
-vi.mock("@/utils/syncClient", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/utils/syncClient")>();
+vi.mock("@/lib/sync/syncClient", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/sync/syncClient")>();
   return {
     ...original,
     applyPreferencesPull: vi.fn(),

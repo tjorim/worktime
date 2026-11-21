@@ -1,4 +1,4 @@
-import { getOverlappingEntries } from "@/lib/timeOff/overlap";
+import { getOverlappingEntries } from "@/lib/time-off/overlap";
 import { TriangleAlertIcon } from "lucide-react";
 import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
@@ -18,7 +18,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
 import { TablePagination } from "@/components/shared/TablePagination";
@@ -32,18 +32,18 @@ import {
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "@/lib/hday/presentation";
-import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
+import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import {
   getTimeOffEntrySortKey,
   isTimeOffDateEntry,
   isTimeOffRangeEntry,
   isTimeOffWeeklyEntry,
-} from "@/lib/timeOff/types";
+} from "@/lib/time-off/types";
 import { TimeOffToolbar } from "@/components/timeOff/TimeOffToolbar";
 import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
-import { formatDisplayDate } from "@/utils/dateTimeUtils";
-import { getEventFlagLabel } from "@/data/timeoffConstants";
-import type { TimeOffViewMode } from "@/data/timeoffConstants";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
+import type { TimeOffViewMode } from "@/lib/time-off/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffRow = {

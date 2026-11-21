@@ -16,13 +16,13 @@ import { TeamCarousel } from "@/components/shared/TeamCarousel";
 
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import { hasMultipleTeams, isValidScheduleType } from "@/utils/scheduleUtils";
-import { getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
+import { hasMultipleTeams, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
+import { getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
-import type { ShiftResult } from "@/utils/shiftCalculations";
-import { getAllTeamsShifts, isCurrentlyWorking } from "@/utils/shiftCalculations";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+import { getAllTeamsShifts, isCurrentlyWorking } from "@/lib/schedule/shiftCalculations";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import * as m from "@/paraglide/messages.js";

@@ -3,7 +3,7 @@
  * kind the view can turn into a specific translated message with a next step.
  * The helper's English `detail` is never shown (docs/api-errors.md).
  */
-import { ApiError, describeError } from "@/utils/apiError";
+import { ApiError, describeError } from "@/lib/api/apiError";
 
 export type TeamLoadError =
   /** The team ID field was empty. */

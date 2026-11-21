@@ -13,7 +13,7 @@ import { Hint } from "@/components/ui/tooltip";
 import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
 import { useAuth } from "@/app/providers/AuthContext";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const MS_PER_SECOND = 1_000;

@@ -1,18 +1,18 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { getEffectiveTeam, getTeamCountForOption } from "@/utils/scheduleUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getEffectiveTeam, getTeamCountForOption } from "@/lib/schedule/scheduleUtils";
 import {
   calculateShift,
   findOverlaps,
   getShiftWindow,
   type ShiftType,
   type ShiftWindow,
-} from "@/utils/shiftCalculations";
-import { logger } from "@/utils/logger";
+} from "@/lib/schedule/shiftCalculations";
+import { logger } from "@/lib/logger";
 
 export type TransferType = "handover" | "takeover";
 

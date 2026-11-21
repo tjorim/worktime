@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
+import { labelsCollection, tasksCollection, templatesCollection } from "@/lib/db/collections";
 
 let uniqueCounter = 0;
 

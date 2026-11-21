@@ -4,7 +4,7 @@ import {
   mergeCollectionContents,
   replaceCollectionContents,
   setSyncCollectionAuth,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 
 interface Row {
   id: string;

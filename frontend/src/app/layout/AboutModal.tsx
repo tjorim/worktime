@@ -33,8 +33,8 @@ import {
 import { Grid, GridItem } from "@/components/ui/grid";
 import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { CONFIG } from "@/utils/config";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { CONFIG } from "@/config/app";
+import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 
 interface AboutModalProps {

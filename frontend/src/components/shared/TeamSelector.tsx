@@ -8,9 +8,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import * as m from "@/paraglide/messages.js";
-import { getTeamCountForOption } from "@/utils/scheduleUtils";
+import { getTeamCountForOption } from "@/lib/schedule/scheduleUtils";
 
 type TeamOption = { value: number; label: string };
 

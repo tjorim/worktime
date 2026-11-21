@@ -5,9 +5,9 @@ import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShiftTimeline } from "@/components/ShiftTimeline";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { ShiftResult } from "@/utils/shiftCalculations";
-import * as shiftCalculations from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+import * as shiftCalculations from "@/lib/schedule/shiftCalculations";
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {

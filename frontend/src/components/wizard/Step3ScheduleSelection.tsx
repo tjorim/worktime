@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { WizardActions } from "./WizardParts";
 import * as m from "@/paraglide/messages.js";
 

@@ -3,10 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { DailyTaskList } from "@/features/timeTracking/DailyTaskList";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import type { Label } from "@/lib/timeTracking/constants";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
 import type { GanttTask } from "@/types/gantt";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 const TEST_LABELS: Label[] = [
   { id: "Support", name: "Support", color: "#c82333" },

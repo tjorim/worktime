@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PwaInstallPrompt } from "@/app/pwa/PwaInstallPrompt";
 import { PwaInstallProvider } from "@/app/providers/PwaInstallContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";
 import * as m from "@/paraglide/messages.js";
 
 const VISIT_THRESHOLD = 3;

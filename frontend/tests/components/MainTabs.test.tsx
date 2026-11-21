@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { MainTabs } from "@/app/home/MainTabs";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { Dayjs } from "dayjs";
 import type { TabKey } from "@/app/providers/SettingsContext";
 import { TestProviders } from "@tests/utils/testProviders";

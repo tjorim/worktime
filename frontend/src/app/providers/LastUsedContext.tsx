@@ -8,7 +8,7 @@ import type {
   TimeOffViewKey,
   TimeTrackingViewKey,
 } from "@/app/providers/SettingsContext";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 
 export interface LastUsedContextType {
   lastUsed: LastUsed;

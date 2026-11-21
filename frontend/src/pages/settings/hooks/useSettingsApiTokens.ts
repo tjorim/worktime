@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { accessTokenErrorMessages } from "@/utils/apiErrorCodes";
+import { logger } from "@/lib/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { accessTokenErrorMessages } from "@/lib/api/apiErrorCodes";
 import type { AccessTokenListResponse, ApiToken, CreatedApiToken } from "@/api-types";
 
 /** Matches `AccessTokenCreate.name` (`max_length=100`) in the backend schema. */

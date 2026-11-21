@@ -9,7 +9,7 @@ import {
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 import { server } from "@/mocks/server";
 import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";
 import { sseEmitter } from "@/mocks/data/sseEmitter";

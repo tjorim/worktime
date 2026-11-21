@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearPushSubscription } from "@/utils/pushNotifications";
+import { clearPushSubscription } from "@/lib/push/pushNotifications";
 
 afterEach(() => vi.unstubAllGlobals());
 

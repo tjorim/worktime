@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import {
   getNonWorkingReason,
@@ -8,7 +8,7 @@ import {
   hasTimeOffEvent,
   isPublicHolidayForShift,
   isWorkingDay,
-} from "@/utils/workingDayUtils";
+} from "@/lib/schedule/workingDayUtils";
 
 const dateEntry = (date: string) =>
   buildTimeOffEntryForRange({

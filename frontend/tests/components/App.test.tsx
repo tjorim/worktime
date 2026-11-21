@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/app/App";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { ShiftResult } from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 
 const { usePushSubscriptionSpy, useSyncSignalSpy } = vi.hoisted(() => ({
   usePushSubscriptionSpy: vi.fn(() => ({
@@ -28,7 +28,7 @@ vi.mock("@/app/providers/useSyncSignal", async (importOriginal) => ({
 }));
 
 // Mock our dayjs setup to avoid loading real dayjs configuration in tests
-vi.mock("@/utils/dateTimeUtils", () => {
+vi.mock("@/lib/dates/dateTimeUtils", () => {
   const mockDayjs = vi.fn(() => ({
     format: vi.fn(() => "2025-01-15"),
     startOf: vi.fn(() => mockDayjs()),

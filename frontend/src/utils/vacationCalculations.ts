@@ -9,14 +9,14 @@ import {
   ThermometerIcon,
   UmbrellaIcon,
 } from "lucide-react";
-import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/time-off/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   statisticsWorkingDays,
   timeOffHalves,
   type WorkingDayOptions,
-} from "@/utils/statisticsWorkingDays";
+} from "@/lib/schedule/statisticsWorkingDays";
 import * as m from "@/paraglide/messages.js";
 
 export type EventTypeKey =

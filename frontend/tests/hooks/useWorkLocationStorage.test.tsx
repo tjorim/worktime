@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ReactNode } from "react";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 /**
  * Writes a v3 user-state to localStorage so that SettingsProvider initialises

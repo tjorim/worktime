@@ -6,7 +6,7 @@ import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { chartRenderer } from "./chartRenderer";
 import type { RecentWeek } from "./hooks/useRecentWeeks";

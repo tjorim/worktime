@@ -11,8 +11,8 @@ import { WorkLocationDayHeader } from "@/features/timeTracking/WorkLocationDayHe
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { getTimerStart, rememberExactTimerStart } from "@/utils/timerStart";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getTimerStart, rememberExactTimerStart } from "@/lib/time-tracking/timerStart";
 import * as m from "@/paraglide/messages.js";
 
 interface MobileQuickActionsProps {

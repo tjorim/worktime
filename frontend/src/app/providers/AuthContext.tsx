@@ -1,4 +1,4 @@
-import { clearPushSubscription } from "@/utils/pushNotifications";
+import { clearPushSubscription } from "@/lib/push/pushNotifications";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -13,9 +13,9 @@ import {
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
 import { useToast } from "@/app/providers/ToastContext";
-import { logger } from "@/utils/logger";
-import { setSyncCollectionAuthResolving } from "@/db/collections";
-import { discardPendingSyncOutbox } from "@/utils/syncClient";
+import { logger } from "@/lib/logger";
+import { setSyncCollectionAuthResolving } from "@/lib/db/collections";
+import { discardPendingSyncOutbox } from "@/lib/sync/syncClient";
 
 export interface AuthContextType {
   /** Whether the user has an active OIDC session. */

@@ -8,11 +8,11 @@ import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonG
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { useDefaultLabelColor, type Label } from "@/lib/timeTracking/constants";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { useDefaultLabelColor, type Label } from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { WeeklyDataView } from "./WeeklyDataView";
 import { useRecentWeeks } from "./hooks/useRecentWeeks";
 import {

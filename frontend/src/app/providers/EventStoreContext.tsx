@@ -11,19 +11,19 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef } fr
 import { useLiveQuery } from "@tanstack/react-db";
 import type { CalendarEvent } from "@/lib/events/types";
 import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
-import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import type { TimeOffImportResult } from "@/lib/timeOff/types";
-import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/time-off/codecs";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import type { TimeOffImportResult } from "@/lib/time-off/types";
+import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   hasSyncCollectionAuth,
   pushTimeOffImport,
   runMutationBatch,
   runWriteBatch,
   timeOffCollection,
-} from "@/db/collections";
-import { logger } from "@/utils/logger";
+} from "@/lib/db/collections";
+import { logger } from "@/lib/logger";
 
 interface EventStoreContextType {
   rawText: string;

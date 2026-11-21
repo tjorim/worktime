@@ -6,9 +6,9 @@ import { TodayView } from "@/components/schedule/TodayView";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { ShiftResult } from "@/utils/shiftCalculations";
-import { getAllTeamsShifts } from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+import { getAllTeamsShifts } from "@/lib/schedule/shiftCalculations";
 
 // Mock today shifts data
 const mockTodayShiftsData: ShiftResult[] = [
@@ -60,7 +60,7 @@ const mockTodayShiftsData: ShiftResult[] = [
 ];
 
 // Mock shift calculation utilities
-vi.mock("@/utils/shiftCalculations", () => ({
+vi.mock("@/lib/schedule/shiftCalculations", () => ({
   getAllTeamsShifts: vi.fn(() => mockTodayShiftsData),
   getShift: vi.fn(() => ({
     code: "M",

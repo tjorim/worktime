@@ -1,4 +1,4 @@
-import { isValidRange, isValidTaskInterval, taskStopTime } from "@/lib/timeTracking/timeUtils";
+import { isValidRange, isValidTaskInterval, taskStopTime } from "@/lib/time-tracking/timeUtils";
 import { InfoIcon, TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import "temporal-polyfill/global";
@@ -19,15 +19,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
 import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
 import { TaskEntryForm } from "@/components/shared/TaskEntryForm";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
 import { buildCalendarConfig } from "@/features/calendar/mapToScheduleXEvents";
 import { useCalendarRangeData, type CalendarRange } from "@/features/calendar/useCalendarRangeData";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import "@/features/calendar/calendar.css";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";

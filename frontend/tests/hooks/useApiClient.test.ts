@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useApiClient } from "@/hooks/useApiClient";
-import { apiFetch } from "@/utils/apiClient";
-import { ApiError } from "@/utils/apiError";
+import { apiFetch } from "@/lib/api/apiClient";
+import { ApiError } from "@/lib/api/apiError";
 
 const auth = vi.hoisted(() => ({
   userId: "alice",
@@ -25,7 +25,7 @@ vi.mock("@/app/providers/ToastContext", () => ({
   useToast: () => toast,
 }));
 
-vi.mock("@/utils/apiClient", () => ({
+vi.mock("@/lib/api/apiClient", () => ({
   apiFetch: vi.fn(),
 }));
 

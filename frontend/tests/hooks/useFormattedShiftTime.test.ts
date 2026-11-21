@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
-import { getFormattedShiftTime } from "@/utils/shiftCalculations";
+import { getFormattedShiftTime } from "@/lib/schedule/shiftCalculations";
 
 vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: vi.fn(),

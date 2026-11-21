@@ -9,8 +9,8 @@
  * Device-specific data (developer options, sync cursor, outbox) is excluded.
  */
 
-import { dayjs } from "@/utils/dateTimeUtils";
-import { ANONYMOUS_USER_STATE_OWNER, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { ANONYMOUS_USER_STATE_OWNER, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import {
   ganttTasksCollection,
   getSyncCollectionUserId,
@@ -22,8 +22,8 @@ import {
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
-} from "@/db/collections";
-import { normalizeTimeOffEntries } from "@/lib/timeOff/storage";
+} from "@/lib/db/collections";
+import { normalizeTimeOffEntries } from "@/lib/time-off/storage";
 import {
   appendToSyncOutbox,
   buildKeepLocalReplacePayload,
@@ -34,20 +34,20 @@ import {
   pushSyncPayload,
   type FetchFn,
   type SyncPushPayload,
-} from "@/utils/syncClient";
-import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
-import { logger } from "@/utils/logger";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
-import type { Label } from "@/lib/timeTracking/constants";
+} from "@/lib/sync/syncClient";
+import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
+import { logger } from "@/lib/logger";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
 import { isValidRawGanttTask } from "@/types/gantt";
-import { isLabelInput } from "@/lib/timeTracking/constants";
-import { isValidTimeString } from "@/lib/timeTracking/timeUtils";
-import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
+import { isLabelInput } from "@/lib/time-tracking/constants";
+import { isValidTimeString } from "@/lib/time-tracking/timeUtils";
+import { isValidEntryType, isValidFlag } from "@/lib/time-off/types";
 import { hasIsoAlpha2Format, isValidCountryCode } from "@/types/countries";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isValidScheduleType } from "@/utils/scheduleUtils";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { isValidScheduleType } from "@/lib/schedule/scheduleUtils";
 
 export type AppBackupPayload = {
   exportedAt: string;

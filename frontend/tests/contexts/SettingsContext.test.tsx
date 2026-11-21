@@ -9,10 +9,10 @@ import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
-} from "@/constants/storageKeys";
+} from "@/config/storageKeys";
 
-import { reconcilePreferences } from "@/utils/syncClient";
-import { withPreferenceLock } from "@/utils/preferenceStorage";
+import { reconcilePreferences } from "@/lib/sync/syncClient";
+import { withPreferenceLock } from "@/lib/storage/preferenceStorage";
 
 describe("SettingsContext unified user state", () => {
   function wrapper({ children }: { children: ReactNode }) {

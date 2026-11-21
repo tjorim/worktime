@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { percent, resolveLabelColors } from "@/features/timeTracking/cssVars";
-import { getDefaultLabelColor } from "@/lib/timeTracking/constants";
+import { percent, resolveLabelColors } from "@/lib/time-tracking/cssVars";
+import { getDefaultLabelColor } from "@/lib/time-tracking/constants";
 
 describe("timeTracking css variable helpers", () => {
   it("passes a valid hex label colour through with a readable foreground", () => {

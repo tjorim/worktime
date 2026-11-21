@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { calculateShift } from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { calculateShift } from "@/lib/schedule/shiftCalculations";
 import {
   calculateAdjustedWeeklyTarget,
   statisticsWorkingDays,
   type WorkingDayOptions,
-} from "@/utils/statisticsWorkingDays";
+} from "@/lib/schedule/statisticsWorkingDays";
 import { calculateVacationStats } from "@/utils/vacationCalculations";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
 
 const options: WorkingDayOptions = { team: 1, schedule: "9-5", holidays: new Map() };
 const leave = (

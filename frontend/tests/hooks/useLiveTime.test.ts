@@ -2,10 +2,10 @@ import { act, renderHook } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLiveTime } from "@/hooks/useLiveTime";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 // Mock our centralized dayjs setup
-vi.mock("@/utils/dateTimeUtils", () => {
+vi.mock("@/lib/dates/dateTimeUtils", () => {
   const mockDayjs = vi.fn();
   return {
     dayjs: mockDayjs,

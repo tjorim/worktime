@@ -8,8 +8,8 @@ import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
-import { timeOffCollection } from "@/db/collections";
+import { hdayToTimeOffEntries } from "@/lib/time-off/codecs";
+import { timeOffCollection } from "@/lib/db/collections";
 import {
   SIMPLE_HDAY,
   MULTI_TYPE_HDAY,

@@ -6,7 +6,7 @@ import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { setLocale } from "@/paraglide/runtime.js";
 import "@/styles/tailwind.css";
 const params = new URLSearchParams(location.search);

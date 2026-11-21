@@ -2,8 +2,8 @@ import { useCallback } from "react";
 import { UsersIcon } from "lucide-react";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import type { ScheduleOption } from "@/data/rosters";
-import { getScheduleChangeTeamAction } from "@/utils/scheduleUtils";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
+import { getScheduleChangeTeamAction } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
 
 /**

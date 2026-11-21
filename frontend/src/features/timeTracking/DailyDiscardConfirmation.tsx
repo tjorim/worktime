@@ -1,7 +1,7 @@
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 interface DailyDiscardConfirmationProps {
   isOpen: boolean;

@@ -12,7 +12,7 @@ const gate = vi.hoisted(() => {
   return state;
 });
 
-vi.mock("@/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
+vi.mock("@/lib/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
 vi.mock("@/app/layout/AppLayout", async () => {
   const { Outlet } = await import("@tanstack/react-router");
   return { AppLayout: () => <Outlet /> };

@@ -18,7 +18,7 @@ import type {
   SyncPullResponse,
   SyncStatusResponse,
   TaskSyncRead,
-} from "@/utils/syncClient";
+} from "@/lib/sync/syncClient";
 
 const AS_OF = "2026-05-18T06:00:00.000Z";
 const CREATED_AT = "2026-01-01T00:00:00.000Z";

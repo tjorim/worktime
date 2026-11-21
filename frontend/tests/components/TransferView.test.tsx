@@ -7,7 +7,7 @@ import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { EventStoreProvider, useEventStore } from "@/app/providers/EventStoreContext";
 import { useTransferCalculations } from "@/hooks/useTransferCalculations";
 import type { TransferType } from "@/hooks/useTransferCalculations";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { CalendarEvent } from "@/lib/events/types";
 
 // Mock useSettings to provide scheduleType
@@ -63,7 +63,7 @@ vi.mock("@/hooks/useTransferCalculations", () => ({
 
 const mockUseTransferCalculations = vi.mocked(useTransferCalculations);
 
-vi.mock("@/utils/shiftCalculations", () => ({
+vi.mock("@/lib/schedule/shiftCalculations", () => ({
   getShift: vi.fn((code) => {
     const shifts: Record<
       string,
@@ -114,8 +114,8 @@ vi.mock("@/utils/shiftCalculations", () => ({
   getFormattedShiftTime: vi.fn(() => "07:00–15:00"),
 }));
 
-vi.mock("@/utils/config", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/utils/config")>();
+vi.mock("@/config/app", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/config/app")>();
 
   return {
     ...actual,

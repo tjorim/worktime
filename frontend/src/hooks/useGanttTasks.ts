@@ -6,7 +6,7 @@ import {
   hasSyncCollectionAuth,
   replaceCollectionContents,
   runMutationBatch,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 
 export type NewGanttTaskInput = Omit<RawGanttTask, "id">;
 

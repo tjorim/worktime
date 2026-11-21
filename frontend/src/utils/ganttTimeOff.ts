@@ -1,6 +1,6 @@
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 const DATE_FORMAT = "YYYY-MM-DD";
 

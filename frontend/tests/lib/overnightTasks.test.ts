@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   taskStopTime,
   overlapsTaskInterval,
   actualTaskDurationHours,
   isValidTaskInterval,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 import { buildRecentWeeks } from "@/features/timeTracking/hooks/useRecentWeeks";
 
 describe("overnight task intervals", () => {

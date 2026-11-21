@@ -9,8 +9,8 @@ import {
   restoreAppBackup,
   validateAppBackupPayload,
 } from "@/utils/appBackup";
-import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { IsoAlpha2 } from "@/types/countries";
 import {
   ganttTasksCollection,
@@ -19,12 +19,12 @@ import {
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
-} from "@/db/collections";
-import * as collectionsModule from "@/db/collections";
-import { stripVirtualProps } from "@/db/persistence";
+} from "@/lib/db/collections";
+import * as collectionsModule from "@/lib/db/collections";
+import { stripVirtualProps } from "@/lib/db/persistence";
 
-import { getPreferenceOwner } from "@/utils/preferenceStorage";
-import { buildLocalSyncPushPayload, buildLocalPreferencesPayload } from "@/utils/syncClient";
+import { getPreferenceOwner } from "@/lib/storage/preferenceStorage";
+import { buildLocalSyncPushPayload, buildLocalPreferencesPayload } from "@/lib/sync/syncClient";
 
 const USER_STATE_KEY = USER_STATE_STORAGE_KEY;
 

@@ -1,5 +1,5 @@
 import { useJsonDraft } from "@/features/timeTracking/useJsonDraft";
-import { getErrorMessage } from "@/utils/apiError";
+import { getErrorMessage } from "@/lib/api/apiError";
 import { ClipboardCheckIcon, FileTextIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
@@ -9,10 +9,10 @@ import { useToast } from "@/app/providers/ToastContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { JsonExample, RawJsonEditor } from "./RawJsonEditor";
-import { buildLabelNameMap, type Label } from "@/lib/timeTracking/constants";
+import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";
 import { TemplateModal, type TemplateForm } from "./TemplateModal";
-import { isValidRange, isValidTimeString } from "@/lib/timeTracking/timeUtils";
-import type { TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import { isValidRange, isValidTimeString } from "@/lib/time-tracking/timeUtils";
+import type { TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import * as m from "@/paraglide/messages.js";
 
 type TemplatesPanelProps = {

@@ -18,7 +18,7 @@ import {
 import { useToast } from "@/app/providers/ToastContext";
 import type { CreatedIntegrationClient, IntegrationClient } from "@/api-types";
 import type { IntegrationClientScope } from "@/pages/settings/hooks/useSettingsIntegrationClients";
-import { formatDisplayDate } from "@/utils/dateTimeUtils";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 /** Matches `IntegrationClientCreate.name` (`max_length=120`) in the backend schema. */

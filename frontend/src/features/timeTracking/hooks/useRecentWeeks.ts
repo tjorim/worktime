@@ -1,8 +1,8 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { actualTaskDurationHours } from "@/lib/timeTracking/timeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { actualTaskDurationHours } from "@/lib/time-tracking/timeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 export const RECENT_WEEKS_COUNT = 8;
 

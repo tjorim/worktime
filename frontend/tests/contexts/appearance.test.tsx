@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { SettingsProvider, useSettings, normalizeAppearance } from "@/app/providers/SettingsContext";
-import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 afterEach(() => localStorage.clear());
 

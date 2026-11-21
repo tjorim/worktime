@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONFIG } from "@/utils/config";
+import { CONFIG } from "@/config/app";
 
 describe("config", () => {
   describe("CONFIG constants", () => {

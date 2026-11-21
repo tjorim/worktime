@@ -2,7 +2,7 @@ import { CloudCheckIcon, UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/query/queryClient";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -19,7 +19,7 @@ import { ToastProvider, useToast } from "@/app/providers/ToastContext";
 import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { PwaInstallProvider } from "@/app/providers/PwaInstallContext";
 import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { useShiftCalculation } from "@/app/hooks/useShiftCalculation";
 import { usePlannedTaskNotifications } from "@/app/hooks/usePlannedTaskNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
@@ -27,11 +27,11 @@ import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useApiClient } from "@/hooks/useApiClient";
 import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
 import { useScheduleChange } from "@/hooks/useScheduleChange";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 
 import * as m from "@/paraglide/messages.js";
 import { router } from "@/app/router/router";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 /**
  * The main application component for team selection and shift management.

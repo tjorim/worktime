@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
-import { ganttTasksCollection, replaceCollectionContents } from "@/db/collections";
+import { ganttTasksCollection, replaceCollectionContents } from "@/lib/db/collections";
 import type { GanttTask } from "@/types/gantt";
 
 let uniqueCounter = 0;

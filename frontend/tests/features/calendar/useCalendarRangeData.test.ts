@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { tasksCollection, timeOffCollection } from "@/db/collections";
+import { tasksCollection, timeOffCollection } from "@/lib/db/collections";
 import { useCalendarRangeData } from "@/features/calendar/useCalendarRangeData";
 
 vi.mock("@/app/providers/SettingsContext", () => ({

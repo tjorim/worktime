@@ -1,4 +1,4 @@
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { expect, test } from "@playwright/test";
 import { expectNoAccessibilityViolations } from "./axe";
 import { mkdirSync } from "node:fs";

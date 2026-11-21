@@ -6,7 +6,7 @@ import { WeekView } from "@/components/schedule/WeekView";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
@@ -39,7 +39,7 @@ vi.mock("@/hooks/useKeyboardShortcuts", () => ({
   useKeyboardShortcuts: vi.fn(),
 }));
 
-vi.mock("@/utils/dateTimeUtils", () => {
+vi.mock("@/lib/dates/dateTimeUtils", () => {
   return {
     dayjs: vi.fn(() => {
       return {
@@ -77,7 +77,7 @@ vi.mock("@/utils/dateTimeUtils", () => {
   };
 });
 
-vi.mock("@/utils/shiftCalculations", () => ({
+vi.mock("@/lib/schedule/shiftCalculations", () => ({
   calculateShift: vi.fn(() => ({
     code: "M",
     displayCode: "M",

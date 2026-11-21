@@ -28,11 +28,11 @@ import {
 } from "@/components/ui/table";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
+import { WORK_LOCATION_ICONS } from "@/config/workLocation";
 import type { WorkLocationMap } from "@/types/workLocation";
 import * as m from "@/paraglide/messages.js";
 import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyTimeTrackingSummary";
-import { percent, resolveLabelColors } from "./cssVars";
+import { percent, resolveLabelColors } from "@/lib/time-tracking/cssVars";
 import { CopyableHoursCell, MetricCard } from "./WeeklyCells";
 import { WeeklyHoursChart } from "./WeeklyHoursChart";
 import { WeeklyLabelChart } from "./WeeklyLabelChart";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getHalfDay, getScrollLeftForColumn, indexEventsByDate } from "@/utils/teamCalendarGrid";
 

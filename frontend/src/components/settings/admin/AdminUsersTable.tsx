@@ -12,7 +12,7 @@ import {
 } from "@/hooks/useDataTable";
 import type { UserRead } from "@/api-types";
 import * as m from "@/paraglide/messages.js";
-import { formatDisplayDateTime as formatTimestamp } from "@/utils/dateTimeUtils";
+import { formatDisplayDateTime as formatTimestamp } from "@/lib/dates/dateTimeUtils";
 
 export type AdminUserRow = Pick<
   UserRead,

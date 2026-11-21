@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useEffect, useRef } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import * as m from "@/paraglide/messages.js";
 

@@ -8,7 +8,7 @@ import {
   getTypeFlagOptions,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   TYPE_FLAGS_AS_EVENT_FLAGS,
-} from "@/data/timeoffConstants";
+} from "@/lib/time-off/timeoffConstants";
 import type { EventFlag } from "@/lib/hday/types";
 
 function renderModal(props: Partial<React.ComponentProps<typeof EventModal>> = {}) {

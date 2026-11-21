@@ -9,7 +9,7 @@ import { WelcomeWizard } from "@/components/WelcomeWizard";
 import { AuthProvider } from "@/app/providers/AuthContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { labelsCollection } from "@/db/collections";
+import { labelsCollection } from "@/lib/db/collections";
 
 // OIDC mocks are provided globally by tests/setup.ts
 

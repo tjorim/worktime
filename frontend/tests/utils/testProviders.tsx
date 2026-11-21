@@ -8,7 +8,7 @@
  *
  * ## TanStack DB compatibility
  *
- * TanStack DB collections (defined in `src/db/collections.ts`) are module-level
+ * TanStack DB collections (defined in `src/lib/db/collections.ts`) are module-level
  * singletons that do not require a React provider. This wrapper is therefore
  * sufficient for component tests that consume migrated TanStack DB collections.
  * Test isolation is guaranteed by the global `beforeEach` in `tests/setup.ts`,

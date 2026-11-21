@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@schedule-x/calendar";
 import { useLiveQuery } from "@tanstack/react-db";
-import { timeOffCollection } from "@/db/collections";
+import { timeOffCollection } from "@/lib/db/collections";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import type { TimeOffEntry, TimeOffWeeklyEntry } from "@/lib/timeOff/types";
-import { isTimeOffWeeklyEntry } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
-import { calculateShift } from "@/utils/shiftCalculations";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import type { TimeOffEntry, TimeOffWeeklyEntry } from "@/lib/time-off/types";
+import { isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
+import { calculateShift } from "@/lib/schedule/shiftCalculations";
 import {
   isTimedWorkingShift,
   shiftToEvent,

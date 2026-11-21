@@ -33,7 +33,7 @@ import {
 import { useToast } from "@/app/providers/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
-import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
+import { WORK_LOCATION_ICONS } from "@/config/workLocation";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 

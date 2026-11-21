@@ -79,7 +79,7 @@ vi.mock("@/features/gantt/GanttChart.tsx", () => ({
 }));
 
 import { GanttView } from "@/features/gantt/GanttView";
-import { ganttTasksCollection, tasksCollection } from "@/db/collections";
+import { ganttTasksCollection, tasksCollection } from "@/lib/db/collections";
 
 function clearTasksCollection() {
   for (const item of [...tasksCollection.toArray]) {

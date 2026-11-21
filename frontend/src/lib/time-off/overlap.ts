@@ -1,5 +1,5 @@
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { dayjs } from "@/utils/dateTimeUtils";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 /** Inclusive date overlap; opposite half-days occupy separate parts of the day. */
 export function entriesOverlap(a: TimeOffEntry, b: TimeOffEntry): boolean {

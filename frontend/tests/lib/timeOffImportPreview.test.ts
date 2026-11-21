@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { previewTimeOffImport } from "@/lib/timeOff/importPreview";
-import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
+import { hdayToTimeOffEntries } from "@/lib/time-off/codecs";
 
 describe("time off import preview", () => {
   it("merges without removing existing entries and skips exact duplicates", () => {

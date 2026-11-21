@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { tasksCollection, ganttTasksCollection, labelsCollection } from "@/db/collections";
-import { ApiError } from "@/utils/apiError";
+import { logger } from "@/lib/logger";
+import { tasksCollection, ganttTasksCollection, labelsCollection } from "@/lib/db/collections";
+import { ApiError } from "@/lib/api/apiError";
 import type { AuditEntryListResponse, AuditEntryRead } from "@/api-types";
 
 /** An audit entry plus the name of its resource, which the client looks up in its own collections. */

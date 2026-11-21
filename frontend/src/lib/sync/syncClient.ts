@@ -10,9 +10,9 @@
  *
  */
 
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
-import type { Label } from "@/lib/timeTracking/constants";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import { isValidRawGanttTask, type RawGanttTask } from "@/types/gantt";
 import {
@@ -21,7 +21,7 @@ import {
   getSyncOutboxKey,
   getSyncQuarantineKey,
   SYNC_PENDING_OUTBOX_KEY,
-} from "@/constants/storageKeys";
+} from "@/config/storageKeys";
 import {
   ganttTasksCollection,
   labelsCollection,
@@ -29,11 +29,11 @@ import {
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
-} from "@/db/collections";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { DEVICE_LOCAL_SETTING_KEYS } from "@/constants/deviceLocalSettings";
-import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
-import { logger } from "@/utils/logger";
+} from "@/lib/db/collections";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { DEVICE_LOCAL_SETTING_KEYS } from "@/config/deviceLocalSettings";
+import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // The backend sync wire schemas are generated (`src/api-schema/`, named in `@/api-types`)

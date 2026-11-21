@@ -7,8 +7,8 @@ import { CurrentStatus } from "@/components/CurrentStatus";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import * as useCountdownHook from "@/hooks/useCountdown";
-import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
-import * as shiftCalculations from "@/utils/shiftCalculations";
+import { dayjs, formatYYWWD } from "@/lib/dates/dateTimeUtils";
+import * as shiftCalculations from "@/lib/schedule/shiftCalculations";
 
 const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
 const originalViewport = { width: window.innerWidth, height: window.innerHeight };
@@ -61,7 +61,7 @@ vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
 });
 
 // Mock dependencies
-vi.mock("@/utils/shiftCalculations", () => ({
+vi.mock("@/lib/schedule/shiftCalculations", () => ({
   calculateShift: vi.fn(),
   getAllTeamsShifts: vi.fn(),
   getCurrentShiftDay: vi.fn(),
@@ -87,7 +87,7 @@ vi.mock("@/hooks/useCountdown", () => ({
   useCountdown: vi.fn(),
 }));
 
-vi.mock("@/utils/dateTimeUtils", async (importOriginal) => {
+vi.mock("@/lib/dates/dateTimeUtils", async (importOriginal) => {
   const actual = await importOriginal();
   const mockDayjsObj: Record<string, ReturnType<typeof vi.fn>> = {
     startOf: vi.fn(() => ({

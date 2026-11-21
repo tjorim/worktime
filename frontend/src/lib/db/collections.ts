@@ -32,10 +32,10 @@
  * domain — that creates a competing cache.
  */
 
-import { ApiError, SettingsReplacementError } from "@/utils/apiError";
+import { ApiError, SettingsReplacementError } from "@/lib/api/apiError";
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/query/queryClient";
 import {
   getLoadedSnapshot,
   hydrateSyncCollections,
@@ -43,12 +43,12 @@ import {
   startPersistingSyncCollections,
   whenHydrated,
   type PersistableCollection,
-} from "@/db/persistence";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
-import type { Label } from "@/lib/timeTracking/constants";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { createTimeOffEntry } from "@/lib/timeOff/codecs";
-import { isValidEntryType, isValidFlag } from "@/lib/timeOff/types";
+} from "@/lib/db/persistence";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { createTimeOffEntry } from "@/lib/time-off/codecs";
+import { isValidEntryType, isValidFlag } from "@/lib/time-off/types";
 import type { GanttTask } from "@/types/gantt";
 import type { WorkLocationEntry } from "@/types/workLocation";
 import {
@@ -68,9 +68,9 @@ import {
   type TemplateSyncRead,
   type TimeOffEntrySyncRead,
   type WorkLocationSyncRead,
-} from "@/utils/syncClient";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { logger } from "@/utils/logger";
+} from "@/lib/sync/syncClient";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Module-level auth state — set by setSyncCollectionAuth

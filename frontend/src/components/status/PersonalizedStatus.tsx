@@ -15,15 +15,15 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Hint } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
+import { getScheduleConfig, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
 import { useTodayActualStart } from "@/hooks/useTodayActualStart";
 import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
-import { formatTimeByPreference, setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { formatTimeByPreference, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
 import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/utils/flexShift";
 import { getLocale } from "@/paraglide/runtime.js";
 import { FlexStartEditor } from "@/components/status/FlexStartEditor";

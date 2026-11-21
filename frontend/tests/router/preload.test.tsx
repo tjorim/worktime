@@ -2,14 +2,14 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { preloadSyncCollections } from "@/db/collections";
+import { preloadSyncCollections } from "@/lib/db/collections";
 import { router as appRouter } from "@/app/router/router";
 import { Header } from "@/app/layout/Header";
 
 vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => ({ isAuthenticated: true, isValidating: false, triggerLogin: vi.fn() }),
 }));
-vi.mock("@/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
+vi.mock("@/lib/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
 vi.mock("@/app/layout/AppLayout", () => ({ AppLayout: () => <Header /> }));
 vi.mock("@/app/providers/AppShellContext", () => ({
   useAppShellContext: () => ({ openShortcuts: vi.fn() }),

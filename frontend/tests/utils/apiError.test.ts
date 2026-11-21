@@ -1,7 +1,7 @@
 import { uncheckedJson } from "@/mocks/response";
 import { describe, expect, it } from "vitest";
 import * as m from "@/paraglide/messages.js";
-import { ApiError, describeError, getErrorMessage, isUnauthorizedError } from "@/utils/apiError";
+import { ApiError, describeError, getErrorMessage, isUnauthorizedError } from "@/lib/api/apiError";
 
 function errorResponse(body: unknown, status: number, headers: Record<string, string> = {}) {
   return uncheckedJson("error", body, {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
-import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
+import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
+import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
 
 describe("preference ownership", () => {
   it("prefers the atomic data owner over a stale legacy owner key", () => {

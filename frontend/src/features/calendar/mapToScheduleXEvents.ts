@@ -1,10 +1,10 @@
 import type { CalendarEvent, CalendarType } from "@schedule-x/calendar";
 import { Temporal } from "temporal-polyfill";
-import { getContrastingTextColor, type Label } from "@/lib/timeTracking/constants";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/timeOff/types";
-import { SHIFT_CODES, type ShiftCode } from "@/data/rosters";
-import type { Shift, ShiftResult } from "@/utils/shiftCalculations";
+import { getContrastingTextColor, type Label } from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/time-off/types";
+import { SHIFT_CODES, type ShiftCode } from "@/lib/schedule/rosters";
+import type { Shift, ShiftResult } from "@/lib/schedule/shiftCalculations";
 
 export const CALENDAR_COLORS = {
   "time-off": "#198754",

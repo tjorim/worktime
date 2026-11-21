@@ -1,5 +1,5 @@
-import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "@/data/rosters";
-import { logger } from "@/utils/logger";
+import { SCHEDULE_OPTIONS, type ScheduleOption, type ScheduleRoster } from "@/lib/schedule/rosters";
+import { logger } from "@/lib/logger";
 
 const SCHEDULE_MAP = new Map<string, ScheduleRoster>(
   SCHEDULE_OPTIONS.map((option) => [option.value, option]),

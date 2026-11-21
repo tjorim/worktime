@@ -5,8 +5,8 @@ import "@testing-library/jest-dom";
 import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
 
 import { ToastProvider } from "@/app/providers/ToastContext";
-import type { Label } from "@/lib/timeTracking/constants";
-import type { TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import type { Label } from "@/lib/time-tracking/constants";
+import type { TimeTrackingTemplate } from "@/lib/time-tracking/types";
 
 const TEST_LABELS: Label[] = [
   { id: "lbl-1", name: "Support", color: "#3B82F6" },

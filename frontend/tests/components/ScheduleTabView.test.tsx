@@ -7,8 +7,8 @@ import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { ScheduleOption } from "@/data/rosters";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 
 // Mock the child components with schedule type support
 vi.mock("@/components/schedule/TodayView", () => ({

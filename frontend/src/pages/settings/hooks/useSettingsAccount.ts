@@ -1,9 +1,9 @@
 import { type LucideIcon, TrashIcon, UserCheckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { accountDeleteErrorMessages, accountProfileErrorMessages } from "@/utils/apiErrorCodes";
+import { logger } from "@/lib/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { accountDeleteErrorMessages, accountProfileErrorMessages } from "@/lib/api/apiErrorCodes";
 import type { AccountProfile, UserRead } from "@/api-types";
 
 interface UseSettingsAccountParams {

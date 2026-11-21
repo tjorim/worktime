@@ -1,5 +1,5 @@
 import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { toCountryCode } from "@/types/workLocation";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";

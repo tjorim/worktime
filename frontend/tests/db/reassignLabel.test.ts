@@ -11,7 +11,7 @@ import {
   setSyncCollectionAuth,
   tasksCollection,
   templatesCollection,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 
 const body = (call: unknown[]) => JSON.parse((call[1] as RequestInit).body as string);
 

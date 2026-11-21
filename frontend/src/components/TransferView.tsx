@@ -35,7 +35,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
+import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
@@ -46,9 +46,9 @@ import {
   formatDisplayDate,
   formatTimeByPreference,
   formatYYWWD,
-} from "@/utils/dateTimeUtils";
-import { getTeamCountForOption, isValidScheduleType } from "@/utils/scheduleUtils";
-import { getShift, type ShiftWindow } from "@/utils/shiftCalculations";
+} from "@/lib/dates/dateTimeUtils";
+import { getTeamCountForOption, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
+import { getShift, type ShiftWindow } from "@/lib/schedule/shiftCalculations";
 import { EmptyState } from "./shared/EmptyState";
 import { SetupActionButton } from "./shared/SetupActionButton";
 import { ShiftBadge } from "./shared/ShiftBadge";

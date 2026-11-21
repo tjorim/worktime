@@ -4,7 +4,7 @@ import {
   usePlannedTaskNotifications,
   type PlannedTaskNotificationOptions,
 } from "@/app/hooks/usePlannedTaskNotifications";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import * as m from "@/paraglide/messages.js";
 
 function buildTask(overrides: Partial<StoredTimeTrackingTask> = {}): StoredTimeTrackingTask {

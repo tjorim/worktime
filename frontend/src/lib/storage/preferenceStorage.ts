@@ -1,4 +1,4 @@
-import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 /** The blob's marker is atomic with its data; the separate key is legacy metadata. */
 export function getPreferenceOwner(): string | null {

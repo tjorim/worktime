@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import { apiFetch } from "@/utils/apiClient";
+import { apiFetch } from "@/lib/api/apiClient";
 
 /** Answers every method on `path` with `status` and returns the requests it received. */
 function serve(path: string, status = 200): Request[] {

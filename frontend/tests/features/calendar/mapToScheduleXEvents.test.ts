@@ -7,8 +7,8 @@ import {
   taskToEvent,
   timeOffToEvent,
 } from "@/features/calendar/mapToScheduleXEvents";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { Shift } from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { Shift } from "@/lib/schedule/shiftCalculations";
 
 vi.spyOn(Temporal.Now, "timeZoneId").mockReturnValue("UTC");
 

@@ -1,6 +1,6 @@
-import { CONFIG } from "@/utils/config";
-import { logger } from "@/utils/logger";
-import type { FetchFn, SyncPushPayload } from "@/utils/syncClient";
+import { CONFIG } from "@/config/app";
+import { logger } from "@/lib/logger";
+import type { FetchFn, SyncPushPayload } from "@/lib/sync/syncClient";
 
 type SyncEntityKey =
   | "labels"

@@ -1,10 +1,10 @@
 import type { Dayjs } from "dayjs";
-import type { NullableScheduleOption } from "@/utils/shiftCalculations";
-import { calculateShift } from "@/utils/shiftCalculations";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { hasTimeOffEvent, isPublicHolidayForShift } from "@/utils/workingDayUtils";
+import type { NullableScheduleOption } from "@/lib/schedule/shiftCalculations";
+import { calculateShift } from "@/lib/schedule/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { hasTimeOffEvent, isPublicHolidayForShift } from "@/lib/schedule/workingDayUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 
 export interface WorkingDayOptions {
   team: number | null;

@@ -6,9 +6,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/app/providers/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { pebblePairErrorMessages } from "@/utils/apiErrorCodes";
-import { logger } from "@/utils/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { pebblePairErrorMessages } from "@/lib/api/apiErrorCodes";
+import { logger } from "@/lib/logger";
 import type { CreatedApiToken } from "@/api-types";
 
 export function PebblePairPage() {

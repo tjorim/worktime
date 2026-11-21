@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 /** Not yet part of TypeScript's DOM lib. */
 interface BeforeInstallPromptEvent extends Event {

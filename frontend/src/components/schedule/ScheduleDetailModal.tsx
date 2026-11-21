@@ -39,13 +39,13 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import type { ScheduleOption, ShiftCode } from "@/data/rosters";
+import type { ScheduleOption, ShiftCode } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
-import { dayjs, getLocalizedShiftTime } from "@/utils/dateTimeUtils";
+import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
+import { dayjs, getLocalizedShiftTime } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
-import { calculateShift } from "@/utils/shiftCalculations";
+import { calculateShift } from "@/lib/schedule/shiftCalculations";
 
 // Display metadata for each working shift code — icons, colors, and variants only (labels are translated at render time).
 // Any shift code present in a schedule's shiftTimes but absent here will receive a generic fallback.

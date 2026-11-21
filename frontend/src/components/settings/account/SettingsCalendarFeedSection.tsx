@@ -11,9 +11,9 @@ import {
 } from "@/components/settings/SettingsParts";
 import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
-import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
-import { logger } from "@/utils/logger";
-import { ApiError } from "@/utils/apiError";
+import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
+import { logger } from "@/lib/logger";
+import { ApiError } from "@/lib/api/apiError";
 import type { IcalFeedCreated, IcalFeedStatus } from "@/api-types";
 
 interface Props {

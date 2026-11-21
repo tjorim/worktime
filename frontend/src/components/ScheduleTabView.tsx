@@ -2,7 +2,7 @@ import { ArrowLeftRightIcon, CalendarDaysIcon } from "lucide-react";
 import type { Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
 
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { TransferView } from "@/components/TransferView";

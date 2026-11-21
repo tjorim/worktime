@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
 
 describe("getGanttTimeOffDates", () => {

@@ -5,7 +5,7 @@ import {
   SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
   SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
   SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
-} from "@/constants/storageKeys";
+} from "@/config/storageKeys";
 import {
   getLoadedSnapshot,
   hydrateSyncCollections,
@@ -16,7 +16,7 @@ import {
   stripVirtualProps,
   whenHydrated,
   type PersistableCollection,
-} from "@/db/persistence";
+} from "@/lib/db/persistence";
 
 const snapshotKey = (name: string, generation = "default") =>
   `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generation === "default" ? "" : `${generation}_`}${name}`;

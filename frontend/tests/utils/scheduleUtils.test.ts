@@ -4,7 +4,7 @@ import {
   getScheduleChangeTeamAction,
   getScheduleConfig,
   getTeamCountForOption,
-} from "@/utils/scheduleUtils";
+} from "@/lib/schedule/scheduleUtils";
 
 describe("scheduleUtils", () => {
   describe("getScheduleChangeTeamAction", () => {

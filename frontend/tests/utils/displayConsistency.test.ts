@@ -5,8 +5,8 @@ import {
   formatDisplayDateTime,
   formatHdayDate,
   formatISODate,
-} from "@/utils/dateTimeUtils";
-import { getEventFlagLabel } from "@/data/timeoffConstants";
+} from "@/lib/dates/dateTimeUtils";
+import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
 
 afterEach(() => setLocale("en", { reload: false }));
 describe("display consistency", () => {

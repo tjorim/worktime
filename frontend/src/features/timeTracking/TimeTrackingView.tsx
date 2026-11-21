@@ -6,13 +6,13 @@ import * as m from "@/paraglide/messages.js";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { calculateAdjustedWeeklyTarget } from "@/utils/statisticsWorkingDays";
+import { calculateAdjustedWeeklyTarget } from "@/lib/schedule/statisticsWorkingDays";
 import { HolidayStatusNotice } from "@/components/shared/HolidayStatusNotice";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 import { useEventStore } from "@/app/providers/EventStoreContext";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
 

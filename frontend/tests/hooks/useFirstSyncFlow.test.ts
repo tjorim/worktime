@@ -20,12 +20,12 @@ import {
   USER_STATE_SWITCH_STORAGE_KEY,
   getSyncCursorKey,
   getSyncOutboxKey,
-} from "@/constants/storageKeys";
+} from "@/config/storageKeys";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
-import { tasksCollection, timeOffCollection } from "@/db/collections";
-import { getPreferenceOwner } from "@/utils/preferenceStorage";
-import { buildLocalSyncPushPayload, reconcilePreferences } from "@/utils/syncClient";
-import * as collections from "@/db/collections";
+import { tasksCollection, timeOffCollection } from "@/lib/db/collections";
+import { getPreferenceOwner } from "@/lib/storage/preferenceStorage";
+import { buildLocalSyncPushPayload, reconcilePreferences } from "@/lib/sync/syncClient";
+import * as collections from "@/lib/db/collections";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>
   React.createElement(EventStoreProvider, null, children);

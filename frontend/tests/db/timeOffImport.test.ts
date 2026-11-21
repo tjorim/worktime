@@ -1,7 +1,7 @@
 import { waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { pushTimeOffImport, setSyncCollectionAuth } from "@/db/collections";
-import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
+import { pushTimeOffImport, setSyncCollectionAuth } from "@/lib/db/collections";
+import { hdayToTimeOffEntries } from "@/lib/time-off/codecs";
 
 afterEach(() => {
   setSyncCollectionAuth(null);

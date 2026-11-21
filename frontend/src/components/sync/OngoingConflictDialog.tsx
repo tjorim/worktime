@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { SyncPushPayload } from "@/utils/syncClient";
+import type { SyncPushPayload } from "@/lib/sync/syncClient";
 import * as m from "@/paraglide/messages.js";
 
 type ConflictChoice = "keep-server" | "keep-mine";

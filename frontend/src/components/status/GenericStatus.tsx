@@ -15,13 +15,13 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 import { Progress } from "@/components/ui/progress";
 
-import type { ScheduleOption } from "@/data/rosters";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
+import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 import { useCountdown } from "@/hooks/useCountdown";
-import { dayjs, setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { dayjs, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
-import type { UpcomingShiftResult, ShiftResult } from "@/utils/shiftCalculations";
-import { getAllTeamsShifts, getCurrentWorkingTeam } from "@/utils/shiftCalculations";
+import type { UpcomingShiftResult, ShiftResult } from "@/lib/schedule/shiftCalculations";
+import { getAllTeamsShifts, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
 import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
 import { CountdownBadge } from "@/components/shared/CountdownBadge";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";

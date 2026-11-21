@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 export interface FlexStartOverride {
   startTime: Dayjs | null;

@@ -40,8 +40,8 @@ import {
   SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
   SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
   SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
-} from "@/constants/storageKeys";
-import { logger } from "@/utils/logger";
+} from "@/config/storageKeys";
+import { logger } from "@/lib/logger";
 
 /**
  * Bumped when a stored snapshot's shape changes, so incompatible snapshots are

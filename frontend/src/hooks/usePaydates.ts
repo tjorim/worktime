@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";
+import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
 import * as m from "@/paraglide/messages.js";
 import type { PaydayInfo } from "@/types/paydays";
-import { ApiError } from "@/utils/apiError";
+import { ApiError } from "@/lib/api/apiError";
 import { usePublicApiClient } from "./usePublicApiClient";
 
 async function fetchPaydates(

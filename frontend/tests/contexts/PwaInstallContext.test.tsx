@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PwaInstallProvider, usePwaInstall } from "@/app/providers/PwaInstallContext";
-import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";
 
 function wrapper({ children }: { children: ReactNode }) {
   return <PwaInstallProvider>{children}</PwaInstallProvider>;

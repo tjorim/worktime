@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
 import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import * as m from "@/paraglide/messages.js";
 
 // Every shipped schedule is available today, so add an unavailable one to cover that state.
-vi.mock("@/data/rosters", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/data/rosters")>();
+vi.mock("@/lib/schedule/rosters", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/schedule/rosters")>();
   const [first] = actual.SCHEDULE_OPTIONS;
   return {
     ...actual,

@@ -14,17 +14,17 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { getScheduleConfig } from "@/utils/scheduleUtils";
+import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";
-import { calculateShift } from "@/utils/shiftCalculations";
+import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
+import { calculateShift } from "@/lib/schedule/shiftCalculations";
 import { getLocale } from "@/paraglide/runtime.js";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 interface WeekViewProps {
   myTeam: number | null; // The user's team from onboarding

@@ -8,7 +8,7 @@ const ALLOWED_PLAIN_USE_QUERY = new Set([
   "hooks/useOpenHolidays.ts",
   "hooks/usePaydates.ts",
 ]);
-const SYNC_QUERY_KEY_ALLOWED_FILES = new Set(["db/collections.ts"]);
+const SYNC_QUERY_KEY_ALLOWED_FILES = new Set(["lib/db/collections.ts"]);
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });

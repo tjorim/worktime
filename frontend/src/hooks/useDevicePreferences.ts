@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export type DismissibleHint = "unifiedCalendar";

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { resolveLabelColors } from "./cssVars";
+import { resolveLabelColors } from "@/lib/time-tracking/cssVars";
 
 /** A user-colored label; the color arrives as validated `--label-*` custom properties. */
 export function LabelChip({ color, children }: { color: string | undefined; children: ReactNode }) {

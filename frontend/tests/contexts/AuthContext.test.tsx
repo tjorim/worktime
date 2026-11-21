@@ -5,18 +5,18 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { oidcConfig } from "@/config/oidc";
 import { useApiClient } from "@/hooks/useApiClient";
-import { apiFetch } from "@/utils/apiClient";
-import { ApiError } from "@/utils/apiError";
+import { apiFetch } from "@/lib/api/apiClient";
+import { ApiError } from "@/lib/api/apiError";
 import { AuthProvider, useAuth } from "@/app/providers/AuthContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
-import { appendToPendingSyncOutbox } from "@/utils/syncClient";
-import { SYNC_PENDING_OUTBOX_KEY } from "@/constants/storageKeys";
+import { appendToPendingSyncOutbox } from "@/lib/sync/syncClient";
+import { SYNC_PENDING_OUTBOX_KEY } from "@/config/storageKeys";
 
 const mockClearPushSubscription = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-vi.mock("@/utils/pushNotifications", () => ({ clearPushSubscription: mockClearPushSubscription }));
+vi.mock("@/lib/push/pushNotifications", () => ({ clearPushSubscription: mockClearPushSubscription }));
 
-vi.mock("@/utils/apiClient", () => ({ apiFetch: vi.fn() }));
+vi.mock("@/lib/api/apiClient", () => ({ apiFetch: vi.fn() }));
 
 // Mock react-oidc-context
 const mockSigninRedirect = vi.fn().mockResolvedValue(undefined);

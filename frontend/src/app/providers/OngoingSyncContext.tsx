@@ -17,9 +17,9 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/app/providers/ToastContext";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { taskValidationErrorMessages } from "@/utils/apiErrorCodes";
-import { setSyncTaskRejectionHandler } from "@/utils/syncClient";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { taskValidationErrorMessages } from "@/lib/api/apiErrorCodes";
+import { setSyncTaskRejectionHandler } from "@/lib/sync/syncClient";
 import * as m from "@/paraglide/messages.js";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useAuth } from "./AuthContext";
@@ -42,8 +42,8 @@ import {
   applyIncrementalPullToCollections,
   applyPullToCollections,
   acceptTaskConflictServerState,
-} from "@/db/collections";
-import { type SyncPullResult, type SyncPushPayload } from "@/utils/syncClient";
+} from "@/lib/db/collections";
+import { type SyncPullResult, type SyncPushPayload } from "@/lib/sync/syncClient";
 
 const PREFERENCES_PULL_DEBOUNCE_MS = 250;
 

@@ -14,15 +14,15 @@ import type { Dayjs } from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/tooltip";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "@/components/shared/ContextMenu";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { buildLabelNameMap, type Label } from "@/lib/timeTracking/constants";
+import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";
 import { LabelChip } from "./LabelChip";
 import { TaskEditModal, type TaskEditForm } from "@/components/shared/TaskEditModal";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import type { GanttTask } from "@/types/gantt";
 import {
   BREAK_DURATION_MINUTES,
@@ -30,9 +30,9 @@ import {
   isValidTaskInterval,
   overlapsTaskInterval,
   taskStopTime,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 export type EditRequest = {

@@ -1,12 +1,12 @@
 import { type LucideIcon, TrashIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { labelsCollection, tasksCollection, templatesCollection } from "@/db/collections";
+import { labelsCollection, tasksCollection, templatesCollection } from "@/lib/db/collections";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
-import { ANONYMOUS_USER_STATE_OWNER } from "@/constants/storageKeys";
-import { getPreferenceOwner, withPreferenceLock } from "@/utils/preferenceStorage";
-import { logger } from "@/utils/logger";
-import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/utils/syncClient";
+import { ANONYMOUS_USER_STATE_OWNER } from "@/config/storageKeys";
+import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
+import { logger } from "@/lib/logger";
+import { applyPreferencesPull, fetchPreferences, type FetchFn } from "@/lib/sync/syncClient";
 
 interface UseSettingsResetFlowParams {
   resetSettings: () => void;

@@ -10,7 +10,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import * as m from "@/paraglide/messages.js";
 import { chartRenderer } from "./chartRenderer";
-import { resolveLabelColors } from "./cssVars";
+import { resolveLabelColors } from "@/lib/time-tracking/cssVars";
 import type { LabelPercentage, WeekDay, WeeklySummary } from "./hooks/useWeeklyTimeTrackingSummary";
 
 interface LabelHoursRow {

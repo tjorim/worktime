@@ -34,15 +34,15 @@ import {
   syncStatusHasData,
   timeOffEntriesToSyncItems,
   type SyncPushPayload,
-} from "@/utils/syncClient";
+} from "@/lib/sync/syncClient";
 import {
   getSyncCursorKey,
   getSyncOutboxKey,
   SYNC_PENDING_OUTBOX_KEY,
   USER_STATE_STORAGE_KEY,
-} from "@/constants/storageKeys";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
-import type { TimeOffDateEntry, TimeOffRangeEntry, TimeOffWeeklyEntry } from "@/lib/timeOff/types";
+} from "@/config/storageKeys";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
+import type { TimeOffDateEntry, TimeOffRangeEntry, TimeOffWeeklyEntry } from "@/lib/time-off/types";
 import {
   ganttTasksCollection,
   labelsCollection,
@@ -50,10 +50,10 @@ import {
   templatesCollection,
   timeOffCollection,
   workLocationsCollection,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 import type { IsoAlpha2 } from "@/types/countries";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import type { SyncPullResponse, TaskSyncRead, LabelSyncRead } from "@/utils/syncClient";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import type { SyncPullResponse, TaskSyncRead, LabelSyncRead } from "@/lib/sync/syncClient";
 
 const mockFetch = vi.fn();
 

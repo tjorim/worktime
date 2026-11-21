@@ -3,7 +3,7 @@ import { Hint } from "@/components/ui/tooltip";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
-import type { ShiftResult } from "@/utils/shiftCalculations";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 
 export const shiftColors: Record<string, string> = {
   "shift-morning": "bg-wt-shift-morning text-wt-shift-morning-text",

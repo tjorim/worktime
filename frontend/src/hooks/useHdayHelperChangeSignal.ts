@@ -19,7 +19,7 @@
 
 import { EventSourceParserStream } from "eventsource-parser/stream";
 import { useEffect, useRef } from "react";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 // ---------------------------------------------------------------------------
 // Transport abstraction

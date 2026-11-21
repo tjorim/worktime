@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
-import { logger } from "@/utils/logger";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import { logger } from "@/lib/logger";
 /**
  * Mandatory break duration in minutes. Per labor law, employees working more
  * than 5 hours must take a 30-minute break that is automatically deducted

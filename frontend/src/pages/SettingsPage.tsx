@@ -30,9 +30,9 @@ import {
   validateAppBackupPayload,
   restoreAppBackup,
 } from "@/utils/appBackup";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 import { BackupDialog } from "@/components/BackupDialog";
-import { CONFIG } from "@/utils/config";
+import { CONFIG } from "@/config/app";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { useScheduleChange } from "@/hooks/useScheduleChange";
 import { shareApp } from "@/utils/share";

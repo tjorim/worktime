@@ -9,7 +9,7 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { http, HttpResponse } from "msw/http";
 import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";
 import { server } from "@/mocks/server";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
+import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
 import {
   calculateVacationStats,
   formatVacationValue,

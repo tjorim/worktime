@@ -22,14 +22,14 @@ import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorUtilities } from "@/lib/hday/presentation";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { ApiError } from "@/utils/apiError";
+import { logger } from "@/lib/logger";
+import { ApiError } from "@/lib/api/apiError";
 import { classifyTeamLoadError, rememberTeamId, type TeamLoadError } from "@/utils/teamFetchError";
-import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import { resolveHdayHelperBaseUrl } from "@/lib/hday-helper/hdayHelper";
 import {
   getHalfDay,
   getScrollLeftForColumn,

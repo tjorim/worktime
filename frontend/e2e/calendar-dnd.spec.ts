@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { WorktimeTestHooks } from "./testHooks";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 test("Unified Calendar persists a task dragged to another day and time", async ({ page }) => {
   await page.clock.setFixedTime(new Date(2026, 10, 4, 12));

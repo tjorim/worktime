@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as m from "@/paraglide/messages.js";
-import { ApiError, getErrorMessage } from "@/utils/apiError";
-import { integrationClientErrorMessages } from "@/utils/apiErrorCodes";
-import { logger } from "@/utils/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { integrationClientErrorMessages } from "@/lib/api/apiErrorCodes";
+import { logger } from "@/lib/logger";
 import type {
   CreatedIntegrationClient,
   IntegrationClient,

@@ -2,7 +2,7 @@ import { ganttDependencyError } from "@/utils/ganttDependencies";
 import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { GanttViewMode } from "@/app/providers/SettingsContext";

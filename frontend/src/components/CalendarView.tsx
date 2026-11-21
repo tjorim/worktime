@@ -18,31 +18,31 @@ import {
   createWeeklyTimeOffEntry,
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
-} from "@/lib/timeOff/codecs";
+} from "@/lib/time-off/codecs";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { usePaydates } from "@/hooks/usePaydates";
 import { useLongWeekend } from "@/hooks/useLongWeekend";
-import { calculateShift, getShift } from "@/utils/shiftCalculations";
-import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/data/rosters";
+import { calculateShift, getShift } from "@/lib/schedule/shiftCalculations";
+import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/lib/schedule/rosters";
 import {
   isWorkingDay,
   hasTimeOffEvent,
   hasFullDayTimeOffEvent,
   isPublicHolidayForShift,
-} from "@/utils/workingDayUtils";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
+} from "@/lib/schedule/workingDayUtils";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import {
   buildEventFormState,
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEntry,
-} from "@/utils/eventFormState";
+} from "@/lib/events/eventFormState";
 import { useEventForm } from "@/hooks/useEventForm";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { CalendarLegend } from "@/components/calendar/CalendarLegend";
@@ -60,7 +60,7 @@ import {
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
   DEFAULT_WEEKDAY,
-} from "@/data/timeoffConstants";
+} from "@/lib/time-off/timeoffConstants";
 import type { WorkLocation } from "@/types/workLocation";
 interface CalendarViewProps {
   myTeam: number | null;

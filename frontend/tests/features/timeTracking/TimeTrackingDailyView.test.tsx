@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
 import { defaultSettings } from "@/app/providers/SettingsContext";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { ganttTasksCollection, timeOffCollection } from "@/db/collections";
-import { buildTimeOffEntryForRange } from "@/lib/timeOff/codecs";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { ganttTasksCollection, timeOffCollection } from "@/lib/db/collections";
+import { buildTimeOffEntryForRange } from "@/lib/time-off/codecs";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { TestProviders } from "@tests/utils/testProviders";
 
 const TEST_LABELS = [

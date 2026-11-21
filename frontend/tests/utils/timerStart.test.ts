@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { TIMER_EXACT_START_STORAGE_KEY } from "@/constants/storageKeys";
-import { getTimerStart, rememberExactTimerStart } from "@/utils/timerStart";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { TIMER_EXACT_START_STORAGE_KEY } from "@/config/storageKeys";
+import { getTimerStart, rememberExactTimerStart } from "@/lib/time-tracking/timerStart";
 
 const task = { id: "t1", startTime: "2025-01-01T10:15" };
 

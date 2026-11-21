@@ -1,5 +1,5 @@
-import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/timeOff/codecs";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/time-off/codecs";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 
 export const MAX_HDAY_IMPORT_BYTES = 1024 * 1024;
 

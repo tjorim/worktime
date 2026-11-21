@@ -1,8 +1,8 @@
 import { useCallback, useRef, useLayoutEffect } from "react";
 import { useAuth } from "@/app/providers/AuthContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { apiFetch } from "@/utils/apiClient";
-import { isUnauthorizedError } from "@/utils/apiError";
+import { apiFetch } from "@/lib/api/apiClient";
+import { isUnauthorizedError } from "@/lib/api/apiError";
 import * as m from "@/paraglide/messages.js";
 
 export interface AuthenticatedRequestInit extends RequestInit {

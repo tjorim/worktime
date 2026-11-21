@@ -6,10 +6,10 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
-import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
+import { formatTimeByPreference, formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
-import { getEffectiveTeam } from "@/utils/scheduleUtils";
-import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/utils/shiftCalculations";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
+import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
 import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
 import { GenericStatusContent } from "@/components/status/GenericStatus";
 import { SetupActionButton } from "@/components/shared/SetupActionButton";

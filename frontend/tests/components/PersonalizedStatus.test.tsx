@@ -4,7 +4,7 @@ import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatu
 import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
 import { useTodayActualStart } from "@/hooks/useTodayActualStart";
 import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: () => ({ settings: { timeFormat: "24h", enableTimeTracking: false } }),

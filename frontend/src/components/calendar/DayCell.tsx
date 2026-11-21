@@ -11,20 +11,20 @@ import {
   type KeyboardEvent,
 } from "react";
 import { cn } from "@/lib/utils";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocationInfo } from "@/types/workLocation";
-import type { ShiftResult } from "@/utils/shiftCalculations";
-import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+import { WORK_LOCATION_ICONS } from "@/config/workLocation";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import {
   getEventColorClass,
   getEventTypeLabel,
   getTimeLocationSymbol,
 } from "@/lib/hday/presentation";
-import { getEntryFlagsForDisplay } from "@/lib/timeOff/codecs";
+import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 

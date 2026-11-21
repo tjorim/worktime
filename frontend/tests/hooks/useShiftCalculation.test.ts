@@ -4,8 +4,8 @@ import React from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { useShiftCalculation } from "@/app/hooks/useShiftCalculation";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { calculateShift, getShiftCode } from "@/utils/shiftCalculations";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { calculateShift, getShiftCode } from "@/lib/schedule/shiftCalculations";
 
 function wrapper({ children }: { children: ReactNode }) {
   return React.createElement(SettingsProvider, null, children);

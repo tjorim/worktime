@@ -5,7 +5,7 @@
  * not list falls back to the surface's operation message. See `docs/api-errors.md`.
  */
 import * as m from "@/paraglide/messages.js";
-import type { ErrorCodeMessages } from "@/utils/apiError";
+import type { ErrorCodeMessages } from "@/lib/api/apiError";
 
 /** Token management and pairing need an interactive session, never an API token. */
 export const accessTokenErrorMessages: ErrorCodeMessages = {

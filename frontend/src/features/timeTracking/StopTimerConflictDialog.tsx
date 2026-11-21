@@ -1,4 +1,4 @@
-import { taskStopTime } from "@/lib/timeTracking/timeUtils";
+import { taskStopTime } from "@/lib/time-tracking/timeUtils";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 type StopTimerConflictDialogProps = {
   isOpen: boolean;

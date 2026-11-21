@@ -5,20 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import { TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   buildLabelColorMap,
   getContrastingTextColor,
   getDefaultLabelColor,
   type Label,
-} from "@/lib/timeTracking/constants";
-import { percent } from "./cssVars";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+} from "@/lib/time-tracking/constants";
+import { percent } from "@/lib/time-tracking/cssVars";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import {
   BREAK_DURATION_MINUTES,
   effectiveDurationHours,
   calculateBreakPosition,
-} from "@/lib/timeTracking/timeUtils";
+} from "@/lib/time-tracking/timeUtils";
 
 const DEFAULT_TARGET_HOURS = 8;
 

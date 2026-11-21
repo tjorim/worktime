@@ -12,9 +12,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { SearchSelect } from "@/components/shared/SearchSelect";
-import { dayjs } from "@/utils/dateTimeUtils";
-import type { Label } from "@/lib/timeTracking/constants";
-import { BREAK_DURATION_MINUTES } from "@/lib/timeTracking/timeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { Label } from "@/lib/time-tracking/constants";
+import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
 import { useSelectedGanttTaskOption } from "@/hooks/useSelectedGanttTaskOption";
 import * as m from "@/paraglide/messages.js";

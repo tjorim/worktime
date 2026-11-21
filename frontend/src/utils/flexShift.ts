@@ -1,5 +1,5 @@
 import type { Dayjs } from "dayjs";
-import { setTimeFromFractionalHour } from "@/utils/dateTimeUtils";
+import { setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
 
 /**
  * A resolved flex-time window: the employee may clock in any time between

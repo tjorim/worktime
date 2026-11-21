@@ -66,15 +66,15 @@
  */
 
 import type { Dayjs } from "dayjs";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import {
   dayjs,
   formatYYWWD,
   getLocalizedShiftTime,
   setTimeFromFractionalHour,
-} from "./dateTimeUtils";
+} from "@/lib/dates/dateTimeUtils";
 import { getScheduleConfig } from "./scheduleUtils";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 import * as m from "@/paraglide/messages.js";
 
 export type NullableScheduleOption = ScheduleOption | null | undefined;

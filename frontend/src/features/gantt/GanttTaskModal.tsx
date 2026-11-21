@@ -1,5 +1,5 @@
 import { ganttDependencyError } from "@/utils/ganttDependencies";
-import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
+import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useMemo, useState } from "react";
@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";

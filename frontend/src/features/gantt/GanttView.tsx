@@ -2,7 +2,7 @@ import { ChartColumnIcon, CirclePlusIcon, TableIcon, TrashIcon } from "lucide-re
 import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import type { GanttTask } from "@/types/gantt";
@@ -13,7 +13,7 @@ import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
 import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
 import { getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { buildLabelColorMap } from "@/lib/timeTracking/constants";
+import { buildLabelColorMap } from "@/lib/time-tracking/constants";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { GanttChart } from "@/features/gantt/GanttChart";
 import { GanttTableView } from "@/features/gantt/GanttTableView";

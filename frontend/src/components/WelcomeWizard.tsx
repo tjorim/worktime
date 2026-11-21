@@ -6,13 +6,13 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { useAuth } from "@/app/providers/AuthContext";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { labelsCollection } from "@/db/collections";
-import type { ScheduleOption } from "@/data/rosters";
+import { labelsCollection } from "@/lib/db/collections";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import {
   getTeamCountForOption,
   hasMultipleTeams,
   isValidScheduleType,
-} from "@/utils/scheduleUtils";
+} from "@/lib/schedule/scheduleUtils";
 import { type CountryCode, isValidCountryCode } from "@/types/countries";
 import {
   type WizardStep,
@@ -31,7 +31,7 @@ import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
 import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
 import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
 import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
-import { createDefaultLabel } from "@/lib/timeTracking/constants";
+import { createDefaultLabel } from "@/lib/time-tracking/constants";
 import * as m from "@/paraglide/messages.js";
 
 export type WizardCompletionPayload = {

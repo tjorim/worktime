@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { SCHEDULE_OPTIONS } from "@/data/rosters";
-import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
+import { SCHEDULE_OPTIONS } from "@/lib/schedule/rosters";
+import { dayjs, formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import {
   calculateShift,
   findOverlaps,
@@ -14,7 +14,7 @@ import {
   isCurrentlyWorking,
   SHIFTS,
   calculateWeeklyShiftTarget,
-} from "@/utils/shiftCalculations";
+} from "@/lib/schedule/shiftCalculations";
 
 describe("Shift Calculations", () => {
   describe("Core Business Logic", () => {

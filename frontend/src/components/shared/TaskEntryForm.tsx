@@ -14,8 +14,8 @@ import {
   isHexColor,
   getDefaultLabelColor,
   getContrastingTextColor,
-} from "@/lib/timeTracking/constants";
-import type { Label } from "@/lib/timeTracking/constants";
+} from "@/lib/time-tracking/constants";
+import type { Label } from "@/lib/time-tracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
 import { useSelectedGanttTaskOption } from "@/hooks/useSelectedGanttTaskOption";

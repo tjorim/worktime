@@ -11,7 +11,7 @@ import type { Dayjs } from "dayjs";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import type { ScheduleOption } from "@/data/rosters";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import type { TabKey } from "@/app/providers/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";

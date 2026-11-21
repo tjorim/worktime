@@ -26,7 +26,7 @@ import {
   createWeeklyTimeOffEntry,
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
-} from "@/lib/timeOff/codecs";
+} from "@/lib/time-off/codecs";
 import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/lib/timeOff/importPreview";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
@@ -48,7 +48,7 @@ import {
   isEventFormDirty,
   serializeEventFormState,
   serializeEventFormStateFromEntry,
-} from "@/utils/eventFormState";
+} from "@/lib/events/eventFormState";
 import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
 import { TimeOffTableView } from "./timeOff/TimeOffTableView";
 import {
@@ -59,12 +59,12 @@ import {
   getViewModeHelpText,
   TIMEOFF_VIEWS,
   DEFAULT_WEEKDAY,
-} from "@/data/timeoffConstants";
+} from "@/lib/time-off/timeoffConstants";
 import { ChoiceToggleGroup } from "@/components/shared/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
-import { ApiError, describeError } from "@/utils/apiError";
-import { resolveHdayHelperBaseUrl } from "@/utils/hdayHelper";
+import { logger } from "@/lib/logger";
+import { ApiError, describeError } from "@/lib/api/apiError";
+import { resolveHdayHelperBaseUrl } from "@/lib/hday-helper/hdayHelper";
 
 /**
  * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.

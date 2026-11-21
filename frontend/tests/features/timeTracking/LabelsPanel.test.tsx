@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { SettingsReplacementError } from "@/utils/apiError";
-import type { Label } from "@/lib/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import { SettingsReplacementError } from "@/lib/api/apiError";
+import type { Label } from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 
 const TEST_LABELS: Label[] = [
   { id: "lbl-1", name: "Support", color: "#3B82F6" },
