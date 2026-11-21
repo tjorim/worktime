@@ -160,7 +160,7 @@ describe("palette wiring", () => {
   });
 
   it("compiles event utilities using only declared palette variables", async () => {
-    const file = path.resolve(__dirname, "../../src/styles/tailwind.css");
+    const file = path.resolve(__dirname, "../../../src/styles/tailwind.css");
     const require = createRequire(import.meta.url);
     const compiler = await compile(readFileSync(file, "utf8"), {
       base: path.dirname(file),
@@ -196,7 +196,7 @@ describe("palette wiring", () => {
   });
 
   it("has an .event-* class for every class the helpers can return", () => {
-    const css = readFileSync(path.resolve(__dirname, "../../src/styles/event-palette.css"), "utf8");
+    const css = readFileSync(path.resolve(__dirname, "../../../src/styles/event-palette.css"), "utf8");
     for (const { flags, eventType } of combos) {
       const className = getEventColorClass(flags, eventType);
       expect(css, className).toContain(`.${className} {`);
@@ -209,7 +209,7 @@ describe("palette wiring", () => {
 
 describe.each(THEMES)("high-contrast event palette (%s)", (theme) => {
   it("preserves distinct AA event colours when appearance overrides are enabled", () => {
-    const tokens = readFileSync(path.resolve(__dirname, "../../src/styles/tokens.css"), "utf8");
+    const tokens = readFileSync(path.resolve(__dirname, "../../../src/styles/tokens.css"), "utf8");
     const overrides = tokens.slice(tokens.indexOf("/* Appearance overrides"));
     // High contrast must not flatten the semantic palette or override its text independently.
     expect(overrides).toContain('[data-high-contrast="true"]');

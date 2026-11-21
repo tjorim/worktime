@@ -5,7 +5,7 @@ import * as codes from "@/lib/api/apiErrorCodes";
 import { ApiError, describeError, getErrorMessage, type ErrorCodeMessages } from "@/lib/api/apiError";
 
 const backendSource = readFileSync(
-  path.resolve(import.meta.dirname, "../../../backend/app/core/errors.py"),
+  path.resolve(import.meta.dirname, "../../../../backend/app/core/errors.py"),
   "utf8",
 );
 const backendCodes = new Set(

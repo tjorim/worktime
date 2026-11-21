@@ -120,7 +120,7 @@ describe("fixture contract enforcement", () => {
           ![
             "src/mocks/response.ts",
             "tests/mocks/fixtureContracts.test.ts",
-            "tests/types/apiFixtures.ts",
+            "tests/utils/apiFixtures.ts",
           ].includes(file),
       )
       .flatMap((file) => violations(readFileSync(file, "utf8"), file));
