@@ -6,13 +6,20 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.errors import ApiHTTPException, ErrorCode, api_error, handle_api_http_exception
+from app.core.errors import (
+    ApiHTTPException,
+    ErrorCode,
+    api_error,
+    handle_api_http_exception,
+    handle_unhandled_exception,
+)
 
 
 @pytest.fixture
 def client() -> TestClient:
     app = FastAPI()
     app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
+    app.add_exception_handler(Exception, handle_unhandled_exception)
 
     @app.get("/coded")
     async def coded() -> None:
@@ -28,7 +35,11 @@ def client() -> TestClient:
     async def plain() -> None:
         raise HTTPException(status_code=404, detail="nope")
 
-    return TestClient(app)
+    @app.get("/boom")
+    async def boom() -> None:
+        raise RuntimeError("secret detail")
+
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def test_coded_error_has_code_and_detail(client: TestClient) -> None:
@@ -57,3 +68,12 @@ def test_error_codes_are_unique_snake_case() -> None:
 
     assert len(values) == len(set(values))
     assert all(value == value.lower() and " " not in value for value in values)
+
+
+def test_unhandled_exception_is_a_json_500_with_a_request_id(client: TestClient) -> None:
+    response = client.get("/boom")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
+    assert response.headers["X-Request-ID"]
+    assert "secret detail" not in response.text

@@ -5,8 +5,10 @@ middleware or a router that changes the shape is caught. The wording of ``detail
 is.
 """
 
+import logging
 from collections.abc import AsyncGenerator, Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.engine import get_session
@@ -94,22 +96,47 @@ def test_failures_never_carry_a_stack_trace_or_a_secret(
             assert marker not in response.text
 
 
-def test_an_unhandled_exception_answers_500_without_leaking_its_cause(
-    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]], caplog: pytest.LogCaptureFixture
 ) -> None:
-    # The unhandled-exception response is Starlette's plain text, not the JSON shape above, and carries no request id
-    # (recorded as a follow-up).
+    # Starlette's ServerErrorMiddleware sends this response after RequestIdMiddleware has unwound, so the handler
+    # registered for ``Exception`` has to put the id on it.
     async def failing() -> AsyncGenerator[None]:
         raise RuntimeError("secret-token postgresql://user:password@db/worktime")
         yield  # pragma: no cover
 
     app.dependency_overrides[get_session] = failing  # db_client restores its own override on teardown
+    with caplog.at_level(logging.ERROR, logger="app.core.errors"):
+        response = TestClient(app, raise_server_exceptions=False).get(
+            "/api/users/9999", headers={**auth_headers(1, is_admin=True), "X-Request-ID": "trace-me-1"}
+        )
+
+    assert response.status_code == 500
+    assert response.headers["content-type"] == "application/json"
+    assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
+    assert response.headers["X-Request-ID"] == "trace-me-1"
+    for secret in ("secret-token", "password", "postgresql"):
+        assert secret not in response.text
+    for marker in TRACE_MARKERS:
+        assert marker not in response.text
+    # The cause and the stack trace stay on the server, tied to the request id.
+    record = next(record for record in caplog.records if record.name == "app.core.errors")
+    assert "trace-me-1" in record.getMessage()
+    assert isinstance(record.exc_info, tuple)
+    assert "secret-token" in str(record.exc_info[1])
+
+
+def test_an_unhandled_exception_gets_a_request_id_even_without_one_supplied(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    async def failing() -> AsyncGenerator[None]:
+        raise RuntimeError("boom")
+        yield  # pragma: no cover
+
+    app.dependency_overrides[get_session] = failing
     response = TestClient(app, raise_server_exceptions=False).get(
         "/api/users/9999", headers=auth_headers(1, is_admin=True)
     )
 
     assert response.status_code == 500
-    for secret in ("secret-token", "password", "postgresql"):
-        assert secret not in response.text
-    for marker in TRACE_MARKERS:
-        assert marker not in response.text
+    assert response.headers["X-Request-ID"]

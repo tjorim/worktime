@@ -24,7 +24,12 @@ from app.core.request_limits import RateLimitExceeded, RateLimitHeadersMiddlewar
 from app.db import init_db
 from app.services.sse import sync_event_manager
 
-from .core.errors import ApiHTTPException, handle_api_http_exception, handle_label_validation_error
+from .core.errors import (
+    ApiHTTPException,
+    handle_api_http_exception,
+    handle_label_validation_error,
+    handle_unhandled_exception,
+)
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter, rate_limit
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.request_timing import RequestTimingMiddleware
@@ -199,6 +204,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
 app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
 app.add_exception_handler(RequestValidationError, handle_label_validation_error)
+app.add_exception_handler(Exception, handle_unhandled_exception)
 app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=rate_limit)
 if settings.RATE_LIMIT_ENABLED:
     logger.info(f"✓ Rate limiting enabled ({settings.RATE_LIMIT_DEFAULT} per client IP)")

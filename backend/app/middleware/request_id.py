@@ -16,7 +16,8 @@ tokens and ids. 5xx log as errors, 4xx as warnings, the rest as info.
 
 Pure ASGI: no ``BaseHTTPMiddleware`` overhead, no context-var isolation (which breaks Sentry) and no buffering of
 streamed (SSE) responses. The 500 for an unhandled exception is sent by Starlette's outermost ``ServerErrorMiddleware``
-after this middleware has unwound, so that response carries no id; the access line still records it.
+after this middleware has unwound, so ``handle_unhandled_exception`` (``app.core.errors``) adds the id from
+``request.state`` itself; the access line records the 500 too.
 """
 
 import json
