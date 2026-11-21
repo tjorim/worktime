@@ -1,0 +1,177 @@
+import { type LucideIcon, TrashIcon, UserCheckIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import * as m from "@/paraglide/messages.js";
+import { logger } from "@/lib/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { accountDeleteErrorMessages, accountProfileErrorMessages } from "@/lib/api/apiErrorCodes";
+import type { AccountProfile, UserRead } from "@/api-types";
+
+interface UseSettingsAccountParams {
+  isAuthenticated: boolean;
+  displayName: string | null;
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+  showSuccessToast: (message: string, icon?: LucideIcon) => void;
+  onAccountDeleted: () => void;
+}
+
+export function useSettingsAccount({
+  isAuthenticated,
+  displayName,
+  fetchFn,
+  showSuccessToast,
+  onAccountDeleted,
+}: UseSettingsAccountParams) {
+  const [accountProfile, setAccountProfile] = useState<AccountProfile | null>(null);
+  const [profileDraft, setProfileDraft] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  // Reset the loaded profile the moment sign-out happens, rather than in an
+  // effect: this is a same-render response to isAuthenticated flipping, not a
+  // side effect that needs to synchronize with anything external.
+  const [wasAuthenticated, setWasAuthenticated] = useState(isAuthenticated);
+  if (wasAuthenticated !== isAuthenticated) {
+    setWasAuthenticated(isAuthenticated);
+    if (!isAuthenticated) {
+      setAccountProfile(null);
+      setProfileDraft("");
+      setProfileError(null);
+      setIsProfileLoading(false);
+    }
+  }
+
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    let isCancelled = false;
+    setProfileLoadFailed(false);
+    setIsProfileLoading(true);
+    setProfileError(null);
+
+    fetchFn("/api/me")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw await ApiError.fromResponse(response);
+        }
+        const profile = (await response.json()) as AccountProfile;
+        if (isCancelled) return;
+        setAccountProfile(profile);
+        setProfileDraft(profile.display_name);
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        logger.error("Failed to load account profile:", error);
+        setProfileLoadFailed(true);
+        setProfileError(m.account_profile_load_failed());
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsProfileLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, fetchFn, loadAttempt]);
+
+  const hasProfileChanges =
+    accountProfile !== null &&
+    profileDraft.trim() !== "" &&
+    profileDraft.trim() !== accountProfile.display_name;
+
+  const resolvedDisplayName = accountProfile?.display_name ?? displayName;
+
+  const handleSaveProfile = async () => {
+    if (!accountProfile) return;
+    const nextDisplayName = profileDraft.trim();
+    if (!nextDisplayName) {
+      setProfileError(m.account_profile_display_name_required());
+      return;
+    }
+
+    if (Array.from(nextDisplayName).length > 150) {
+      setProfileError(m.error_code_display_name_invalid());
+      return;
+    }
+
+    setIsProfileSaving(true);
+    setProfileError(null);
+
+    try {
+      const response = await fetchFn(`/api/users/${accountProfile.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: nextDisplayName }),
+      });
+      if (!response.ok) {
+        throw await ApiError.fromResponse(response);
+      }
+      const updatedProfile = (await response.json()) as UserRead;
+      setAccountProfile((current) =>
+        current
+          ? {
+              ...current,
+              username: updatedProfile.username,
+              display_name: updatedProfile.display_name,
+            }
+          : current,
+      );
+      setProfileDraft(updatedProfile.display_name);
+      showSuccessToast(m.account_profile_saved(), UserCheckIcon);
+    } catch (error) {
+      logger.error("Failed to save account profile:", error);
+      setProfileError(
+        getErrorMessage(error, m.account_profile_save_failed(), accountProfileErrorMessages),
+      );
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    setDeleteAccountError(null);
+
+    try {
+      const response = await fetchFn("/api/me", { method: "DELETE" });
+      if (!response.ok) {
+        throw await ApiError.fromResponse(response);
+      }
+
+      showSuccessToast(m.account_deleted(), TrashIcon);
+      onAccountDeleted();
+    } catch (error) {
+      logger.error("Failed to delete account:", error);
+      setDeleteAccountError(
+        getErrorMessage(error, m.account_delete_failed(), accountDeleteErrorMessages),
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  return {
+    profileLoadFailed,
+    retryProfile: () => setLoadAttempt((attempt) => attempt + 1),
+    accountProfile,
+    profileDraft,
+    setProfileDraft,
+    isProfileLoading,
+    isProfileSaving,
+    profileError,
+    hasProfileChanges,
+    resolvedDisplayName,
+    handleSaveProfile,
+    isDeletingAccount,
+    deleteAccountError,
+    handleDeleteAccount,
+  };
+}

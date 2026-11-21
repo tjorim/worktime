@@ -7,10 +7,10 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
-import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
-import { SettingsReplacementError } from "@/utils/apiError";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { LabelsPanel } from "@/features/settings/time-tracking/LabelsPanel";
+import { TemplatesPanel } from "@/features/settings/time-tracking/TemplatesPanel";
+import { SettingsReplacementError } from "@/lib/api/apiError";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import "@/styles/tailwind.css";
 const params = new URLSearchParams(location.search);
 document.documentElement.setAttribute("data-theme", params.get("theme") ?? "light");

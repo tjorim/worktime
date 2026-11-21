@@ -1,0 +1,167 @@
+import { ChartColumnIcon, CirclePlusIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/EmptyState";
+import { WeekNavigationButtonGroup } from "@/components/NavigationButtonGroup";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useLiveTime } from "@/hooks/useLiveTime";
+import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
+import { useDefaultLabelColor, type Label } from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+import { WeeklyDataView } from "./WeeklyDataView";
+import { useRecentWeeks } from "./hooks/useRecentWeeks";
+import {
+  getWeekDateRange,
+  useWeeklyTimeTrackingSummary,
+} from "./hooks/useWeeklyTimeTrackingSummary";
+
+type TimeTrackingWeeklyViewProps = {
+  tasks: StoredTimeTrackingTask[];
+  labels: Label[];
+  selectedDate: string;
+  onSelectedDateChange: (date: string) => void;
+  targetForWeek?: (date: string) => { weeklyHours: number; workingDays: number };
+  weeklyTargetHours?: number;
+  weeklyWorkingDays?: number;
+  onSwitchToDaily?: (date: string) => void;
+};
+
+export function TimeTrackingWeeklyView({
+  tasks,
+  labels,
+  selectedDate,
+  onSelectedDateChange,
+  targetForWeek,
+  weeklyTargetHours,
+  weeklyWorkingDays,
+  onSwitchToDaily,
+}: TimeTrackingWeeklyViewProps) {
+  const [copiedCellId, setCopiedCellId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleCopyCell = useCallback((id: string, value: string) => {
+    navigator.clipboard.writeText(value).then(() => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      setCopiedCellId(id);
+      copyTimeoutRef.current = setTimeout(() => setCopiedCellId(null), 1500);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
+  const { settings } = useSettings();
+  const liveTime = useLiveTime({ precision: "minute" });
+  const weeklyDate = dayjs(selectedDate);
+  const weekStart = weeklyDate.startOf("isoWeek");
+  const isWeeklyCurrent = weekStart.isSame(liveTime.startOf("isoWeek"), "day");
+  const todayIso = liveTime.format("YYYY-MM-DD");
+  const defaultLabelColor = useDefaultLabelColor();
+
+  const year = weekStart.isoWeekYear();
+  const { workLocationMap } = useWorkLocationStorage(year);
+  const isoWeek = weekStart.isoWeek();
+  const [start, end] = useMemo(() => getWeekDateRange(year, isoWeek), [year, isoWeek]);
+  const targetWorkingDays = weeklyWorkingDays && weeklyWorkingDays > 0 ? weeklyWorkingDays : 5;
+
+  const summary = useWeeklyTimeTrackingSummary({
+    tasks,
+    labels,
+    liveTime,
+    start,
+    end,
+    defaultLabelColor,
+  });
+
+  const rawRecentWeeks = useRecentWeeks(tasks, start, liveTime);
+  const recentWeeks = rawRecentWeeks.map((week) => ({
+    ...week,
+    targetHours: targetForWeek?.(week.start).weeklyHours,
+  }));
+
+  const targetDaily = weeklyTargetHours !== undefined ? weeklyTargetHours / targetWorkingDays : 8;
+  const weeklyProgressPercent =
+    weeklyTargetHours && weeklyTargetHours > 0
+      ? Math.min((summary.weekTotal / weeklyTargetHours) * 100, 100)
+      : 0;
+
+  return (
+    <Card className="overflow-visible shadow-sm">
+      <CardHeader className="border-b border-border">
+        <div className="mb-2 flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
+          <span className="font-semibold">
+            <Icon icon={ChartColumnIcon} className="mr-2" />
+            {m.tt_weekly_heading()}
+          </span>
+          <WeekNavigationButtonGroup
+            isCurrent={isWeeklyCurrent}
+            onPrevious={() =>
+              onSelectedDateChange(weekStart.subtract(1, "week").format("YYYY-MM-DD"))
+            }
+            onCurrent={() => onSelectedDateChange(dayjs().format("YYYY-MM-DD"))}
+            onNext={() => onSelectedDateChange(weekStart.add(1, "week").format("YYYY-MM-DD"))}
+            selectorLabel={m.tt_jump_to_date()}
+            selectorValue={selectedDate}
+            onSelectorChange={onSelectedDateChange}
+          />
+        </div>
+        <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
+          <div className="text-sm text-muted-foreground">
+            {m.week_label({ week: weekStart.isoWeek(), year: weekStart.isoWeekYear() })}
+            {isWeeklyCurrent && (
+              <Badge variant="success" className="ml-2" aria-label={m.tt_current_week_aria()}>
+                {m.this_week()}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {weeklyTargetHours === 0 && summary.rows.length === 0 && (
+          <p className="text-sm text-muted-foreground">{m.tt_no_target_week()}</p>
+        )}
+        {summary.rows.length === 0 && (
+          <EmptyState
+            icon={ChartColumnIcon}
+            title={m.tt_no_weekly_data_title()}
+            description={m.tt_no_weekly_data_desc()}
+            ctaButton={
+              onSwitchToDaily
+                ? {
+                    label: m.tt_go_to_daily_log(),
+                    onClick: () => onSwitchToDaily(todayIso),
+                    icon: CirclePlusIcon,
+                  }
+                : undefined
+            }
+          />
+        )}
+
+        {summary.rows.length > 0 && (
+          <WeeklyDataView
+            {...summary}
+            recentWeeks={recentWeeks}
+            weeklyTargetHours={weeklyTargetHours}
+            weeklyProgressPercent={weeklyProgressPercent}
+            todayIso={todayIso}
+            targetDaily={targetDaily}
+            crossBorderEnabled={settings.enableCrossBorderTracking}
+            workLocationMap={workLocationMap}
+            onSwitchToDaily={onSwitchToDaily}
+            pluralRules={pluralRules}
+            copiedCellId={copiedCellId}
+            onCopyCell={handleCopyCell}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,0 +1,471 @@
+import { Grid, GridItem } from "@/components/ui/grid";
+import {
+  CalendarXIcon,
+  CircleArrowRightIcon,
+  HourglassIcon,
+  LogInIcon,
+  LogOutIcon,
+  TagIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useId, useMemo } from "react";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+
+import { Hint } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+
+import type { ScheduleOption } from "@/lib/schedule/rosters";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { getScheduleConfig, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
+import { useCountdown } from "@/features/status/useCountdown";
+import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
+import { useLiveShiftStatus } from "@/features/status/useLiveShiftStatus";
+import { useTodayActualStart } from "@/features/status/useTodayActualStart";
+import { useFlexStartOverride } from "@/features/status/useFlexStartOverride";
+import { formatTimeByPreference, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
+import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/features/status/flexShift";
+import { getLocale } from "@/paraglide/runtime.js";
+import { FlexStartEditor } from "@/features/status/FlexStartEditor";
+import { ShiftTimeDisplay } from "@/features/status/ShiftTimeDisplay";
+import { CountdownBadge } from "@/features/status/CountdownBadge";
+import { ShiftBadge } from "@/components/ShiftBadge";
+import { EmptyState } from "@/components/EmptyState";
+import * as m from "@/paraglide/messages.js";
+
+interface PersonalizedStatusContentProps {
+  myTeam: number;
+  scheduleType: ScheduleOption;
+  /** Render a single-line summary instead of the full Today/Up Next cards. */
+  compact?: boolean;
+}
+
+/**
+ * Personalized status content showing the user's team shifts.
+ *
+ * Displays "Your Team Status" (today's shift with off-day progress) and
+ * "Your Next Shift" (upcoming shift with countdown).
+ *
+ * This is a content component rendered by CurrentStatus - it does not include
+ * the Card wrapper, header row, or timeline.
+ */
+export function PersonalizedStatusContent({
+  myTeam,
+  scheduleType,
+  compact = false,
+}: PersonalizedStatusContentProps) {
+  const teamTooltipId = useId();
+  const locale = getLocale();
+  const { settings } = useSettings();
+  const weekdayDateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
+    [locale],
+  );
+
+  if (!isValidScheduleType(scheduleType)) {
+    return (
+      <EmptyState
+        icon={TriangleAlertIcon}
+        title={m.personalized_status_invalid_title()}
+        description={m.personalized_status_invalid_desc()}
+      />
+    );
+  }
+
+  const scheduleConfig = getScheduleConfig(scheduleType);
+  const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
+
+  // NOTE: Intentional exception — do not replace with useShiftCalculation().
+  // PersonalizedStatusContent needs minute-level live updates plus the
+  // night-shift anchoring/extension behavior, which useShiftCalculation
+  // does not provide. Keeping useLiveShiftStatus prevents regressions.
+  const { today, currentShift, nextShift, offDayProgress } = useLiveShiftStatus(
+    myTeam,
+    scheduleType,
+  );
+
+  // Calculate next shift start time for countdown
+  const nextShiftStartTime = useMemo(() => {
+    if (!nextShift || nextShift.shift.start == null) return null;
+    return setTimeFromFractionalHour(nextShift.date, nextShift.shift.start);
+  }, [nextShift]);
+
+  // Calculate current shift start/end times for progress bar and "Ends in" countdown
+  const currentShiftStartTime = useMemo(() => {
+    if (!currentShift.shift.isWorking || currentShift.shift.start == null) return null;
+    return setTimeFromFractionalHour(currentShift.date, currentShift.shift.start);
+  }, [currentShift]);
+
+  const currentShiftEndTime = useMemo(() => {
+    const { start, end } = currentShift.shift;
+    if (!currentShift.shift.isWorking || end == null) return null;
+    // Detect midnight-crossing shifts (e.g., night shift 23h-7h)
+    const endDate =
+      start != null && start > end ? currentShift.date.add(1, "day") : currentShift.date;
+    return setTimeFromFractionalHour(endDate, end);
+  }, [currentShift]);
+
+  // Flex-time handling: for shifts with a flex window (e.g. the 9-5 Day shift),
+  // anchor the finish to the actual clock-in plus a flat presence span instead
+  // of the nominal roster end. This avoids showing "2 hours left" at 15:30 to
+  // someone who started at 07:00 and can already go home.
+  const flexWindow = useMemo(() => getFlexWindow(currentShift.shift), [currentShift.shift]);
+  const actualStart = useTodayActualStart(currentShift.date);
+  const manualStart = useFlexStartOverride(currentShift.date);
+  const isFlexShift = flexWindow != null && currentShift.shift.isWorking;
+
+  // A logged time-tracking clock-in is authoritative; otherwise fall back to a
+  // manual "I started at ..." override. Either drives a real countdown/progress.
+  const flexStartTime = isFlexShift ? (actualStart ?? manualStart.startTime) : null;
+  // Only offer the manual editor when time-tracking is not already providing
+  // the start (editing it would have no effect while a clock-in exists).
+  const showFlexEditor = isFlexShift && !actualStart;
+  const flexEndTime = useMemo(
+    () =>
+      flexStartTime && flexWindow
+        ? getFlexEndFromStart(flexStartTime, flexWindow.presenceHours)
+        : null,
+    [flexStartTime, flexWindow],
+  );
+  // No clock-in yet: show the possible leave range instead of a false countdown.
+  const flexEndRange = useMemo(
+    () =>
+      isFlexShift && flexWindow && !flexStartTime
+        ? getFlexEndRange(currentShift.date, flexWindow)
+        : null,
+    [isFlexShift, flexWindow, flexStartTime, currentShift.date],
+  );
+
+  const effectiveStartTime = isFlexShift ? flexStartTime : currentShiftStartTime;
+  const effectiveEndTime = isFlexShift ? flexEndTime : currentShiftEndTime;
+
+  // Shift progress percentage (elapsed / total duration)
+  const shiftProgress = useMemo(() => {
+    if (!effectiveStartTime || !effectiveEndTime) return null;
+    const totalSeconds = effectiveEndTime.diff(effectiveStartTime, "second");
+    if (totalSeconds <= 0) return null;
+    const elapsedSeconds = today.diff(effectiveStartTime, "second");
+    const clampedElapsedSeconds = Math.min(totalSeconds, Math.max(0, elapsedSeconds));
+    const percentage = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
+    // For flex shifts the presence span is fixed (e.g. 8.5h), so show the total
+    // verbatim and give elapsed matching one-decimal precision — otherwise a
+    // fully-elapsed flex shift would read "8h / 8.5h".
+    const elapsedHours =
+      isFlexShift && flexWindow
+        ? Math.round(clampedElapsedSeconds / 360) / 10
+        : Math.floor(clampedElapsedSeconds / 3600);
+    const totalHours =
+      isFlexShift && flexWindow ? flexWindow.presenceHours : Math.round(totalSeconds / 3600);
+    return { percentage, elapsedHours, totalHours };
+  }, [effectiveStartTime, effectiveEndTime, today, isFlexShift, flexWindow]);
+
+  const flexHourLabel = (fractionalHour: number) =>
+    formatTimeByPreference(setTimeFromFractionalHour(today, fractionalHour), settings.timeFormat);
+
+  const countdown = useCountdown(nextShiftStartTime);
+  const shiftStartCountdown = useCountdown(effectiveStartTime);
+  const shiftEndCountdown = useCountdown(effectiveEndTime);
+  const hasEnded = effectiveEndTime != null && shiftEndCountdown.isExpired;
+  const formattedShiftTime = useFormattedShiftTime(currentShift.shift);
+
+  // Tooltip details for current shift badge
+  const shiftTooltipDetails = m.status_shift_tooltip({
+    emoji: currentShift.shift.emoji,
+    name: currentShift.shift.name,
+    time: formattedShiftTime,
+  });
+
+  // Single-team schedules (e.g. 9-5) have nothing meaningful to show in "Up Next" —
+  // it's the same shift every day. Drop that tile and let "Today" take the full width.
+  // Multi-team schedules can independently resolve "next shift" to the same date and
+  // shift already shown in "Today" (e.g. an off day whose only upcoming shift is later
+  // today) — drop the duplicate tile in that case too.
+  const nextShiftDuplicatesToday =
+    nextShift != null &&
+    nextShift.date.isSame(currentShift.date, "day") &&
+    nextShift.shift.code === currentShift.shift.code;
+  const showUpNext = hasTeams && !nextShiftDuplicatesToday;
+
+  // currentShift.date is the "shift day" (useLiveShiftStatus backs it up while a night
+  // shift from the prior calendar day is still running), so it can differ from the real
+  // calendar day even though the "Today" card's title is the static string "Today". When
+  // that's the case and the next shift also resolves to the real calendar day, labeling
+  // it "Today" too reads as a duplicate of the shift already ending — say "Later today"
+  // instead so the two cards don't appear to describe the same shift twice (issue #1145).
+  const nextShiftIsLaterToday =
+    nextShift != null &&
+    nextShift.date.isSame(today, "day") &&
+    !currentShift.date.isSame(today, "day");
+
+  if (compact) {
+    const isWorking = currentShift.shift.isWorking;
+    const hasStarted = effectiveStartTime != null && today.isAfter(effectiveStartTime);
+    return (
+      <div className="flex items-center gap-2 flex-wrap ">
+        {hasTeams && (
+          <span className="font-semibold ">
+            {m.personalized_status_team({ team: String(myTeam) })}
+          </span>
+        )}
+        <span>
+          <ShiftBadge shift={currentShift.shift} showEmoji showName size="sm" showTooltip={false} />
+        </span>
+        {currentShift.shift.start != null && currentShift.shift.end != null && !isFlexShift && (
+          <ShiftTimeDisplay shift={currentShift.shift} className="text-sm text-muted-foreground" />
+        )}
+        {isFlexShift && flexStartTime && flexEndTime && (
+          <span className="text-sm text-muted-foreground">
+            {formatTimeByPreference(flexStartTime, settings.timeFormat)}–
+            {formatTimeByPreference(flexEndTime, settings.timeFormat)}
+          </span>
+        )}
+        {isWorking && effectiveStartTime && !hasStarted && !shiftStartCountdown.isExpired && (
+          <span className="text-sm text-muted-foreground">
+            {m.current_status_starts_in({ time: shiftStartCountdown.formatted })}
+          </span>
+        )}
+        {isWorking && effectiveStartTime && hasStarted && !shiftEndCountdown.isExpired && (
+          <span className="text-sm text-warning">
+            {m.personalized_status_ends_in()} {shiftEndCountdown.formatted}
+          </span>
+        )}
+        {!isWorking && nextShiftStartTime && !countdown.isExpired && (
+          <span className="text-sm text-muted-foreground">
+            {m.current_status_next_in({ time: countdown.formatted })}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Grid>
+      <GridItem desktopSpan={showUpNext ? 6 : 12}>
+        <Card className="h-full">
+          <CardContent className="flex grow flex-col">
+            <CardTitle className="mb-2 text-link">
+              <Icon icon={TagIcon} className="mr-1" />
+              {m.personalized_status_today()}
+            </CardTitle>
+            <div className="grow">
+              {hasTeams && (
+                <span className="font-semibold mr-1">
+                  {m.personalized_status_team({ team: String(myTeam) })}
+                </span>
+              )}
+              <Hint
+                placement="bottom"
+                content={
+                  <div id={teamTooltipId}>
+                    <strong>{m.personalized_status_your_team_today()}</strong>
+                    <br />
+                    {m.personalized_status_code_label()}{" "}
+                    <strong>{currentShift.shift.displayCode}</strong>
+                    <br />
+                    {shiftTooltipDetails}
+                    <br />
+                    <em>{m.personalized_status_full_code({ code: currentShift.code })}</em>
+                  </div>
+                }
+              >
+                <ShiftBadge
+                  shift={currentShift.shift}
+                  showName
+                  size="lg"
+                  showTooltip={false}
+                  className="cursor-help"
+                />
+              </Hint>
+              {currentShift.shift.start != null &&
+                currentShift.shift.end != null &&
+                !isFlexShift && (
+                  <ShiftTimeDisplay
+                    shift={currentShift.shift}
+                    className="text-sm text-muted-foreground mt-1"
+                  />
+                )}
+              {isFlexShift && flexWindow && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  <Icon icon={HourglassIcon} className="mr-1" />
+                  {m.personalized_status_flex_window({
+                    earliest: flexHourLabel(flexWindow.earliestStart),
+                    latest: flexHourLabel(flexWindow.latestStart),
+                    hours: String(flexWindow.presenceHours),
+                  })}
+                </div>
+              )}
+              {isFlexShift && flexStartTime && flexEndTime && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  <Icon icon={LogInIcon} className="mr-1" />
+                  {m.personalized_status_flex_clocked({
+                    start: formatTimeByPreference(flexStartTime, settings.timeFormat),
+                    end: formatTimeByPreference(flexEndTime, settings.timeFormat),
+                  })}
+                </div>
+              )}
+              {isFlexShift && flexEndRange && (
+                <div className="mt-2">
+                  <span className="font-semibold">
+                    <Icon icon={LogOutIcon} className="mr-1" />
+                    {m.personalized_status_flex_leave_range({
+                      earliest: formatTimeByPreference(
+                        flexEndRange.earliestEnd,
+                        settings.timeFormat,
+                      ),
+                      latest: formatTimeByPreference(flexEndRange.latestEnd, settings.timeFormat),
+                    })}
+                  </span>
+                  {settings.enableTimeTracking && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {m.personalized_status_flex_leave_hint()}
+                    </div>
+                  )}
+                </div>
+              )}
+              {currentShift.shift.isWorking &&
+                effectiveStartTime &&
+                !today.isAfter(effectiveStartTime) && (
+                  <CountdownBadge countdown={shiftStartCountdown} startTime={effectiveStartTime} />
+                )}
+              {currentShift.shift.isWorking &&
+                effectiveStartTime &&
+                today.isAfter(effectiveStartTime) &&
+                !hasEnded && (
+                  <>
+                    <CountdownBadge
+                      countdown={shiftEndCountdown}
+                      startTime={effectiveEndTime}
+                      label={m.personalized_status_ends_in()}
+                      variant="warning"
+                    />
+                    {shiftProgress && (
+                      <div className="mt-2">
+                        <div className="text-sm text-muted-foreground mb-1">
+                          {m.personalized_status_shift_progress({
+                            elapsedHours: String(shiftProgress.elapsedHours),
+                            totalHours: String(shiftProgress.totalHours),
+                          })}
+                        </div>
+                        <Progress
+                          indicatorClassName="bg-warning"
+                          value={shiftProgress.percentage}
+
+                          aria-label={
+                            shiftProgress.totalHours === 1
+                              ? m.personalized_status_shift_progress_aria_one({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                              : m.personalized_status_shift_progress_aria_other({
+                                  elapsedHours: String(shiftProgress.elapsedHours),
+                                  totalHours: String(shiftProgress.totalHours),
+                                })
+                          }
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              {currentShift.shift.isWorking && hasEnded && effectiveEndTime && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {m.personalized_status_shift_ended({
+                    time: formatTimeByPreference(effectiveEndTime, settings.timeFormat),
+                  })}
+                </div>
+              )}
+              {showFlexEditor && flexWindow && (
+                <div className="mt-2">
+                  <FlexStartEditor
+                    startTime={manualStart.startTime}
+                    defaultInputTime={setTimeFromFractionalHour(
+                      currentShift.date,
+                      flexWindow.earliestStart,
+                    ).format("HH:mm")}
+                    onSet={manualStart.setStartTime}
+                    onClear={manualStart.clear}
+                  />
+                </div>
+              )}
+              {!currentShift.shift.isWorking && offDayProgress && (
+                <div className="mt-2">
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {m.personalized_status_off_day_progress({
+                      current: String(offDayProgress.current),
+                      total: String(offDayProgress.total),
+                    })}
+                  </div>
+                  <Progress
+                    indicatorClassName="bg-info"
+                    value={(offDayProgress.current / offDayProgress.total) * 100}
+
+                    aria-label={
+                      offDayProgress.total === 1
+                        ? m.personalized_status_off_day_progress_aria_one({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                        : m.personalized_status_off_day_progress_aria_other({
+                            current: String(offDayProgress.current),
+                            total: String(offDayProgress.total),
+                          })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </GridItem>
+      {showUpNext && (
+        <GridItem desktopSpan={6}>
+          <Card className="h-full">
+            <CardContent className="flex grow flex-col">
+              <CardTitle className="mb-2 text-success">
+                <Icon icon={CircleArrowRightIcon} className="mr-1" />
+                {m.personalized_status_up_next()}
+              </CardTitle>
+              <div className="text-muted-foreground grow">
+                {nextShift ? (
+                  <div>
+                    <div className="font-semibold">
+                      {nextShiftIsLaterToday
+                        ? m.personalized_status_later_today()
+                        : nextShift.date.isSame(today, "day")
+                          ? m.today()
+                          : nextShift.date.isSame(today.add(1, "day"), "day")
+                            ? m.personalized_status_tomorrow()
+                            : typeof (nextShift.date as { toDate?: () => Date }).toDate ===
+                                "function"
+                              ? weekdayDateFormatter.format(
+                                  (nextShift.date as { toDate: () => Date }).toDate(),
+                                )
+                              : nextShift.date.format("ddd, MMM D")}{" "}
+                      - {nextShift.shift.name}
+                    </div>
+                    <ShiftTimeDisplay
+                      shift={nextShift.shift}
+                      className="text-sm text-muted-foreground"
+                    />
+                    {shiftStartCountdown.isExpired && shiftEndCountdown.isExpired && (
+                      <CountdownBadge
+                        countdown={countdown}
+                        startTime={nextShiftStartTime}
+                        urgency
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={CalendarXIcon}
+                    title={m.personalized_status_no_next_title()}
+                    description={m.personalized_status_no_next_desc()}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </GridItem>
+      )}
+    </Grid>
+  );
+}

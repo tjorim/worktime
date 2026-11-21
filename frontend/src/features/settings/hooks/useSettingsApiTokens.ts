@@ -1,0 +1,142 @@
+import { useCallback, useEffect, useState } from "react";
+import * as m from "@/paraglide/messages.js";
+import { logger } from "@/lib/logger";
+import { ApiError, getErrorMessage } from "@/lib/api/apiError";
+import { accessTokenErrorMessages } from "@/lib/api/apiErrorCodes";
+import type { AccessTokenListResponse, ApiToken, CreatedApiToken } from "@/api-types";
+
+/** Matches `AccessTokenCreate.name` (`max_length=100`) in the backend schema. */
+export const API_TOKEN_NAME_MAX_LENGTH = 100;
+
+interface UseSettingsApiTokensParams {
+  isAuthenticated: boolean;
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+}
+
+export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsApiTokensParams) {
+  const [apiTokens, setApiTokens] = useState<ApiToken[] | null>(null);
+  const [isApiTokensLoading, setIsApiTokensLoading] = useState(false);
+  const [apiTokensError, setApiTokensError] = useState<string | null>(null);
+  const [isCreatingApiToken, setIsCreatingApiToken] = useState(false);
+  const [createApiTokenError, setCreateApiTokenError] = useState<string | null>(null);
+  const [createdApiToken, setCreatedApiToken] = useState<CreatedApiToken | null>(null);
+  const [revokingApiTokenId, setRevokingApiTokenId] = useState<string | null>(null);
+  const [revokeApiTokenError, setRevokeApiTokenError] = useState<string | null>(null);
+
+  const loadApiTokens = useCallback(async () => {
+    setIsApiTokensLoading(true);
+    setApiTokensError(null);
+    try {
+      const response = await fetchFn("/api/access-tokens");
+      if (!response.ok) {
+        throw await ApiError.fromResponse(response);
+      }
+      const payload = (await response.json()) as AccessTokenListResponse;
+      setApiTokens(payload.items);
+    } catch (error) {
+      logger.error("Failed to load API tokens:", error);
+      setApiTokensError(m.api_tokens_load_failed());
+    } finally {
+      setIsApiTokensLoading(false);
+    }
+  }, [fetchFn]);
+
+  // Reset the loaded tokens the moment sign-out happens, rather than in an
+  // effect: this is a same-render response to isAuthenticated flipping, not a
+  // side effect that needs to synchronize with anything external.
+  const [wasAuthenticated, setWasAuthenticated] = useState(isAuthenticated);
+  if (wasAuthenticated !== isAuthenticated) {
+    setWasAuthenticated(isAuthenticated);
+    if (!isAuthenticated) {
+      setApiTokens(null);
+      setApiTokensError(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+    void loadApiTokens();
+  }, [isAuthenticated, loadApiTokens]);
+
+  const handleCreateApiToken = async (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setCreateApiTokenError(m.api_tokens_name_required());
+      return;
+    }
+    if (trimmedName.length > API_TOKEN_NAME_MAX_LENGTH) {
+      setCreateApiTokenError(m.api_tokens_name_invalid({ max: API_TOKEN_NAME_MAX_LENGTH }));
+      return;
+    }
+
+    setIsCreatingApiToken(true);
+    setCreateApiTokenError(null);
+
+    try {
+      const response = await fetchFn("/api/access-tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: trimmedName,
+          scopes: ["pebble:read", "pebble:write"],
+        }),
+      });
+      if (!response.ok) {
+        throw await ApiError.fromResponse(response);
+      }
+      const created = (await response.json()) as CreatedApiToken;
+      setCreatedApiToken(created);
+      await loadApiTokens();
+    } catch (error) {
+      logger.error("Failed to create API token:", error);
+      // The only user-editable field is the name, so a 422 means it was rejected.
+      setCreateApiTokenError(
+        error instanceof ApiError && error.status === 422
+          ? m.api_tokens_name_invalid({ max: API_TOKEN_NAME_MAX_LENGTH })
+          : getErrorMessage(error, m.api_tokens_create_failed(), accessTokenErrorMessages),
+      );
+    } finally {
+      setIsCreatingApiToken(false);
+    }
+  };
+
+  const handleRevokeApiToken = async (tokenId: string) => {
+    setRevokingApiTokenId(tokenId);
+    setRevokeApiTokenError(null);
+
+    try {
+      const response = await fetchFn(`/api/access-tokens/${tokenId}`, { method: "DELETE" });
+      if (!response.ok && response.status !== 404) {
+        throw await ApiError.fromResponse(response);
+      }
+      setApiTokens((current) => current?.filter((token) => token.id !== tokenId) ?? current);
+      if (createdApiToken?.id === tokenId) {
+        setCreatedApiToken(null);
+      }
+    } catch (error) {
+      logger.error("Failed to revoke API token:", error);
+      setRevokeApiTokenError(
+        getErrorMessage(error, m.api_tokens_revoke_failed(), accessTokenErrorMessages),
+      );
+    } finally {
+      setRevokingApiTokenId(null);
+    }
+  };
+
+  return {
+    retryApiTokens: () => void loadApiTokens(),
+    apiTokens,
+    isApiTokensLoading,
+    apiTokensError,
+    isCreatingApiToken,
+    createApiTokenError,
+    createdApiToken,
+    dismissCreatedApiToken: () => setCreatedApiToken(null),
+    handleCreateApiToken: (name: string) => void handleCreateApiToken(name),
+    revokingApiTokenId,
+    revokeApiTokenError,
+    handleRevokeApiToken: (tokenId: string) => void handleRevokeApiToken(tokenId),
+  };
+}

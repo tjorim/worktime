@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
-import { AdminUsersTable } from "@/components/settings/admin/AdminUsersTable";
-import { SettingsAuditTrailSection } from "@/components/settings/account/SettingsAuditTrailSection";
+import { AdminUsersTable } from "@/features/settings/admin/AdminUsersTable";
+import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
 import { setLocale } from "@/paraglide/runtime.js";
 
 const params = new URLSearchParams(location.search);

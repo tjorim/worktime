@@ -1,0 +1,103 @@
+import { RotateCcwClockIcon } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  SettingsHint,
+  SettingsItem,
+  SettingsList,
+  SettingsLoading,
+  SettingsSection,
+} from "@/features/settings/SettingsParts";
+import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail";
+import * as m from "@/paraglide/messages.js";
+import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
+import {
+  getAuditActionLabel,
+  getAuditResourceLabel,
+  getAuditActorLabel,
+} from "@/features/settings/auditPresentation";
+
+interface SettingsAuditTrailSectionProps {
+  entries: AuditEntry[];
+  users?: ReadonlyArray<{ id: number; display_name: string }>;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  error: string | null;
+  hasMore: boolean;
+  teamWide?: boolean;
+  onLoadMore: () => void;
+}
+
+export function SettingsAuditTrailSection({
+  entries,
+  users = [],
+  isLoading,
+  isLoadingMore,
+  error,
+  hasMore,
+  teamWide = false,
+  onLoadMore,
+}: SettingsAuditTrailSectionProps) {
+  return (
+    <SettingsSection
+      icon={RotateCcwClockIcon}
+      title={teamWide ? m.audit_trail_admin_title() : m.audit_trail_title()}
+    >
+      <SettingsHint className="mb-2">
+        {teamWide ? m.audit_trail_admin_description() : m.audit_trail_description()}
+      </SettingsHint>
+      {isLoading ? (
+        <SettingsLoading>{m.audit_trail_loading()}</SettingsLoading>
+      ) : error && entries.length === 0 ? (
+        <Alert variant="warning">{error}</Alert>
+      ) : entries.length === 0 ? (
+        <SettingsHint>{m.audit_trail_empty()}</SettingsHint>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <SettingsList className="rounded-lg border border-border">
+            {entries.map((entry) => {
+              const hasDetails = Object.keys(entry.details).length > 0;
+              return (
+                <SettingsItem
+                  key={entry.id}
+                  className="flex flex-col items-start justify-between gap-2 px-3 py-2 first:pt-2 last:pb-2 md:flex-row md:gap-3"
+                >
+                  <div className="min-w-0 text-sm">
+                    <div className="font-medium break-words">
+                      {getAuditActionLabel(entry.action)} ·{" "}
+                      {getAuditResourceLabel(entry.resource_type)}{" "}
+                      {entry.resource_display_name || entry.resource_id}
+                    </div>
+                    <div className="text-muted-foreground">{getAuditActorLabel(entry, users)}</div>
+                    {hasDetails ? (
+                      <details className="mt-1">
+                        <summary className="min-h-6 pointer-coarse:min-h-11 cursor-pointer text-muted-foreground">
+                          {m.audit_trail_details()}
+                        </summary>
+                        <code className="text-sm break-all">{JSON.stringify(entry.details)}</code>
+                      </details>
+                    ) : null}
+                  </div>
+                  <time
+                    className="text-sm whitespace-nowrap text-muted-foreground"
+                    dateTime={entry.created_at}
+                  >
+                    {formatDisplayDateTime(entry.created_at)}
+                  </time>
+                </SettingsItem>
+              );
+            })}
+          </SettingsList>
+          {error ? <Alert variant="warning">{error}</Alert> : null}
+          {hasMore ? (
+            <div>
+              <Button variant="outline" size="sm" disabled={isLoadingMore} onClick={onLoadMore}>
+                {isLoadingMore ? m.audit_trail_loading_more() : m.audit_trail_load_more()}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </SettingsSection>
+  );
+}

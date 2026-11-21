@@ -7,7 +7,7 @@ arguments (#1472); keep it true (#1473).
 
 ## Shape
 
-`frontend/src/utils/apiError.ts`:
+`frontend/src/lib/api/apiError.ts`:
 
 - `ApiError` carries `status`, an optional stable `code`, and the `requestId`
   (`X-Request-ID`). Its `message` is English and for logs only.
@@ -52,7 +52,7 @@ hooks) translate inside the hook, so views never see an `Error`.
    keep `{ "detail": "…" }` and the client shows its status/operation message.
    Codes are permanent: never rename or reuse one.
 2. Add a message to `messages/en.json` and `nl.json`.
-3. Add it to the surface's map in `src/utils/apiErrorCodes.ts` and pass that map as
+3. Add it to the surface's map in `src/lib/api/apiErrorCodes.ts` and pass that map as
    `codeMessages`. A code the client has not learned yet falls back to the operation
    message, so adding codes on the server first is safe.
    `tests/utils/apiErrorCodes.test.ts` fails if a map lists a code the backend does not send.

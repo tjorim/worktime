@@ -1,0 +1,179 @@
+import { ChartNoAxesColumnIncreasingIcon, ListChecksIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
+import * as m from "@/paraglide/messages.js";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useToast } from "@/app/providers/ToastContext";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
+import { calculateAdjustedWeeklyTarget } from "@/lib/schedule/statisticsWorkingDays";
+import { HolidayStatusNotice } from "@/components/HolidayStatusNotice";
+import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
+import { useEventStore } from "@/app/providers/EventStoreContext";
+import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
+import { TimeTrackingDailyView } from "./TimeTrackingDailyView";
+import { TimeTrackingWeeklyView } from "./TimeTrackingWeeklyView";
+
+/**
+ * Valid time tracking view modes. Source of truth for all available views.
+ */
+const TIME_TRACKING_VIEWS = ["daily", "weekly"] as const;
+
+/**
+ * Default time tracking view mode when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_TRACKING_VIEW = TIME_TRACKING_VIEWS[0]; // "daily"
+
+interface TimeTrackingViewProps {
+  /** ID of a time-tracking entry to jump straight to the edit modal for, e.g. requested from the Gantt tab. */
+  pendingTaskEditId?: string | null;
+  onClearPendingTaskEdit?: () => void;
+}
+
+export function TimeTrackingView({
+  pendingTaskEditId,
+  onClearPendingTaskEdit,
+}: TimeTrackingViewProps = {}) {
+  const { myTeam, scheduleType } = useSettings();
+  const { lastUsed, updateLastTimeTrackingView } = useLastUsed();
+  const toast = useToast();
+  const {
+    tasks,
+    hiddenTaskCount,
+    templates,
+    labels,
+    addTask,
+    updateTaskTimes,
+    toggleBreak,
+    removeTask,
+    updateLabels,
+  } = useTimeTrackingStorage();
+
+  // Delete immediately, then offer undo. Re-adding restores the same task id
+  // via the existing store API, so sync sees a restore rather than a duplicate.
+  const handleRemoveTask = useCallback(
+    (id: string) => {
+      const removedTask = tasks.find((task) => task.id === id);
+      removeTask(id);
+      if (removedTask) {
+        toast.showUndo(m.tt_task_removed(), () => {
+          void addTask(removedTask);
+        });
+      }
+    },
+    [tasks, removeTask, addTask, toast],
+  );
+  const [viewMode, setViewMode] = useState(lastUsed.timeTrackingView ?? DEFAULT_TIME_TRACKING_VIEW);
+  const [selectedDailyDate, setSelectedDailyDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [selectedWeeklyDate, setSelectedWeeklyDate] = useState(dayjs().format("YYYY-MM-DD"));
+
+  // Skip the initial run: viewMode is already initialized from lastUsed.timeTrackingView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialTimeTrackingViewRender = useRef(true);
+  useEffect(() => {
+    if (isInitialTimeTrackingViewRender.current) {
+      isInitialTimeTrackingViewRender.current = false;
+      return;
+    }
+    updateLastTimeTrackingView(viewMode);
+  }, [updateLastTimeTrackingView, viewMode]);
+
+  const pendingEditTask = useMemo(
+    () =>
+      pendingTaskEditId ? (tasks.find((item) => item.id === pendingTaskEditId) ?? null) : null,
+    [pendingTaskEditId, tasks],
+  );
+
+  useEffect(() => {
+    if (!pendingTaskEditId) return;
+    if (!pendingEditTask) {
+      // Entry no longer exists (e.g. removed) — clear the request so it doesn't get stuck.
+      onClearPendingTaskEdit?.();
+      return;
+    }
+    setViewMode("daily");
+    setSelectedDailyDate(pendingEditTask.startTime.slice(0, 10));
+  }, [pendingTaskEditId, pendingEditTask, onClearPendingTaskEdit]);
+
+  const effectiveTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleType),
+    [myTeam, scheduleType],
+  );
+  const workingDays = useStatisticsWorkingDays(dayjs(selectedWeeklyDate).year());
+  const { entries } = useEventStore();
+  const targetForWeek = useCallback(
+    (date: string) => calculateAdjustedWeeklyTarget(date, workingDays, entries),
+    [workingDays, entries],
+  );
+  const weeklyTarget = useMemo(
+    () => (effectiveTeam != null ? targetForWeek(selectedWeeklyDate) : null),
+    [selectedWeeklyDate, effectiveTeam, targetForWeek],
+  );
+
+  return (
+    <div data-slot="time-tracking-view" className="flex flex-col gap-3 py-3">
+      {hiddenTaskCount > 0 && (
+        <Alert role="status" variant="warning">
+          {hiddenTaskCount === 1
+            ? m.tt_hidden_tasks_notice_one({ count: hiddenTaskCount })
+            : m.tt_hidden_tasks_notice_other({ count: hiddenTaskCount })}
+        </Alert>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <ChoiceToggleGroup
+          fill
+          label={m.tt_toggle_view_aria()}
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: "daily", label: m.tt_daily_log(), icon: ListChecksIcon },
+            {
+              value: "weekly",
+              label: m.tt_weekly_summary(),
+              icon: ChartNoAxesColumnIncreasingIcon,
+            },
+          ]}
+        />
+      </div>
+
+      {viewMode === "weekly" && <HolidayStatusNotice status={workingDays.holidayStatus} />}
+
+      {viewMode === "daily" && (
+        <TimeTrackingDailyView
+          tasks={tasks}
+          labels={labels}
+          templates={templates}
+          selectedDate={selectedDailyDate}
+          onSelectedDateChange={setSelectedDailyDate}
+          onAddTask={addTask}
+          onUpdateLabels={updateLabels}
+          onUpdateTaskTimes={updateTaskTimes}
+          onRemoveTask={handleRemoveTask}
+          onToggleBreak={toggleBreak}
+          externalEditRequest={pendingEditTask ? { task: pendingEditTask } : null}
+          onExternalEditRequestHandled={onClearPendingTaskEdit}
+        />
+      )}
+
+      {viewMode === "weekly" && (
+        <TimeTrackingWeeklyView
+          tasks={tasks}
+          labels={labels}
+          selectedDate={selectedWeeklyDate}
+          onSelectedDateChange={setSelectedWeeklyDate}
+          targetForWeek={effectiveTeam != null ? targetForWeek : undefined}
+          weeklyTargetHours={weeklyTarget?.weeklyHours}
+          weeklyWorkingDays={weeklyTarget?.workingDays}
+          onSwitchToDaily={(date) => {
+            setSelectedDailyDate(date);
+            setViewMode("daily");
+          }}
+        />
+      )}
+    </div>
+  );
+}

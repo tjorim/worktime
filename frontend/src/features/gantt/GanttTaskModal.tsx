@@ -1,13 +1,13 @@
-import { ganttDependencyError } from "@/utils/ganttDependencies";
-import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
+import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SearchSelect, MultiSearchSelect } from "@/components/shared/SearchSelect";
+import { SearchSelect, MultiSearchSelect } from "@/components/SearchSelect";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +16,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
-import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
+import { getLoggedMinutes, formatLoggedDuration } from "@/features/gantt/ganttLoggedTime";
 import * as m from "@/paraglide/messages.js";
 
 export type GanttTaskFormInput = Omit<RawGanttTask, "id">;

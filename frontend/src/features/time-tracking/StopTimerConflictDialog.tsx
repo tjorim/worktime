@@ -1,0 +1,120 @@
+import { taskStopTime } from "@/lib/time-tracking/timeUtils";
+import { useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import * as m from "@/paraglide/messages.js";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
+
+type StopTimerConflictDialogProps = {
+  isOpen: boolean;
+  runningTask: StoredTimeTrackingTask | null;
+  conflictingTasks: StoredTimeTrackingTask[];
+  initialStopTime: string;
+  onConfirm: (stopTime: string) => void;
+  onClose: () => void;
+};
+
+export function StopTimerConflictDialog({
+  isOpen,
+  runningTask,
+  conflictingTasks,
+  initialStopTime,
+  onConfirm,
+  onClose,
+}: StopTimerConflictDialogProps) {
+  // Captured on mount; the parent remounts this dialog with a key for each conflict.
+  const [stopTime, setStopTime] = useState(initialStopTime);
+  const startTime = runningTask ? dayjs(runningTask.startTime).format("HH:mm") : "";
+  const date = runningTask ? dayjs(runningTask.startTime).format("YYYY-MM-DD") : "";
+  const resolvedStop = taskStopTime(date, startTime, stopTime);
+  const isValid = Boolean(
+    stopTime &&
+    stopTime !== startTime &&
+    dayjs(resolvedStop).isAfter(dayjs(runningTask?.startTime)) &&
+    !dayjs(resolvedStop).isAfter(dayjs(taskStopTime(date, startTime, initialStopTime))),
+  );
+
+  const effects = isValid
+    ? conflictingTasks.map((task) => {
+        const taskStart = dayjs(task.startTime).format("HH:mm");
+        const taskStop = task.stopTime ? dayjs(task.stopTime).format("HH:mm") : "";
+        const outcome = !dayjs(resolvedStop).isAfter(dayjs(task.startTime))
+          ? "unchanged"
+          : dayjs(resolvedStop).isBefore(dayjs(task.stopTime))
+            ? "shortened"
+            : "removed";
+        return { task, taskStart, taskStop, outcome };
+      })
+    : [];
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{m.tt_stop_conflict_title()}</DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 overflow-y-auto p-4">
+          <p>{m.tt_stop_conflict_intro()}</p>
+          <Field className="mb-3">
+            <FieldLabel htmlFor="stopTimerConflictTime">{m.tt_stop_time()}</FieldLabel>
+            <Input
+              id="stopTimerConflictTime"
+              type="time"
+              value={stopTime}
+              onChange={(event) => setStopTime(event.target.value)}
+              aria-invalid={Boolean(stopTime) && !isValid}
+              aria-describedby="stopTimerConflictRange"
+            />
+            <FieldDescription id="stopTimerConflictRange">
+              {m.tt_stop_conflict_range({ start: startTime, now: initialStopTime })}
+            </FieldDescription>
+          </Field>
+
+          <div aria-live="polite">
+            {effects.map(({ task, taskStart, taskStop, outcome }) => (
+              <Alert
+                key={task.id}
+                variant={outcome === "removed" ? "warning" : "default"}
+                className="mb-2"
+              >
+                {outcome === "unchanged"
+                  ? m.tt_plan_unchanged({ task: task.text, start: taskStart, stop: taskStop })
+                  : outcome === "shortened"
+                    ? m.tt_plan_shortened({
+                        task: task.text,
+                        oldStart: taskStart,
+                        newStart: stopTime,
+                        stop: taskStop,
+                      })
+                    : m.tt_plan_removed({ task: task.text, start: taskStart, stop: taskStop })}
+              </Alert>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            {m.cancel()}
+          </Button>
+          <Button variant="destructive" disabled={!isValid} onClick={() => onConfirm(stopTime)}>
+            {m.tt_stop_adjust_plan()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

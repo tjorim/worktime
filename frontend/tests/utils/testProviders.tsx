@@ -8,7 +8,7 @@
  *
  * ## TanStack DB compatibility
  *
- * TanStack DB collections (defined in `src/db/collections.ts`) are module-level
+ * TanStack DB collections (defined in `src/lib/db/collections.ts`) are module-level
  * singletons that do not require a React provider. This wrapper is therefore
  * sufficient for component tests that consume migrated TanStack DB collections.
  * Test isolation is guaranteed by the global `beforeEach` in `tests/setup.ts`,
@@ -16,10 +16,10 @@
  */
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 
 /**
  * Create an isolated QueryClient with retries disabled so test assertions

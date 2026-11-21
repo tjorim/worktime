@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { localStorageKey } from "@/paraglide/runtime.js";
 import { expectNoAccessibilityViolations } from "./axe";
 

@@ -1,0 +1,469 @@
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clear, get, set, setMany } from "idb-keyval";
+import {
+  SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY,
+  SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX,
+  SYNC_COLLECTION_SNAPSHOT_OWNER_KEY,
+} from "@/config/storageKeys";
+import {
+  getLoadedSnapshot,
+  hydrateSyncCollections,
+  purgeSnapshotsOnOwnerChange,
+  resetHydrationForTests,
+  startPersistingSyncCollections,
+  stopPersistingSyncCollections,
+  stripVirtualProps,
+  whenHydrated,
+  type PersistableCollection,
+} from "@/lib/db/persistence";
+
+const snapshotKey = (name: string, generation = "default") =>
+  `${SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX}${generation === "default" ? "" : `${generation}_`}${name}`;
+const getItemKey = (_name: string, item: unknown) => (item as { id: string }).id;
+
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  postMessage = vi.fn();
+  close = vi.fn();
+
+  readonly name: string;
+
+  constructor(name: string) {
+    this.name = name;
+    FakeBroadcastChannel.instances.push(this);
+  }
+}
+
+/** Stand-in for a TanStack DB collection with a controllable change stream. */
+function fakeCollection<T>(items: T[] = []) {
+  let current = items;
+  const listeners = new Set<() => void>();
+  return {
+    get toArray() {
+      return current;
+    },
+    subscribeChanges(cb: () => void) {
+      listeners.add(cb);
+      return { unsubscribe: () => listeners.delete(cb) };
+    },
+    /** Test helper: change the contents and notify subscribers. */
+    setItems(next: T[]) {
+      current = next;
+      for (const cb of listeners) cb();
+    },
+  };
+}
+
+beforeEach(async () => {
+  await stopPersistingSyncCollections();
+  await clear();
+  resetHydrationForTests();
+  vi.useRealTimers();
+  FakeBroadcastChannel.instances = [];
+});
+
+afterEach(async () => {
+  await stopPersistingSyncCollections();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("snapshot storage keys", () => {
+  it("keeps the centralized key values stable", () => {
+    expect(SYNC_COLLECTION_SNAPSHOT_KEY_PREFIX).toBe("worktime_collection_snapshot_");
+    expect(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY).toBe("worktime_collection_snapshot_owner");
+    expect(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY).toBe("worktime_collection_snapshot_generation");
+  });
+});
+
+const virtualProps = {
+  $collectionId: "worktime/tasks",
+  $hasPendingWrites: true,
+  $key: "t1",
+  $origin: "local",
+  $synced: false,
+};
+
+describe("stripVirtualProps", () => {
+  it("removes the properties TanStack DB attaches and keeps the row's own", () => {
+    expect(stripVirtualProps({ id: "t1", text: "x", ...virtualProps })).toEqual({
+      id: "t1",
+      text: "x",
+    });
+  });
+
+  it("does not mutate its input and passes non-objects through", () => {
+    const row = { id: "t1", ...virtualProps };
+    stripVirtualProps(row);
+    expect(row.$synced).toBe(false);
+    expect(stripVirtualProps(null)).toBeNull();
+    expect(stripVirtualProps("x")).toBe("x");
+  });
+});
+
+describe("hydrateSyncCollections", () => {
+  it("loads a stored snapshot so the queryFn can return it", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
+  });
+
+  it("drops virtual props from snapshots stored before they were stripped", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", ...virtualProps }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
+  });
+
+  it("preserves an empty stored snapshot", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toEqual([]);
+  });
+
+  it("ignores a snapshot written by an incompatible version", async () => {
+    // Hydrating rows the current code cannot read would be worse than showing
+    // nothing and refetching.
+    await set(snapshotKey("tasks"), { version: 999, items: [{ id: "t1" }] });
+
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("reports no snapshot for a collection that has never been stored", async () => {
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("resolves whenHydrated only after the snapshots are read", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    const hydration = hydrateSyncCollections(["tasks"]);
+    // The queryFn awaits this exact promise before deciding what to return —
+    // that ordering is what stops a cold start from committing an empty
+    // collection over a full local history.
+    await whenHydrated();
+    await hydration;
+
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "t1" }]);
+  });
+});
+
+describe("startPersistingSyncCollections", () => {
+  it("writes a snapshot after a change settles", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    tasks.setItems([{ id: "t1" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    // idb-keyval resolves on its own microtask queue.
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({ version: 1, items: [{ id: "t1" }] });
+  });
+
+  it("does not persist virtual props", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<Record<string, unknown>>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    tasks.setItems([{ id: "t1", ...virtualProps }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({ version: 1, items: [{ id: "t1" }] });
+  });
+
+  it("treats a pending-write flip alone as no change to the row", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", text: "stored" }] });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection<Record<string, unknown>>([
+      { id: "t1", text: "stored", ...virtualProps },
+    ]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    // Another tab edits the row after this tab loaded it.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1", text: "other-tab" }] });
+
+    vi.useFakeTimers();
+    tasks.setItems([
+      { id: "t1", text: "stored", ...virtualProps, $hasPendingWrites: false, $synced: true },
+    ]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "t1", text: "other-tab" }],
+    });
+  });
+
+  it("coalesces a burst of changes into one write", async () => {
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    tasks.setItems([{ id: "t1" }]);
+    tasks.setItems([{ id: "t1" }, { id: "t2" }]);
+    tasks.setItems([{ id: "t1" }, { id: "t2" }, { id: "t3" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Only the settled state is stored, not each intermediate step.
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "t1" }, { id: "t2" }, { id: "t3" }],
+    });
+  });
+
+  it("merges a local addition with a snapshot written by another tab", async () => {
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "original" }] });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "original" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }],
+    });
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "original" }, { id: "this-tab" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "original" }, { id: "other-tab" }, { id: "this-tab" }],
+    });
+  });
+
+  it("applies local deletions without resurrecting rows added by another tab", async () => {
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }],
+    });
+    await hydrateSyncCollections(["tasks"]);
+    const tasks = fakeCollection([{ id: "keep" }, { id: "delete" }]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+
+    await set(snapshotKey("tasks"), {
+      version: 1,
+      items: [{ id: "keep" }, { id: "delete" }, { id: "other-tab" }],
+    });
+    vi.useFakeTimers();
+    tasks.setItems([{ id: "keep" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "keep" }, { id: "other-tab" }],
+    });
+  });
+
+  it("notifies other tabs after writing and refreshes its persisted fallback", async () => {
+    vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
+    vi.useFakeTimers();
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    const channel = FakeBroadcastChannel.instances[0];
+
+    tasks.setItems([{ id: "local" }]);
+    await vi.advanceTimersByTimeAsync(600);
+    vi.useRealTimers();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(channel!.postMessage).toHaveBeenCalledWith({
+      type: "snapshot_changed",
+      name: "tasks",
+      generation: "default",
+    });
+
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "remote" }] });
+    channel!.onmessage?.({
+      data: { type: "snapshot_changed", name: "tasks", generation: "default" },
+    } as MessageEvent<unknown>);
+    await vi.waitFor(() => expect(getLoadedSnapshot("tasks")).toEqual([{ id: "remote" }]));
+  });
+});
+
+describe("purgeSnapshotsOnOwnerChange", () => {
+  it("records the owner on first run without purging", async () => {
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-1");
+  });
+
+  it("keeps the snapshots when the same user signs in again", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(snapshotKey("tasks"))).toBeDefined();
+  });
+
+  it("keeps anonymous data when that user signs in", async () => {
+    // Data entered before signing in belongs to the person signing in, and
+    // uploading it is exactly what first sync is for. Purging here would throw
+    // away whatever someone entered while trying the app out.
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "anonymous");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+    expect(await get(snapshotKey("tasks"))).toBeDefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-1");
+  });
+
+  it("clears the in-memory snapshots too when purging", async () => {
+    // The stored keys and the in-memory map are two copies of the same
+    // records, and the pull fallback reads the in-memory one. Purging only
+    // IndexedDB would let user A's rows render in user B's session the first
+    // time a pull fails for B.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "a-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "a-task" }]);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-a");
+
+    expect(await purgeSnapshotsOnOwnerChange("user-b", ["tasks"])).toBe(true);
+
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("keeps the in-memory snapshots when there is nothing to purge", async () => {
+    // anonymous -> signed in: the data belongs to the person signing in, so it
+    // must survive for first sync to upload it.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "own-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "anonymous");
+
+    expect(await purgeSnapshotsOnOwnerChange("user-a", ["tasks"])).toBe(false);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "own-task" }]);
+  });
+
+  it("purges when a different user signs in on the same device", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    expect(await purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).toBe(true);
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("user-2");
+  });
+
+  it("purges on sign-out so a signed-out device keeps no one's records", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "t1" }] });
+
+    expect(await purgeSnapshotsOnOwnerChange(null, ["tasks"])).toBe(true);
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY)).toBe("anonymous");
+  });
+
+  it("cancels this tab's queued old-owner writes before changing owner", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    const tasks = fakeCollection<{ id: string }>([]);
+    startPersistingSyncCollections(
+      { tasks } as unknown as Record<string, PersistableCollection<never>>,
+      getItemKey,
+    );
+    tasks.setItems([{ id: "user-1-task" }]);
+
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    const generation = await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY);
+    expect(generation).toBeTypeOf("string");
+    expect(generation).not.toBe("default");
+    expect(await get(snapshotKey("tasks"))).toBeUndefined();
+    expect(await get(snapshotKey("tasks", generation))).toBeUndefined();
+  });
+
+  it("ignores a snapshot recreated by an old tab after an owner change", async () => {
+    await set(SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1");
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "user-1-task" }] });
+    await hydrateSyncCollections(["tasks"]);
+
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    const generation = await get<string>(SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY);
+    expect(generation).toBeTypeOf("string");
+
+    // A tab that has not observed the transition can only recreate its old
+    // namespace. A reload hydrates the new owner's generation instead.
+    await set(snapshotKey("tasks"), { version: 1, items: [{ id: "stale-user-1-task" }] });
+    resetHydrationForTests();
+    await hydrateSyncCollections(["tasks"]);
+
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+    expect(await get(snapshotKey("tasks"))).toEqual({
+      version: 1,
+      items: [{ id: "stale-user-1-task" }],
+    });
+    expect(await get(snapshotKey("tasks", generation))).toBeUndefined();
+  });
+
+  it("detects an owner transition already completed by another tab", async () => {
+    await setMany([
+      [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-1"],
+      [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, "generation-1"],
+    ]);
+    await set(snapshotKey("tasks", "generation-1"), {
+      version: 1,
+      items: [{ id: "user-1-task" }],
+    });
+    await hydrateSyncCollections(["tasks"]);
+    expect(getLoadedSnapshot("tasks")).toEqual([{ id: "user-1-task" }]);
+
+    // Simulate another tab atomically assigning user-2 a fresh namespace.
+    await setMany([
+      [SYNC_COLLECTION_SNAPSHOT_OWNER_KEY, "user-2"],
+      [SYNC_COLLECTION_SNAPSHOT_GENERATION_KEY, "generation-2"],
+    ]);
+
+    await expect(purgeSnapshotsOnOwnerChange("user-2", ["tasks"])).resolves.toBe(true);
+    expect(getLoadedSnapshot("tasks")).toBeNull();
+  });
+
+  it("reports no purge when storage is unavailable", async () => {
+    vi.spyOn(indexedDB, "open").mockImplementation(() => {
+      throw new Error("IndexedDB disabled");
+    });
+
+    // Private browsing or disabled storage: persistence is an enhancement, so
+    // the app must keep working from memory rather than throwing.
+    expect(await purgeSnapshotsOnOwnerChange("user-1", ["tasks"])).toBe(false);
+  });
+});

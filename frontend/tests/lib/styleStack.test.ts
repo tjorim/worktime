@@ -53,7 +53,7 @@ describe("style stack", () => {
 
   it("orders cascade layers so vendor styles sit below components and utilities", () => {
     expect(tailwind).toMatch(/@layer theme, base, vendor, components, utilities;/);
-    expect(read("src/features/calendar/calendar.css")).toContain("layer(vendor)");
+    expect(read("src/features/calendar/unified/calendar.css")).toContain("layer(vendor)");
     expect(read("src/features/gantt/gantt.css")).toContain("layer(vendor)");
   });
 
@@ -104,7 +104,7 @@ describe("style stack", () => {
     (await buildTailwind([])).walkDecls((decl) => {
       declarations.add(decl.prop);
     });
-    const calendar = read("src/features/calendar/calendar.css");
+    const calendar = read("src/features/calendar/unified/calendar.css");
     const references = [...calendar.matchAll(/var\((--[\w-]+)\)/g)].map((match) => match[1]);
     expect(references.length).toBeGreaterThan(10);
     for (const reference of references) {

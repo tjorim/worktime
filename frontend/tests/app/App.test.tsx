@@ -1,0 +1,211 @@
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import App from "@/app/App";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
+
+const { usePushSubscriptionSpy, useSyncSignalSpy } = vi.hoisted(() => ({
+  usePushSubscriptionSpy: vi.fn(() => ({
+    isSupported: true,
+    hasActiveSubscription: false,
+    subscribeToPush: vi.fn(),
+    unsubscribeFromPush: vi.fn(),
+    getActiveSubscription: vi.fn(),
+  })),
+  useSyncSignalSpy: vi.fn(),
+}));
+
+// OIDC mocks are provided globally by tests/setup.ts
+
+vi.mock("@/hooks/usePushSubscription", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/usePushSubscription")>()),
+  usePushSubscription: usePushSubscriptionSpy,
+}));
+
+vi.mock("@/app/providers/useSyncSignal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/providers/useSyncSignal")>()),
+  useSyncSignal: useSyncSignalSpy,
+}));
+
+// Mock our dayjs setup to avoid loading real dayjs configuration in tests
+vi.mock("@/lib/dates/dateTimeUtils", () => {
+  const mockDayjs = vi.fn(() => ({
+    format: vi.fn(() => "2025-01-15"),
+    startOf: vi.fn(() => mockDayjs()),
+    add: vi.fn(() => mockDayjs()),
+  }));
+  return { dayjs: mockDayjs };
+});
+
+// Mock all the child components to focus on App structure
+vi.mock("@/app/layout/Header", () => ({
+  Header: () => <div data-testid="header">Header</div>,
+}));
+
+vi.mock("@/features/status/CurrentStatus", () => ({
+  CurrentStatus: () => <div data-testid="current-status">CurrentStatus</div>,
+}));
+
+vi.mock("@/app/home/MainTabs", () => ({
+  MainTabs: () => <div data-testid="main-tabs">MainTabs</div>,
+}));
+
+vi.mock("@/features/onboarding/WelcomeWizard", () => ({
+  WelcomeWizard: () => <div data-testid="welcome-wizard">WelcomeWizard</div>,
+}));
+
+vi.mock("@/components/ErrorBoundary", () => ({
+  ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="error-boundary">{children}</div>
+  ),
+}));
+
+vi.mock("@/app/layout/AboutModal", () => ({
+  AboutModal: () => <div data-testid="about-modal">AboutModal</div>,
+}));
+
+// Mock dayjs first to avoid reference issues
+vi.mock("dayjs", () => ({
+  default: vi.fn(() => ({
+    format: () => "2025-01-15",
+    year: () => 2025,
+    month: () => 0, // January
+    date: () => 15,
+  })),
+}));
+
+// Create realistic mock data
+const createMockDate = () => dayjs("2025-01-15");
+const mockTodayShifts: ShiftResult[] = [
+  {
+    teamNumber: 1,
+    date: createMockDate(),
+    code: "2503.3M",
+    shift: {
+      code: "M",
+      displayCode: "M",
+      emoji: "🌅",
+      name: "Morning",
+      start: 7,
+      end: 15,
+      isWorking: true,
+      className: "shift-morning",
+    },
+  },
+  {
+    teamNumber: 2,
+    date: createMockDate(),
+    code: "2503.3L",
+    shift: {
+      code: "L",
+      displayCode: "L",
+      emoji: "🌆",
+      name: "Late",
+      start: 15,
+      end: 23,
+      isWorking: true,
+      className: "shift-late",
+    },
+  },
+];
+
+// Mock the shift calculation hook with realistic data
+vi.mock("@/app/hooks/useShiftCalculation", () => ({
+  useShiftCalculation: () => ({
+    myTeam: 1,
+    setMyTeam: vi.fn(),
+    currentDate: createMockDate(),
+    setCurrentDate: vi.fn(),
+    todayShifts: mockTodayShifts,
+  }),
+}));
+
+describe("App", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("mounts only the OIDC callback surface during silent renewal", () => {
+    window.history.replaceState(null, "", "/auth/silent-callback?code=test&state=test");
+
+    const { container } = render(<App />);
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("header")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("current-status")).not.toBeInTheDocument();
+    expect(usePushSubscriptionSpy).not.toHaveBeenCalled();
+    expect(useSyncSignalSpy).not.toHaveBeenCalled();
+  });
+
+  describe("Component Structure", () => {
+    it("renders all main components", async () => {
+      render(<App />);
+
+      expect(await screen.findByTestId("header")).toBeInTheDocument();
+      expect(await screen.findByTestId("current-status")).toBeInTheDocument();
+      expect(await screen.findByTestId("main-tabs")).toBeInTheDocument();
+      // Lazy: mounted once a first run shows it.
+      expect(await screen.findByTestId("welcome-wizard")).toBeInTheDocument();
+    });
+
+    it("wraps components in error boundaries", () => {
+      render(<App />);
+
+      const errorBoundaries = screen.getAllByTestId("error-boundary");
+      expect(errorBoundaries.length).toBeGreaterThan(0);
+    });
+
+    it("has proper layout structure", async () => {
+      render(<App />);
+
+      const header = await screen.findByTestId("header");
+      expect(screen.getByRole("main")).toBeInTheDocument();
+
+      // The fixed header is offset by the layout wrapper's top padding.
+      const layout = header.closest(".pt-header");
+      expect(layout).not.toBeNull();
+      expect(layout).toContainElement(screen.getByRole("main"));
+    });
+  });
+
+  describe("Toast Provider Integration", () => {
+    it("provides toast context to child components without errors", () => {
+      // Test that the app renders without errors - indicates toast context is working
+      const { container } = render(<App />);
+      expect(container).toBeInTheDocument();
+
+      // Verify all major components receive toast context successfully
+      expect(screen.getByTestId("header")).toBeInTheDocument();
+      expect(screen.getByTestId("current-status")).toBeInTheDocument();
+      expect(screen.getByTestId("main-tabs")).toBeInTheDocument();
+    });
+
+    it("renders toast container in DOM structure", () => {
+      render(<App />);
+
+      // The ToastProvider should create the necessary DOM structure
+      // Even though we can't directly test toast context value without accessing internals,
+      // successful rendering indicates the provider is working correctly
+      expect(screen.getByTestId("current-status")).toBeInTheDocument();
+    });
+  });
+
+  describe("App Architecture", () => {
+    it("separates AppContent from App wrapper", () => {
+      render(<App />);
+
+      // Both App and AppContent should render successfully
+      expect(screen.getByTestId("current-status")).toBeInTheDocument();
+    });
+
+    it("integrates with realistic shift calculation data", () => {
+      render(<App />);
+
+      // Test that app handles realistic shift data without errors
+      // Mock data includes proper ShiftResult structure with dates, codes, and shift details
+      expect(screen.getByTestId("current-status")).toBeInTheDocument();
+      expect(screen.getByTestId("main-tabs")).toBeInTheDocument();
+    });
+  });
+});

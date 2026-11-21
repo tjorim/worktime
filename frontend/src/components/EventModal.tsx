@@ -1,9 +1,9 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TriangleAlertIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
-import { getOverlappingEntries } from "@/lib/timeOff/overlap";
-import { getEntryFlagsForDisplay, getEntryTimeFlagFromDisplayFlags } from "@/lib/timeOff/codecs";
+import { Icon } from "@/components/Icon";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { getOverlappingEntries } from "@/lib/time-off/overlap";
+import { getEntryFlagsForDisplay, getEntryTimeFlagFromDisplayFlags } from "@/lib/time-off/codecs";
 import { isValidDate } from "@/lib/hday/validation";
 import {
   Dialog,
@@ -17,16 +17,16 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MAX_TIME_OFF_NOTE_LENGTH } from "@/constants/timeOff";
+import { MAX_TIME_OFF_NOTE_LENGTH } from "@/config/timeOff";
 import { Field, FieldError, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Grid, GridItem } from "@/components/ui/grid";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
-import { getEventFlagLabel } from "@/data/timeoffConstants";
+import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
-import { formatDisplayDate, getWeekdayName } from "@/utils/dateTimeUtils";
+import { formatDisplayDate, getWeekdayName } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 type FlagRadioProps = {

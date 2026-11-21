@@ -9,7 +9,7 @@ import {
   type TimeOffEntryFlag,
   type TimeOffEntryKind,
   type TimeOffEntryType,
-} from "@/lib/timeOff/types";
+} from "@/lib/time-off/types";
 
 // The camelCase time-off model is frontend-only, but its vocabularies are the backend's: an entry type,
 // flag or kind the API does not know is rejected on push, and one the frontend lacks falls out of a pull.

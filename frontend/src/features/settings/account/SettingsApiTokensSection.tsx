@@ -1,0 +1,203 @@
+import { ClipboardIcon, KeyIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsHint,
+  SettingsItem,
+  SettingsList,
+  SettingsLoading,
+  SettingsSection,
+  SettingsSecret,
+} from "@/features/settings/SettingsParts";
+import { useToast } from "@/app/providers/ToastContext";
+import type { ApiToken, CreatedApiToken } from "@/api-types";
+import { API_TOKEN_NAME_MAX_LENGTH } from "@/features/settings/hooks/useSettingsApiTokens";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
+
+interface SettingsApiTokensSectionProps {
+  apiTokens: ApiToken[] | null;
+  isApiTokensLoading: boolean;
+  onRetry?: () => void;
+  apiTokensError: string | null;
+  isCreatingApiToken: boolean;
+  createApiTokenError: string | null;
+  createdApiToken: CreatedApiToken | null;
+  onDismissCreatedApiToken: () => void;
+  onCreateApiToken: (name: string) => void;
+  revokingApiTokenId: string | null;
+  revokeApiTokenError: string | null;
+  onRevokeApiToken: (tokenId: string) => void;
+}
+
+export function SettingsApiTokensSection({
+  apiTokens,
+  isApiTokensLoading,
+  onRetry,
+  apiTokensError,
+  isCreatingApiToken,
+  createApiTokenError,
+  createdApiToken,
+  onDismissCreatedApiToken,
+  onCreateApiToken,
+  revokingApiTokenId,
+  revokeApiTokenError,
+  onRevokeApiToken,
+}: SettingsApiTokensSectionProps) {
+  const toast = useToast();
+  const [nameDraft, setNameDraft] = useState("");
+  const [tokenPendingRevoke, setTokenPendingRevoke] = useState<ApiToken | null>(null);
+
+  const handleGenerate = () => {
+    onCreateApiToken(nameDraft);
+  };
+
+  // Clear the draft the moment a token is created, as a same-render response
+  // to the prop changing rather than a follow-up effect.
+  const [prevCreatedApiToken, setPrevCreatedApiToken] = useState(createdApiToken);
+  if (createdApiToken !== prevCreatedApiToken) {
+    setPrevCreatedApiToken(createdApiToken);
+    if (createdApiToken) {
+      setNameDraft("");
+    }
+  }
+
+  const handleCopy = async () => {
+    if (!createdApiToken) return;
+    try {
+      await navigator.clipboard.writeText(createdApiToken.token);
+      toast?.showSuccess(m.api_tokens_copied());
+    } catch {
+      toast?.showError(m.api_tokens_copy_failed());
+    }
+  };
+
+  return (
+    <SettingsSection icon={KeyIcon} title={m.api_tokens_section_title()}>
+      <SettingsHint className="mb-3">{m.api_tokens_description()}</SettingsHint>
+
+      {/* Announce the result without putting the secret itself in a live region. */}
+      <div role="status" className="sr-only">
+        {createdApiToken ? m.api_tokens_created_title() : ""}
+      </div>
+      {createdApiToken ? (
+        <Alert role="note" variant="success" className="mb-3 gap-2">
+          <div className="font-medium">{m.api_tokens_created_title()}</div>
+          <div>{m.api_tokens_created_warning()}</div>
+          <div>{m.api_tokens_pebble_guidance()}</div>
+          <SettingsSecret>{createdApiToken.token}</SettingsSecret>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => void handleCopy()}>
+              <Icon icon={ClipboardIcon} />
+              {m.api_tokens_copy_btn()}
+            </Button>
+            <Button size="sm" onClick={onDismissCreatedApiToken}>
+              {m.api_tokens_done_btn()}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+
+      <Field className="mb-3">
+        <FieldLabel htmlFor="api-token-name">{m.api_tokens_name_label()}</FieldLabel>
+        <div className="flex gap-2">
+          <Input
+            id="api-token-name"
+            type="text"
+            value={nameDraft}
+            onChange={(event) => setNameDraft(event.target.value)}
+            placeholder={m.api_tokens_name_placeholder()}
+            maxLength={API_TOKEN_NAME_MAX_LENGTH}
+            aria-describedby="api-token-name-help"
+            disabled={isCreatingApiToken}
+          />
+          <Button
+            onClick={handleGenerate}
+            disabled={isCreatingApiToken || nameDraft.trim() === ""}
+            aria-describedby="api-token-name-help"
+          >
+            {isCreatingApiToken ? m.api_tokens_generating_btn() : m.api_tokens_generate_btn()}
+          </Button>
+        </div>
+        <FieldDescription id="api-token-name-help">
+          {m.api_tokens_name_help({ max: API_TOKEN_NAME_MAX_LENGTH })}
+        </FieldDescription>
+      </Field>
+
+      <div className="flex flex-col gap-2">
+        {createApiTokenError ? <Alert variant="destructive">{createApiTokenError}</Alert> : null}
+        {revokeApiTokenError ? <Alert variant="destructive">{revokeApiTokenError}</Alert> : null}
+        {apiTokensError ? (
+          <div>
+            <Alert role="note" variant="warning">
+              {apiTokensError}
+            </Alert>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {m.sync_retry_in_label()}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      {isApiTokensLoading ? (
+        <SettingsLoading>{m.loading()}</SettingsLoading>
+      ) : apiTokens && apiTokens.length > 0 ? (
+        <SettingsList>
+          {apiTokens.map((token) => (
+            <SettingsItem
+              key={token.id}
+              className="flex flex-wrap items-start justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <div className="font-medium">{token.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  •••• {token.token_preview} · {m.api_tokens_created_at_label()}{" "}
+                  {formatDisplayDate(token.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                  {token.last_used_at
+                    ? formatDisplayDate(token.last_used_at)
+                    : m.api_tokens_last_used_never()}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {m.api_tokens_scopes_label()}: {token.scopes.join(", ")}
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={revokingApiTokenId === token.id}
+                onClick={() => setTokenPendingRevoke(token)}
+              >
+                {revokingApiTokenId === token.id
+                  ? m.api_tokens_revoke_busy()
+                  : m.api_tokens_revoke_btn()}
+              </Button>
+            </SettingsItem>
+          ))}
+        </SettingsList>
+      ) : (
+        <SettingsHint>{m.api_tokens_empty()}</SettingsHint>
+      )}
+      <ConfirmationDialog
+        isOpen={tokenPendingRevoke !== null}
+        title={m.api_tokens_revoke_confirm_title()}
+        message={m.api_tokens_revoke_confirm_message({ name: tokenPendingRevoke?.name ?? "" })}
+        confirmLabel={m.api_tokens_revoke_btn()}
+        cancelLabel={m.cancel()}
+        onConfirm={() => {
+          if (tokenPendingRevoke) {
+            onRevokeApiToken(tokenPendingRevoke.id);
+          }
+          setTokenPendingRevoke(null);
+        }}
+        onCancel={() => setTokenPendingRevoke(null)}
+        variant="danger"
+        icon={KeyIcon}
+      />
+    </SettingsSection>
+  );
+}

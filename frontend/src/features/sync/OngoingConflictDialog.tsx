@@ -1,0 +1,198 @@
+import { CircleCheckIcon, CloudDownloadIcon, HardDriveIcon, TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import type { SyncPushPayload } from "@/lib/sync/syncClient";
+import * as m from "@/paraglide/messages.js";
+
+type ConflictChoice = "keep-server" | "keep-mine";
+
+interface OngoingConflictDialogProps {
+  show: boolean;
+  conflictCount: number;
+  conflictedPayload: SyncPushPayload | null;
+  onResolve: (choice: ConflictChoice) => void;
+}
+
+/**
+ * Modal dialog shown during ongoing sync when one or more records were
+ * overwritten by a newer server version (last-write-wins conflict).
+ *
+ * The user can:
+ *   - Accept the server version → conflict state is cleared, no re-push.
+ *   - Keep their own version → conflicted items are re-pushed with a fresh
+ *     `client_updated_at` timestamp so they win the next push.
+ *   - Dismiss → treated as accepting the server version (equivalent to
+ *     "Keep server version").
+ */
+export function OngoingConflictDialog({
+  show,
+  conflictCount,
+  conflictedPayload,
+  onResolve,
+}: OngoingConflictDialogProps) {
+  const bodyId = useId();
+  const [selected, setSelected] = useState<ConflictChoice | null>(null);
+
+  // Reset selection when the dialog is closed programmatically (show → false).
+  // A dialog close handler only fires on user-driven closes (backdrop/Escape),
+  // not when the parent flips show={false} directly. Handled as a same-render
+  // response rather than a follow-up effect.
+  const [prevShow, setPrevShow] = useState(show);
+  if (prevShow !== show) {
+    setPrevShow(show);
+    if (!show) {
+      setSelected(null);
+    }
+  }
+
+  const handleConfirm = () => {
+    if (!selected) return;
+    onResolve(selected);
+    setSelected(null);
+  };
+
+  // Backdrop and Escape are disabled below, so this only runs if the dialog
+  // closes the modal some other way. It deliberately does *not* resolve the
+  // conflict: dismissal used to be mapped to "keep-server", which meant a stray
+  // Escape keypress silently discarded the user's local edits for every
+  // conflicted record. Discarding data has to be something the user picked.
+  const handleHide = () => {
+    setSelected(null);
+  };
+
+  // Map each entity key to a localized display label.
+  const entityLabels: Record<string, () => string> = {
+    labels: m.ongoing_conflict_entity_labels,
+    tasks: m.ongoing_conflict_entity_tasks,
+    templates: m.ongoing_conflict_entity_templates,
+    work_locations: m.ongoing_conflict_entity_work_locations,
+    time_off_entries: m.ongoing_conflict_entity_time_off_entries,
+    gantt_tasks: m.ongoing_conflict_entity_gantt_tasks,
+  };
+  const getEntityLabel = (entity: string) =>
+    (entityLabels[entity] ?? (() => entity.replace(/_/g, " ")))();
+
+  // Compute per-entity-type conflict counts for the detail section.
+  const entityCounts = conflictedPayload
+    ? (
+        [
+          ["labels", conflictedPayload.labels.length],
+          ["tasks", conflictedPayload.tasks.length],
+          ["templates", conflictedPayload.templates.length],
+          ["work_locations", conflictedPayload.work_locations.length],
+          ["time_off_entries", conflictedPayload.time_off_entries.length],
+          ["gantt_tasks", conflictedPayload.gantt_tasks.length],
+        ] as const
+      ).filter(([, count]) => count > 0)
+    : [];
+
+  return (
+    <Dialog
+      open={show}
+      onOpenChange={(open, details) => {
+        if (!open && details.reason !== "escape-key") handleHide();
+      }}
+      disablePointerDismissal
+    >
+      <DialogContent aria-describedby={bodyId} showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>
+            <Icon icon={TriangleAlertIcon} className="text-warning me-2" />
+            {conflictCount === 1
+              ? m.ongoing_conflict_title_one({ count: String(conflictCount) })
+              : m.ongoing_conflict_title_other({ count: String(conflictCount) })}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 overflow-y-auto p-4" id={bodyId}>
+          <p className="text-muted-foreground text-sm mb-4">
+            {conflictCount === 1
+              ? m.ongoing_conflict_body_one({ count: String(conflictCount) })
+              : m.ongoing_conflict_body_other({ count: String(conflictCount) })}
+          </p>
+
+          {entityCounts.length > 0 && (
+            <ul className="text-sm text-muted-foreground mb-6 ps-4">
+              {entityCounts.map(([entity, count]) => (
+                <li key={entity}>
+                  {count} {getEntityLabel(entity)}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="grid gap-2">
+            {/* Keep server version */}
+            <button
+              type="button"
+              className={`rounded-lg border p-4 text-left focus-visible:ring-3 focus-visible:ring-ring/50 ${selected === "keep-server" ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted"}`}
+              onClick={() => setSelected("keep-server")}
+              aria-pressed={selected === "keep-server"}
+            >
+              <div className="flex items-start gap-4">
+                <Icon
+                  icon={CloudDownloadIcon}
+                  className={`text-lg shrink-0 mt-1 ${selected === "keep-server" ? "text-primary" : "text-muted-foreground"}`}
+                />
+                <div>
+                  <div className="font-semibold">{m.ongoing_conflict_keep_server()}</div>
+                  <div className="text-muted-foreground text-sm">
+                    {m.ongoing_conflict_keep_server_desc()}
+                  </div>
+                </div>
+                {selected === "keep-server" && (
+                  <Icon icon={CircleCheckIcon} className="text-primary ms-auto shrink-0 mt-1" />
+                )}
+              </div>
+            </button>
+
+            {/* Keep my version */}
+            <button
+              type="button"
+              className={`rounded-lg border p-4 text-left focus-visible:ring-3 focus-visible:ring-ring/50 ${selected === "keep-mine" ? "border-primary bg-primary/5" : "border-border bg-background hover:bg-muted"}`}
+              onClick={() => setSelected("keep-mine")}
+              aria-pressed={selected === "keep-mine"}
+            >
+              <div className="flex items-start gap-4">
+                <Icon
+                  icon={HardDriveIcon}
+                  className={`text-lg shrink-0 mt-1 ${selected === "keep-mine" ? "text-primary" : "text-muted-foreground"}`}
+                />
+                <div>
+                  <div className="font-semibold">{m.ongoing_conflict_keep_mine()}</div>
+                  <div className="text-muted-foreground text-sm">
+                    {m.ongoing_conflict_keep_mine_desc()}
+                  </div>
+                </div>
+                {selected === "keep-mine" && (
+                  <Icon icon={CircleCheckIcon} className="text-primary ms-auto shrink-0 mt-1" />
+                )}
+              </div>
+            </button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              onResolve("keep-server");
+              setSelected(null);
+            }}
+          >
+            {m.ongoing_conflict_dismiss()}
+          </Button>
+          <Button variant="default" onClick={handleConfirm} disabled={!selected}>
+            {m.ongoing_conflict_confirm()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,7 +1,7 @@
 // Extra service-worker logic for Web Push shift reminders, loaded into the
 // generated workbox service worker via `workbox.importScripts` (vite.config.ts)
 // rather than a full injectManifest rewrite, so precaching/update-toast
-// behavior (see src/components/PwaUpdateToast.tsx) is untouched.
+// behavior (see src/app/pwa/PwaUpdateToast.tsx) is untouched.
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;

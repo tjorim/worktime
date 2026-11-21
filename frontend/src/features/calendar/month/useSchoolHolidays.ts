@@ -1,0 +1,75 @@
+import { useMemo } from "react";
+import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
+import { dayjs, formatHdayDate } from "@/lib/dates/dateTimeUtils";
+import { useOpenHolidays } from "@/hooks/useOpenHolidays";
+
+import type { SchoolHoliday } from "@/api-types";
+import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
+import * as m from "@/paraglide/messages.js";
+
+const DEFAULT_LANGUAGE = "EN";
+const NATIVE_LANGUAGE = "NL"; // Dutch is the native language for Netherlands
+
+export function getSchoolHolidayName(holiday: SchoolHoliday, language: string = DEFAULT_LANGUAGE) {
+  const match = holiday.name.find((entry) => entry.language === language);
+  if (match?.text) {
+    return match.text;
+  }
+  return holiday.name[0]?.text ?? m.calendar_legend_school_holiday();
+}
+
+const toSchoolHolidayMap = (
+  holidays: SchoolHoliday[],
+  language: string,
+  nativeLanguage: string,
+) => {
+  const map = new Map<string, SchoolHolidayInfo>();
+
+  holidays.forEach((holiday) => {
+    const start = dayjs(holiday.startDate);
+    const end = dayjs(holiday.endDate);
+    const name = getSchoolHolidayName(holiday, language);
+    // Extract the local/native language name (e.g., "NL" for Netherlands = Dutch)
+    const localName = getSchoolHolidayName(holiday, nativeLanguage);
+
+    let current = start;
+    while (current.isSameOrBefore(end, "day")) {
+      map.set(formatHdayDate(current), { name, localName });
+      current = current.add(1, "day");
+    }
+  });
+
+  return map;
+};
+
+export function useSchoolHolidays(year: number, enabled: boolean = true) {
+  const isValidYear = Number.isInteger(year) && year >= 1000 && year <= 9999;
+  const isEnabled = enabled && isValidYear;
+  const params = useMemo(
+    () => ({
+      country: DEFAULT_COUNTRY,
+      year: String(year),
+    }),
+    [year],
+  );
+
+  const { holidays, loading, error } = useOpenHolidays<SchoolHoliday>({
+    endpoint: "school",
+    params,
+    enabled: isEnabled,
+    responseErrorPrefix: m.school_holidays_fetch_failed(),
+    timeoutError: m.school_holidays_timeout(),
+    networkError: m.school_holidays_network(),
+    unknownError: m.school_holidays_fetch_failed(),
+  });
+
+  const schoolHolidayMap = useMemo(
+    () =>
+      isEnabled
+        ? toSchoolHolidayMap(holidays, DEFAULT_LANGUAGE, NATIVE_LANGUAGE)
+        : new Map<string, SchoolHolidayInfo>(),
+    [holidays, isEnabled],
+  );
+
+  return { schoolHolidayMap, loading, error };
+}

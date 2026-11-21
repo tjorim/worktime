@@ -1,0 +1,281 @@
+import {
+  CircleCheckIcon,
+  CircleXIcon,
+  InfoIcon,
+  type LucideIcon,
+  TrashIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button } from "@/components/ui/button";
+import { XIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+import * as m from "@/paraglide/messages.js";
+
+/** Default autohide delay for info/success/warning toasts (ms). */
+const DEFAULT_TOAST_DELAY = 4000;
+/** Longer autohide delay for error toasts so failures aren't missed (ms). */
+const ERROR_TOAST_DELAY = 10000;
+/** Undo toasts stay a little longer so the action is reachable (ms). */
+const UNDO_TOAST_DELAY = 7000;
+
+/** Optional action button rendered inside a toast (e.g. "Undo"). */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  variant?: "success" | "danger" | "warning" | "info";
+  icon?: LucideIcon;
+  delay?: number;
+  autohide?: boolean;
+  action?: ToastAction;
+}
+
+interface ToastContextType {
+  /** Add a toast and return its generated id. */
+  addToast: (message: Omit<ToastMessage, "id">) => string;
+  removeToast: (id: string) => void;
+  showSuccess: (message: string, icon?: LucideIcon) => void;
+  /** Show an error toast and return its id so callers can dismiss it later. */
+  showError: (message: string, icon?: LucideIcon) => string;
+  showWarning: (message: string, icon?: LucideIcon) => void;
+  showInfo: (message: string, icon?: LucideIcon) => void;
+  /**
+   * Show a toast with an "Undo" action for a recently performed destructive
+   * action. Invoking undo runs `onUndo` and dismisses the toast.
+   */
+  showUndo: (message: string, onUndo: () => void, icon?: LucideIcon) => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+/**
+ * Hook to access toast notification context
+ * Must be used within a ToastProvider
+ *
+ * @returns The ToastContextType with toast notification methods
+ * @throws {Error} If used outside of a ToastProvider
+ */
+export const useToast = () => {
+  const context = useContext(ToastContext);
+  if (context === undefined) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return context;
+};
+
+interface ToastProviderProps {
+  children: React.ReactNode;
+}
+
+interface ToastItemProps {
+  toast: ToastMessage;
+  onClose: (id: string) => void;
+}
+
+/**
+ * Renders a single toast and manages its autohide countdown.
+ *
+ * The timer can pause while the toast is hovered or focused —
+ * giving the user time to reach an action button such as "Undo".
+ */
+function ToastItem({ toast, onClose }: ToastItemProps) {
+  const isError = toast.variant === "danger";
+
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const paused = hovered || focused;
+  const remainingRef = useRef(toast.delay ?? DEFAULT_TOAST_DELAY);
+  const startedAtRef = useRef<number | null>(null);
+  // Keep the latest onClose without re-arming the timer when it changes.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (toast.autohide === false || paused || remainingRef.current <= 0) {
+      return;
+    }
+    startedAtRef.current = Date.now();
+    const timerId = window.setTimeout(() => {
+      onCloseRef.current(toast.id);
+    }, remainingRef.current);
+    return () => {
+      window.clearTimeout(timerId);
+      // Subtract elapsed time so pausing resumes where it left off.
+      if (startedAtRef.current != null) {
+        remainingRef.current = Math.max(
+          0,
+          remainingRef.current - (Date.now() - startedAtRef.current),
+        );
+      }
+    };
+  }, [paused, toast.autohide, toast.id]);
+
+  return (
+    <div
+      data-slot="toast"
+      className={cn(
+        "pointer-events-auto flex w-full items-center gap-2 rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg",
+        isError && "border-destructive",
+        toast.variant === "warning" && "border-warning",
+        toast.variant === "success" && "border-success",
+      )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+      aria-atomic="true"
+    >
+      {toast.icon && <Icon icon={toast.icon} />}
+      <span className="min-w-0 grow text-sm">{toast.message}</span>
+      {toast.action && (
+        <Button size="sm" variant="outline" onClick={toast.action.onClick}>
+          {toast.action.label}
+        </Button>
+      )}
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        onClick={() => onClose(toast.id)}
+        aria-label={m.toast_close_aria()}
+      >
+        <Icon icon={XIcon} />
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Provides a toast notification context and renders a toast viewport that displays active toasts.
+ *
+ * The provider supplies context methods to add and remove toasts and to show success, error,
+ * warning and info messages with optional icons.
+ *
+ * @param children - React nodes to render inside the provider
+ * @returns The provider element which renders its children and the toast container
+ */
+export function ToastProvider({ children }: ToastProviderProps) {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((toast: Omit<ToastMessage, "id">) => {
+    const id = crypto.randomUUID();
+    const newToast: ToastMessage = {
+      id,
+      delay: DEFAULT_TOAST_DELAY,
+      autohide: true,
+      variant: "info",
+      ...toast,
+    };
+    setToasts((prevToasts) => [...prevToasts, newToast]);
+    return id;
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+  }, []);
+
+  const showSuccess = useCallback(
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "success", icon: icon ?? CircleCheckIcon });
+    },
+    [addToast],
+  );
+
+  const showError = useCallback(
+    (message: string, icon?: LucideIcon) => {
+      return addToast({
+        message,
+        variant: "danger",
+        icon: icon ?? CircleXIcon,
+        delay: ERROR_TOAST_DELAY,
+      });
+    },
+    [addToast],
+  );
+
+  const showWarning = useCallback(
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "warning", icon: icon ?? TriangleAlertIcon });
+    },
+    [addToast],
+  );
+
+  const showInfo = useCallback(
+    (message: string, icon?: LucideIcon) => {
+      addToast({ message, variant: "info", icon: icon ?? InfoIcon });
+    },
+    [addToast],
+  );
+
+  const showUndo = useCallback(
+    (message: string, onUndo: () => void, icon?: LucideIcon) => {
+      let clicked = false;
+      const id = addToast({
+        message,
+        variant: "info",
+        icon: icon ?? TrashIcon,
+        delay: UNDO_TOAST_DELAY,
+        action: {
+          label: m.toast_undo(),
+          onClick: () => {
+            if (clicked) return;
+            clicked = true;
+            try {
+              onUndo();
+            } finally {
+              removeToast(id);
+            }
+          },
+        },
+      });
+    },
+    [addToast, removeToast],
+  );
+
+  const contextValue = useMemo<ToastContextType>(
+    () => ({
+      addToast,
+      removeToast,
+      showSuccess,
+      showError,
+      showWarning,
+      showInfo,
+      showUndo,
+    }),
+    [addToast, removeToast, showSuccess, showError, showWarning, showInfo, showUndo],
+  );
+
+  return (
+    <ToastContext.Provider value={contextValue}>
+      {children}
+      <div
+        data-slot="toast-viewport"
+        className="pointer-events-none fixed top-0 right-0 z-feedback flex w-full max-w-sm flex-col gap-2 p-3"
+      >
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onClose={removeToast} />
+        ))}
+      </div>
+    </ToastContext.Provider>
+  );
+}

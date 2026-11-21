@@ -14,7 +14,7 @@ official phone-side `@moddable/pebbleproxy` package. So:
 - **`src/pkjs/index.js`** — runs on the phone, inside the Pebble mobile app.
   Hosts the Alloy network proxy and relays runtime configuration to the
   watch via AppMessage.
-- **`frontend/src/pages/PebblePairPage.tsx`** — the authenticated
+- **`frontend/src/features/pebble/PebblePairPage.tsx`** — the authenticated
   configuration webview opened via `Pebble.openURL()` when the user taps the
   app's settings in the Pebble mobile app. It rotates a dedicated Pebble
   credential and returns it to `pkjs` through `pebblejs://close#<data>`.

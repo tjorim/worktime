@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useApiClient } from "@/hooks/useApiClient";
-import { readErrorDetail } from "@/utils/apiClient";
+import { readErrorDetail } from "@/lib/api/apiClient";
 import {
   getPushRegistrationGeneration,
   invalidatePushRegistration,
   isPushSupported,
   urlBase64ToUint8Array,
-} from "@/utils/pushNotifications";
-import { logger } from "@/utils/logger";
+} from "@/lib/push/pushNotifications";
+import { logger } from "@/lib/logger";
 import type { VapidPublicKeyResponse } from "@/api-types";
 
 export interface UsePushSubscriptionReturn {

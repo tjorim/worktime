@@ -1,17 +1,17 @@
-import { OtherLocationModal } from "@/components/calendar/OtherLocationModal";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { OtherLocationModal } from "@/components/OtherLocationModal";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { toCountryCode } from "@/types/workLocation";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import "@/styles/tailwind.css";
-import { TemplateModal } from "@/features/timeTracking/TemplateModal";
-import { TaskEditModal } from "@/components/shared/TaskEditModal";
+import { TemplateModal } from "@/features/settings/time-tracking/TemplateModal";
+import { TaskEditModal } from "@/components/TaskEditModal";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
-import { WelcomeWizard } from "@/components/WelcomeWizard";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { WelcomeWizard } from "@/features/onboarding/WelcomeWizard";
+import { AuthProvider } from "@/app/providers/AuthContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { GanttTaskModal } from "@/features/gantt/GanttTaskModal";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 

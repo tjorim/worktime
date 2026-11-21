@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "@/app/App";
 import "./styles/tailwind.css";
 import { getLocale } from "./paraglide/runtime.js";
-import { logger } from "@/utils/logger";
-import { initSyncCollectionPersistence, tasksCollection } from "@/db/collections";
+import { logger } from "@/lib/logger";
+import { initSyncCollectionPersistence, tasksCollection } from "@/lib/db/collections";
 
 // Set the HTML lang attribute based on the current locale
 document.documentElement.lang = getLocale();

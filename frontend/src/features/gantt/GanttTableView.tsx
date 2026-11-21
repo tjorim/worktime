@@ -1,34 +1,34 @@
-import { ganttDependencyError } from "@/utils/ganttDependencies";
-import { ganttDependencyErrorMessages } from "@/utils/apiErrorCodes";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
+import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TableSearchInput } from "@/components/shared/TableSearchInput";
+import { TableSearchInput } from "@/components/TableSearchInput";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import type { SortingState } from "@tanstack/react-table";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { SortableHeaderCell } from "@/components/shared/SortableHeaderCell";
-import { TablePagination } from "@/components/shared/TablePagination";
+import { SortableHeaderCell } from "@/components/SortableHeaderCell";
+import { TablePagination } from "@/components/TablePagination";
 import {
   createDataColumnHelper,
   DATA_TABLE_DEFAULT_PAGE_SIZE,
   useDataTable,
 } from "@/hooks/useDataTable";
-import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
-import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
+import { getGanttDeleteConfirmMessage } from "@/features/gantt/ganttDeleteConfirm";
+import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/features/gantt/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import {
   buildLabelColorMap,
   buildLabelNameMap,
   getContrastingTextColor,
   getDefaultLabelColor,
-} from "@/lib/timeTracking/constants";
+} from "@/lib/time-tracking/constants";
 import type { GanttTask } from "@/types/gantt";
 import * as m from "@/paraglide/messages.js";
-import { formatDisplayDate as formatDate } from "@/utils/dateTimeUtils";
+import { formatDisplayDate as formatDate } from "@/lib/dates/dateTimeUtils";
 
 interface GanttTableViewProps {
   tasks: GanttTask[];

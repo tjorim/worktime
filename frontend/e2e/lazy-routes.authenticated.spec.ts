@@ -4,7 +4,7 @@ import { mockHolidays } from "./mockHolidays";
 
 /**
  * Settings is a code-split route (#1513). These run against the dev server, where
- * the route's module is served from /src/pages/SettingsPage.tsx; the production
+ * the route's module is served from /src/features/settings/SettingsPage.tsx; the production
  * chunk, service worker and offline behaviour are covered by pwa-offline.pwa.spec.ts.
  */
 // The header ("Back to app") and a `main` landmark also render around the route error page,
@@ -44,7 +44,7 @@ test.describe("lazy settings route", () => {
   });
 
   test("a chunk that fails to load shows recovery and Reload Page loads it", async ({ page }) => {
-    const chunk = "**/src/pages/SettingsPage.tsx*";
+    const chunk = "**/src/features/settings/SettingsPage.tsx*";
     await page.route(chunk, (route) => route.abort());
     await page.goto("/settings");
     await expect(

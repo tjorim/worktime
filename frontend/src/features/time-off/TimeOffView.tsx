@@ -1,0 +1,1092 @@
+import {
+  ChartNoAxesColumnIncreasingIcon,
+  CircleCheckIcon,
+  CloudDownloadIcon,
+  CloudUploadIcon,
+  FileLockIcon,
+  FileXIcon,
+  PencilIcon,
+  PlugIcon,
+  TableIcon,
+  TriangleAlertIcon,
+  UploadIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/IconButton";
+import { normalizeEventFlags } from "@/lib/hday/flags";
+import { buildPreviewLine } from "@/lib/hday/serializer";
+import {
+  timeOffEntriesToHday,
+  buildTimeOffEntryForRange,
+  createWeeklyTimeOffEntry,
+  getEntryTimeFlagFromDisplayFlags,
+  getEntryTypeFromDisplayFlags,
+} from "@/lib/time-off/codecs";
+import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/features/time-off/importPreview";
+import { useEventStore } from "@/app/providers/EventStoreContext";
+import { useHdayHelper } from "@/app/providers/HdayHelperContext";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useToast } from "@/app/providers/ToastContext";
+import { useDevicePreferences } from "@/hooks/useDevicePreferences";
+import { useEventForm } from "@/hooks/useEventForm";
+import {
+  createHdayHelperChangeTransport,
+  useHdayHelperChangeSignal,
+} from "@/features/time-off/useHdayHelperChangeSignal";
+import { useTimeOffKeyboardShortcuts } from "@/features/time-off/useTimeOffKeyboardShortcuts";
+import { EventModal } from "@/components/EventModal";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { TeamScheduleView } from "./TeamScheduleView";
+import {
+  buildEventFormState,
+  isEventFormDirty,
+  serializeEventFormState,
+  serializeEventFormStateFromEntry,
+} from "@/lib/events/eventFormState";
+import { TimeOffStatsView } from "./TimeOffStatsView";
+import { TimeOffTableView } from "./TimeOffTableView";
+import {
+  getTypeFlagOptions,
+  getTimeLocationFlagOptions,
+  TYPE_FLAGS_AS_EVENT_FLAGS,
+  TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
+  getViewModeHelpText,
+  TIMEOFF_VIEWS,
+  DEFAULT_WEEKDAY,
+} from "@/lib/time-off/timeoffConstants";
+import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
+import * as m from "@/paraglide/messages.js";
+import { logger } from "@/lib/logger";
+import { ApiError, describeError } from "@/lib/api/apiError";
+import { resolveHdayHelperBaseUrl } from "@/lib/hday-helper/hdayHelper";
+
+/**
+ * Render the Time Off Management UI that lists time-off events and provides add, edit, import, export and delete flows.
+ *
+ * The component manages form state and validation, displays a responsive table of events, and shows modal dialogs for event editing and deletion confirmation. It uses the EventStore and Toast contexts for persistence and user feedback.
+ *
+ * Accessibility Features:
+ * - Semantic table structure with proper thead/tbody for screen readers
+ * - ARIA labels on icon-only buttons (Edit/Delete) for screen reader announcements
+ * - aria-hidden on decorative icons to prevent redundant announcements
+ * - Proper form labels and ARIA attributes in EventModal (aria-required, aria-describedby)
+ * - Keyboard navigation supported via standard HTML elements (buttons, inputs, table)
+ * - Color contrast: Event badges use #000 text on colored backgrounds for readability
+ * - Dialogs use Base UI's built-in accessibility features (focus trap, Escape key)
+ * - Empty state provides helpful context for new users
+ * - Import/Export buttons clearly labeled with icons and text
+ * - Responsive table layout adapts to smaller screens
+ *
+ * @returns The Time Off Management React element.
+ */
+interface TimeOffViewProps {
+  isActive?: boolean;
+  addEventRequest?: number;
+}
+
+/**
+ * Default view mode for Time Off tab when no preference is stored or when stored value is invalid.
+ */
+const DEFAULT_TIME_OFF_VIEW = TIMEOFF_VIEWS[0]; // "table"
+
+// Type guard to validate viewMode against TIMEOFF_VIEWS
+const isValidTimeOffView = (value: unknown): value is (typeof TIMEOFF_VIEWS)[number] => {
+  return typeof value === "string" && TIMEOFF_VIEWS.includes(value as any);
+};
+
+/** How long to wait after the last local edit before auto-pushing to the .hday helper. */
+const AUTO_PUSH_DEBOUNCE_MS = 3000;
+
+export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffViewProps) {
+  const { options: hdayHelperOptions, helperConnectionStatus } = useHdayHelper();
+  const helpText = getViewModeHelpText();
+  const {
+    rawText,
+    entries,
+    addEntries,
+    updateEntry,
+    deleteEntry,
+    deleteEntries,
+    importHday,
+    applyImportedEntries,
+  } = useEventStore();
+  const { lastUsed, updateLastTimeOffView } = useLastUsed();
+  const { settings } = useSettings();
+  const { preferences: devicePreferences, setPreferences: setDevicePreferences } =
+    useDevicePreferences();
+  const toast = useToast();
+  const hdayUsername = settings.hdayUsername?.trim() || null;
+  const helperBaseUrl = resolveHdayHelperBaseUrl(hdayHelperOptions.hdayHelperUrl);
+  const canUseHdayHelperSync =
+    helperConnectionStatus === "connected" && !!helperBaseUrl && !!hdayUsername;
+  const [isPullingFromHelper, setIsPullingFromHelper] = useState(false);
+  const [isPushingToHelper, setIsPushingToHelper] = useState(false);
+  // The etag is scoped to the username it was fetched for, so a username
+  // change doesn't let a push mistake an unrelated file's etag for this one.
+  const lastKnownHdayEtag =
+    hdayUsername && devicePreferences?.hdayEtag?.username === hdayUsername
+      ? devicePreferences.hdayEtag.etag
+      : null;
+  // Read by handlePushToHelper at actual send time rather than closed over,
+  // so a push queued while an earlier one is in flight (see
+  // isPushInFlightRef below) retries with whatever is current when it
+  // finally runs, not a stale snapshot from when it was first scheduled.
+  const rawTextRef = useRef(rawText);
+  const lastKnownHdayEtagRef = useRef(lastKnownHdayEtag);
+  // The helper/username a pull or push is talking to, read at the point a
+  // response arrives (and, for a retried push, at the point it's about to
+  // fire) to detect that the user switched targets mid-flight. Without this,
+  // a slow response for a since-abandoned username could import into the
+  // current view, or a queued retry could write the latest content to the
+  // wrong file.
+  const hdayTargetRef = useRef({ helperBaseUrl, hdayUsername });
+  // A layout effect (not a passive one) so this commits synchronously right
+  // after render — before any pending fetch response's .then() can run — so
+  // an in-flight request can never read a target/etag that is one render
+  // stale and mistake an abandoned target for the current one.
+  useLayoutEffect(() => {
+    rawTextRef.current = rawText;
+    lastKnownHdayEtagRef.current = lastKnownHdayEtag;
+    hdayTargetRef.current = { helperBaseUrl, hdayUsername };
+  }, [rawText, lastKnownHdayEtag, helperBaseUrl, hdayUsername]);
+  const rememberHdayEtag = useCallback(
+    (username: string, etag: string | null) => {
+      // Update the ref immediately rather than waiting for the state update
+      // below to flow through a re-render: a queued push retried from
+      // handlePushToHelper's own finally block runs synchronously, before
+      // React has re-rendered, and must see the etag this call just learned.
+      lastKnownHdayEtagRef.current = etag;
+      setDevicePreferences((current) => ({ ...current, hdayEtag: { username, etag } }));
+    },
+    [setDevicePreferences],
+  );
+
+  // Notify-then-pull for the helper side: a change-stream signal only ever
+  // surfaces a "pull now?" prompt, never an automatic import — silently
+  // replacing in-progress local edits would defeat the point of Pull being
+  // explicit. An echo of this device's own push (the new etag matching what
+  // we just remembered) is filtered out rather than re-prompting the user.
+  const hdayChangeEventsUrl =
+    canUseHdayHelperSync && helperBaseUrl && hdayUsername
+      ? `${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}/events`
+      : null;
+  const hdayChangeTransport = useMemo(
+    () => (hdayChangeEventsUrl ? createHdayHelperChangeTransport(hdayChangeEventsUrl) : null),
+    [hdayChangeEventsUrl],
+  );
+  const [hdayChangedRemotely, setHdayChangedRemotely] = useState(false);
+  useHdayHelperChangeSignal(
+    hdayChangeTransport,
+    // Reads the ref rather than closing over lastKnownHdayEtag: an SSE echo
+    // of this device's own write can arrive after rememberHdayEtag() updates
+    // the ref but before the state update behind it has re-rendered this
+    // component, and comparing against the stale render value would show a
+    // false "changed remotely" prompt for a push we just made ourselves.
+    useCallback((etag: string | null) => {
+      if (etag === lastKnownHdayEtagRef.current) return;
+      setHdayChangedRemotely(true);
+    }, []),
+  );
+  // A stale prompt for a helper/username combination that's no longer active
+  // would be confusing; drop it whenever either changes, as a same-render
+  // response rather than a follow-up effect.
+  const [prevHdayChangeEventsUrl, setPrevHdayChangeEventsUrl] = useState(hdayChangeEventsUrl);
+  if (prevHdayChangeEventsUrl !== hdayChangeEventsUrl) {
+    setPrevHdayChangeEventsUrl(hdayChangeEventsUrl);
+    setHdayChangedRemotely(false);
+  }
+
+  const [viewMode, setViewMode] = useState(
+    isValidTimeOffView(lastUsed.timeOffView) ? lastUsed.timeOffView : DEFAULT_TIME_OFF_VIEW,
+  );
+  const previousHelperStatusRef = useRef(helperConnectionStatus);
+  const hasCompletedInitialHelperProbeRef = useRef(!hdayHelperOptions.hdayHelperUrl);
+
+  // Do not leave a previously loaded Team schedule visible after the local
+  // helper becomes unhealthy. The Team button is health-gated, so its view
+  // must follow the same rule.
+  useEffect(() => {
+    const wasConnected = previousHelperStatusRef.current === "connected";
+    previousHelperStatusRef.current = helperConnectionStatus;
+    const initialProbeFailed =
+      !hasCompletedInitialHelperProbeRef.current && helperConnectionStatus === "error";
+    if (helperConnectionStatus === "connected" || helperConnectionStatus === "error") {
+      hasCompletedInitialHelperProbeRef.current = true;
+    }
+    const helperLossConfirmed = wasConnected && helperConnectionStatus !== "connected";
+    if (
+      viewMode === "team" &&
+      (!hdayHelperOptions.hdayHelperUrl || initialProbeFailed || helperLossConfirmed)
+    ) {
+      setViewMode(DEFAULT_TIME_OFF_VIEW);
+      if (wasConnected) {
+        toast.showWarning(m.team_helper_unavailable_toast(), PlugIcon);
+      }
+    }
+  }, [hdayHelperOptions.hdayHelperUrl, helperConnectionStatus, toast, viewMode]);
+
+  // Skip the initial run: viewMode is already initialized from lastUsed.timeOffView,
+  // so persisting it back on mount would be a no-op write that still bumps the shared
+  // preferences blob's _updatedAt — making local state look newer than it really is
+  // and winning last-write-wins reconciliation against genuinely newer server data.
+  const isInitialTimeOffViewRender = useRef(true);
+  useEffect(() => {
+    if (isInitialTimeOffViewRender.current) {
+      isInitialTimeOffViewRender.current = false;
+      return;
+    }
+    if (hasCompletedInitialHelperProbeRef.current && isValidTimeOffView(viewMode)) {
+      updateLastTimeOffView(viewMode);
+    }
+  }, [updateLastTimeOffView, viewMode]);
+
+  // Use custom hook for event form state management
+  const {
+    eventType,
+    eventWeekday,
+    eventStart,
+    eventEnd,
+    eventTitle,
+    eventFlags,
+    startDateError,
+    endDateError,
+    setEventType,
+    setEventWeekday,
+    setEventStart,
+    setEventEnd,
+    setEventTitle,
+    resetForm,
+    validateForm,
+    prefillFormFromEntry,
+    handleTypeFlagChange,
+    handleTimeFlagChange,
+  } = useEventForm();
+
+  // Modal state
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [initialFormState, setInitialFormState] = useState("");
+
+  // Raw .hday adapter state for the explicit import/export panel.
+  // The canonical runtime data remains `entries`; this text is just the editable codec surface.
+  const [rawEditorText, setRawEditorText] = useState(rawText);
+  const [isRawEditorDirty, setIsRawEditorDirty] = useState(false);
+  const [rawEditorError, setRawEditorError] = useState<string | undefined>(undefined);
+  const [rawEditorSkippedLines, setRawEditorSkippedLines] = useState<string[]>([]);
+  const rawEditorTextRef = useRef(rawText);
+
+  // Update ref whenever rawEditorText changes
+  useEffect(() => {
+    rawEditorTextRef.current = rawEditorText;
+  }, [rawEditorText]);
+
+  // Bulk delete keeps a confirmation dialog (higher stakes); single deletes are
+  // immediate with an undo toast.
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Refs
+  const formRef = useRef<HTMLDivElement>(null);
+  // Tracks the form validation toast so it never lingers beside a later success toast.
+  const validationToastIdRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Pull/push concurrency guard, shared by both: a pull racing a push (or
+  // vice versa) could apply a stale GET after a newer PUT completes, or send
+  // a PUT with an etag the other request is about to invalidate. Only one
+  // runs at a time; an overlapping push is queued instead of firing a second
+  // request, and retried with whatever is current once the in-flight
+  // operation finishes successfully (via rawTextRef/lastKnownHdayEtagRef
+  // above). An overlapping pull is simply declined — it's always
+  // user-initiated, so the user can just press it again once free.
+  const isHdaySyncInFlightRef = useRef(false);
+  const hdayPushQueuedRef = useRef(false);
+
+  const isFormDirty = isEventFormDirty(
+    buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+    initialFormState,
+  );
+
+  const handleOpenAddModal = useCallback(() => {
+    resetForm();
+    setInitialFormState(
+      serializeEventFormState({
+        type: "range",
+        weekday: DEFAULT_WEEKDAY,
+        start: "",
+        end: "",
+        title: "",
+        flags: [],
+      }),
+    );
+    setEditEntryId(null);
+    setModalMode("add");
+    setShowEventModal(true);
+  }, [resetForm]);
+  const handledAddEventRequest = useRef(0);
+
+  useEffect(() => {
+    if (addEventRequest === 0 || addEventRequest === handledAddEventRequest.current) return;
+    handledAddEventRequest.current = addEventRequest;
+    handleOpenAddModal();
+  }, [addEventRequest, handleOpenAddModal]);
+
+  const loadEntryIntoForm = useCallback(
+    (entryId: string, mode: "view" | "edit") => {
+      const entry = entries.find((currentEntry) => currentEntry.id === entryId);
+      if (!entry) return;
+      prefillFormFromEntry(entry);
+      setInitialFormState(serializeEventFormStateFromEntry(entry, DEFAULT_WEEKDAY));
+      setModalMode(mode);
+    },
+    [entries, prefillFormFromEntry],
+  );
+
+  const handleOpenEditModal = (entryId: string) => {
+    setEditEntryId(entryId);
+    loadEntryIntoForm(entryId, "edit");
+    setShowEventModal(true);
+  };
+
+  const handleSwitchToEdit = () => {
+    setInitialFormState(
+      serializeEventFormState(
+        buildEventFormState(eventType, eventWeekday, eventStart, eventEnd, eventTitle, eventFlags),
+      ),
+    );
+    setModalMode("edit");
+  };
+
+  const handleCancelEditMode = useCallback(() => {
+    if (!editEntryId) {
+      return;
+    }
+    loadEntryIntoForm(editEntryId, "view");
+  }, [editEntryId, loadEntryIntoForm]);
+
+  const handleResetForm = () => {
+    if (isFormDirty) {
+      setShowResetConfirm(true);
+      return;
+    }
+    resetForm();
+  };
+
+  const handleConfirmResetForm = () => {
+    resetForm();
+    setShowResetConfirm(false);
+  };
+
+  const handleSubmitEvent = () => {
+    if (validationToastIdRef.current) toast.removeToast(validationToastIdRef.current);
+    validationToastIdRef.current = null;
+    if (!validateForm()) {
+      validationToastIdRef.current = toast.showError(m.timeoff_fix_validation());
+      return;
+    }
+
+    const normalizedFlags = normalizeEventFlags(eventFlags);
+
+    const nextEntry =
+      eventType === "weekly"
+        ? createWeeklyTimeOffEntry({
+            weekday: eventWeekday,
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
+          })
+        : buildTimeOffEntryForRange({
+            start: eventStart.replace(/\//g, "-"),
+            end: (eventEnd || eventStart).replace(/\//g, "-"),
+            note: eventTitle,
+            entryType: getEntryTypeFromDisplayFlags(normalizedFlags),
+            entryFlag: getEntryTimeFlagFromDisplayFlags(normalizedFlags),
+          });
+
+    if (editEntryId) {
+      updateEntry(editEntryId, nextEntry);
+      toast.showSuccess(m.timeoff_event_updated(), PencilIcon);
+    } else {
+      addEntries([nextEntry]);
+      toast.showSuccess(m.timeoff_event_added());
+    }
+
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+    resetForm();
+  };
+
+  const handleDeleteClick = (entryId: string) => {
+    const entry = entries.find((currentEntry) => currentEntry.id === entryId);
+    if (!entry) return;
+    // Act immediately, then offer an undo — re-adding restores the same entry id
+    // via the existing store API, so no duplicate or conflicting entry is created.
+    deleteEntry(entryId);
+    setSelectedIds(new Set());
+    toast.showUndo(m.timeoff_event_deleted(), () => addEntries([entry]));
+  };
+
+  const handleToggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSetSelection = (ids: string[], selected: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (selected) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    if (selectedIds.size > 0) {
+      // Capture the entries before deleting so undo can restore them exactly.
+      const removedEntries = entries.filter((entry) => selectedIds.has(entry.id));
+      deleteEntries(Array.from(selectedIds));
+      toast.showUndo(m.timeoff_events_deleted({ count: removedEntries.length }), () =>
+        addEntries(removedEntries),
+      );
+    }
+    setSelectedIds(new Set());
+    setShowBulkDeleteConfirm(false);
+  };
+
+  // Prune the selection whenever entries change, as a same-render response
+  // rather than a follow-up effect.
+  const [prevEntries, setPrevEntries] = useState(entries);
+  if (prevEntries !== entries) {
+    setPrevEntries(entries);
+    setSelectedIds((prev) => {
+      const newSet = new Set<string>();
+      const existingIds = new Set(entries.map((entry) => entry.id));
+      let changed = false;
+      prev.forEach((id) => {
+        if (existingIds.has(id)) {
+          newSet.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? newSet : prev;
+    });
+  }
+
+  // Re-sync the raw editor from `rawText` whenever it isn't dirty, as a
+  // same-render response rather than a follow-up effect.
+  const [prevIsRawEditorDirty, setPrevIsRawEditorDirty] = useState(isRawEditorDirty);
+  const [prevRawText, setPrevRawText] = useState(rawText);
+  if (prevIsRawEditorDirty !== isRawEditorDirty || prevRawText !== rawText) {
+    setPrevIsRawEditorDirty(isRawEditorDirty);
+    setPrevRawText(rawText);
+    if (!isRawEditorDirty) {
+      setRawEditorText(rawText);
+      setRawEditorError(undefined);
+    }
+  }
+
+  const handleRawEditorChange = useCallback(
+    (value: string) => {
+      setRawEditorText(value);
+      setIsRawEditorDirty(value !== rawText);
+      setRawEditorError(undefined);
+    },
+    [rawText],
+  );
+
+  const handleParseRawEditor = useCallback(() => {
+    try {
+      // Use the ref to get the current value without adding to dependencies
+      const result = importHday(rawEditorTextRef.current);
+      setIsRawEditorDirty(false);
+      setRawEditorError(undefined);
+      setRawEditorSkippedLines(result.skippedLines);
+      setSelectedIds(new Set());
+      if (result.skippedLines.length > 0) {
+        const skippedMsg =
+          result.skippedLines.length === 1
+            ? m.timeoff_hday_skipped_one()
+            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
+        toast.showWarning(`${m.timeoff_hday_applied()} ${skippedMsg}`, TriangleAlertIcon);
+      } else {
+        toast.showSuccess(m.timeoff_hday_applied(), CircleCheckIcon);
+      }
+    } catch (error) {
+      logger.error("Failed to parse raw .hday content:", error);
+      setRawEditorError(m.timeoff_parse_failed());
+      toast.showError(m.timeoff_parse_failed());
+    }
+  }, [importHday, toast]);
+
+  const handleResetRawEditor = useCallback(() => {
+    setRawEditorText(rawText);
+    setIsRawEditorDirty(false);
+    setRawEditorError(undefined);
+    setRawEditorSkippedLines([]);
+  }, [rawText]);
+
+  const [pendingImport, setPendingImport] = useState<{ text: string; name: string } | null>(null);
+  const [replaceImport, setReplaceImport] = useState(false);
+  const importPreview = useMemo(
+    () => (pendingImport ? previewTimeOffImport(pendingImport.text, entries) : null),
+    [pendingImport, entries],
+  );
+  const previewEntries = importPreview
+    ? replaceImport
+      ? importPreview.entries
+      : importPreview.additions
+    : [];
+  const previewRowLimit = 10;
+  const confirmImport = () => {
+    if (!pendingImport || !importPreview) return;
+    if (!importPreview.entries.length) {
+      setPendingImport(null);
+      return;
+    }
+    applyImportedEntries(
+      replaceImport ? importPreview.entries : [...entries, ...importPreview.additions],
+      replaceImport,
+    );
+    setSelectedIds(new Set());
+    setIsRawEditorDirty(false);
+    toast.showSuccess(m.timeoff_imported({ name: pendingImport.name }), CircleCheckIcon);
+    setPendingImport(null);
+    setReplaceImport(false);
+  };
+
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+
+    try {
+      if (file.size > MAX_HDAY_IMPORT_BYTES) {
+        toast.showError(m.timeoff_import_too_large());
+        return;
+      }
+      const text = await file.text();
+      const preview = previewTimeOffImport(text, entries);
+      if (!preview.entries.length) {
+        toast.showError(m.timeoff_import_no_entries());
+        if (preview.invalidLines.length) setPendingImport({ text, name: file.name });
+        return;
+      }
+      setReplaceImport(false);
+      setPendingImport({ text, name: file.name });
+    } catch (error) {
+      logger.error("Failed to import .hday file:", error);
+      setRawEditorError(m.timeoff_import_failed());
+      toast.showError(m.timeoff_import_failed());
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // True if helperBaseUrl/hdayUsername (captured by the caller, typically at
+  // the start of a pull/push) still match what's currently configured. A
+  // stale closure — a response that arrived after the user switched targets,
+  // or a queued push retry left over from before the switch — fails this and
+  // must not be applied or sent.
+  const isHdayTargetCurrent = useCallback(
+    (targetHelperBaseUrl: string | null, targetHdayUsername: string | null) =>
+      hdayTargetRef.current.helperBaseUrl === targetHelperBaseUrl &&
+      hdayTargetRef.current.hdayUsername === targetHdayUsername,
+    [],
+  );
+
+  const handlePushToHelper = useCallback(
+    async (options?: { silent?: boolean }) => {
+      // A queued retry loops back to the top (re-validating its own target on
+      // entry, so a retry left over from before a helper/username switch
+      // quietly no-ops) instead of the function calling itself recursively —
+      // a self-reference the compiler can't safely analyze for memoization.
+      let currentOptions = options;
+      for (;;) {
+        if (!helperBaseUrl || !hdayUsername) return;
+        if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
+
+        // Never run two requests at once, pull or push: an overlapping one would
+        // read a lastKnownHdayEtag the in-flight one is about to make stale
+        // (producing a spurious conflict or a lost update), or apply a stale GET
+        // after a newer PUT already landed. Queue it instead — handled below.
+        if (isHdaySyncInFlightRef.current) {
+          hdayPushQueuedRef.current = true;
+          return;
+        }
+
+        isHdaySyncInFlightRef.current = true;
+        hdayPushQueuedRef.current = false;
+        setIsPushingToHelper(true);
+        let succeeded = false;
+        try {
+          // Read fresh at send time, not captured at schedule time: a debounced
+          // auto-push can sit queued for a while, during which further edits
+          // (or a completed manual push) may have moved these on.
+          const currentRawText = rawTextRef.current;
+          const currentEtag = lastKnownHdayEtagRef.current;
+          const response = await fetch(
+            `${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              body: JSON.stringify(
+                currentEtag ? { raw: currentRawText, etag: currentEtag } : { raw: currentRawText },
+              ),
+            },
+          );
+
+          if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) {
+            // The user moved on to a different helper/username while this
+            // request was in flight — its result belongs to a view nobody's
+            // looking at anymore. Still counts as "succeeded" for the
+            // queued-retry check below, but there's nothing here to apply or
+            // announce.
+            succeeded = true;
+          } else if (response.status === 409) {
+            // Always surfaced, even for a silent auto-push: this is exactly the
+            // case the user needs to act on (pull first) before anything of
+            // theirs can sync again. Don't auto-retry a queued push against the
+            // same known-stale etag — that would just conflict again silently.
+            toast.showWarning(m.timeoff_push_conflict(), FileLockIcon);
+          } else if (!response.ok) {
+            throw await ApiError.fromResponse(response);
+          } else {
+            const data: { etag: string } = await response.json();
+            rememberHdayEtag(hdayUsername, data.etag);
+            setHdayChangedRemotely(false);
+            succeeded = true;
+            if (!currentOptions?.silent) {
+              toast.showSuccess(m.timeoff_pushed({ username: hdayUsername }), CloudUploadIcon);
+            }
+          }
+        } catch (error) {
+          logger.error("Failed to push .hday content to helper:", error);
+          const reason = describeError(error);
+          toast.showError(
+            reason ? m.timeoff_push_failed({ error: reason }) : m.timeoff_push_failed_generic(),
+          );
+        } finally {
+          setIsPushingToHelper(false);
+          isHdaySyncInFlightRef.current = false;
+        }
+
+        if (!succeeded || !hdayPushQueuedRef.current) return;
+        hdayPushQueuedRef.current = false;
+        currentOptions = { silent: true };
+      }
+    },
+    [helperBaseUrl, hdayUsername, isHdayTargetCurrent, rememberHdayEtag, toast],
+  );
+
+  const handlePullFromHelper = useCallback(async () => {
+    if (!helperBaseUrl || !hdayUsername) return;
+    if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
+
+    // Pull never queues itself behind an in-flight push — it's always
+    // user-initiated, so declining and letting the (disabled, per the UI)
+    // button be pressed again once free is enough.
+    if (isHdaySyncInFlightRef.current) return;
+
+    isHdaySyncInFlightRef.current = true;
+    setIsPullingFromHelper(true);
+    try {
+      const response = await fetch(`${helperBaseUrl}/hday/${encodeURIComponent(hdayUsername)}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+
+      // The user switched helper/username while this GET was in flight —
+      // importing it now would apply a since-abandoned target's data to the
+      // current view.
+      if (!isHdayTargetCurrent(helperBaseUrl, hdayUsername)) return;
+
+      if (response.status === 404) {
+        toast.showWarning(m.timeoff_pull_not_found({ username: hdayUsername }), FileXIcon);
+        return;
+      }
+
+      if (!response.ok) {
+        throw await ApiError.fromResponse(response);
+      }
+
+      const data: { raw: string; etag: string | null } = await response.json();
+      // The entries this import produces already match the helper's file,
+      // so the auto-push effect below will still fire once for the resulting
+      // entries change — but rememberHdayEtag() just below means that push
+      // sends the etag the helper already has, so it's a harmless idempotent
+      // no-op rather than a real conflict risk.
+      const result = importHday(data.raw);
+      setRawEditorText(data.raw);
+      setSelectedIds(new Set());
+      setIsRawEditorDirty(false);
+      setRawEditorError(undefined);
+      setRawEditorSkippedLines(result.skippedLines);
+      rememberHdayEtag(hdayUsername, data.etag);
+      setHdayChangedRemotely(false);
+      if (result.skippedLines.length > 0) {
+        const skippedMsg =
+          result.skippedLines.length === 1
+            ? m.timeoff_hday_skipped_one()
+            : m.timeoff_hday_skipped_other({ count: result.skippedLines.length });
+        toast.showWarning(
+          `${m.timeoff_pulled({ username: hdayUsername })} ${skippedMsg}`,
+          TriangleAlertIcon,
+        );
+      } else {
+        toast.showSuccess(m.timeoff_pulled({ username: hdayUsername }), CloudDownloadIcon);
+      }
+    } catch (error) {
+      logger.error("Failed to pull .hday content from helper:", error);
+      const reason = describeError(error);
+      toast.showError(
+        reason ? m.timeoff_pull_failed({ error: reason }) : m.timeoff_pull_failed_generic(),
+      );
+    } finally {
+      setIsPullingFromHelper(false);
+      isHdaySyncInFlightRef.current = false;
+      // A push that arrived while this pull was running queued itself
+      // instead of racing it; run it now that the lock is free.
+      if (hdayPushQueuedRef.current) {
+        hdayPushQueuedRef.current = false;
+        void handlePushToHelper({ silent: true });
+      }
+    }
+  }, [
+    handlePushToHelper,
+    helperBaseUrl,
+    hdayUsername,
+    importHday,
+    isHdayTargetCurrent,
+    rememberHdayEtag,
+    toast,
+  ]);
+
+  // Auto-push: debounce a silent push whenever the entries change for any
+  // local-origin reason (add/edit/delete, undo, raw-editor apply, file
+  // import), when the helper becomes reachable (so edits made before it was
+  // configured/connected aren't stranded), and — redundantly but harmlessly —
+  // right after a pull (handlePushToHelper reads current state at send time,
+  // so that case is just an idempotent no-op PUT the helper already matches).
+  useEffect(() => {
+    if (!canUseHdayHelperSync) return;
+    const timer = setTimeout(() => {
+      void handlePushToHelper({ silent: true });
+    }, AUTO_PUSH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [entries, canUseHdayHelperSync, handlePushToHelper]);
+
+  const handleExport = useCallback(() => {
+    if (entries.length === 0) {
+      toast.showError(m.timeoff_no_events_export());
+      return;
+    }
+
+    const blob = new Blob([rawText], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "timeoff.hday";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.showSuccess(m.timeoff_exported(), UploadIcon);
+  }, [entries, rawText, toast]);
+
+  // Use custom hook for keyboard shortcuts
+  useTimeOffKeyboardShortcuts(
+    {
+      onImport: handleImport,
+      onExport: handleExport,
+      onBulkDelete: () => setShowBulkDeleteConfirm(true),
+      onCancelEditMode: handleCancelEditMode,
+    },
+    {
+      isActive: isActive && pendingImport === null,
+      showEventModal,
+      modalMode,
+      editIndex: editEntryId ? 0 : -1,
+      viewMode,
+      selectedIndicesCount: selectedIds.size,
+    },
+  );
+
+  const handleHideEventModal = () => {
+    setShowEventModal(false);
+    setShowResetConfirm(false);
+  };
+
+  const previewLine = buildPreviewLine({
+    eventType,
+    start: eventStart,
+    end: eventEnd,
+    weekday: eventWeekday,
+    title: eventTitle,
+    flags: eventFlags,
+  });
+
+  return (
+    <div className="flex flex-col gap-3 py-3">
+      {viewMode === "table" && hdayChangedRemotely && (
+        <Alert variant="info" className="flex flex-wrap items-center justify-between gap-2">
+          <span>
+            <Icon icon={CloudDownloadIcon} className="mr-2" />
+            {m.timeoff_hday_changed_remotely()}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePullFromHelper}
+              disabled={isPullingFromHelper || isPushingToHelper}
+            >
+              {m.timeoff_pull_btn()}
+            </Button>
+            <IconButton
+              icon={XIcon}
+              label={m.close()}
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setHdayChangedRemotely(false)}
+            />
+          </div>
+        </Alert>
+      )}
+      <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
+        <ChoiceToggleGroup
+          fill
+          label={m.timeoff_toggle_view_aria()}
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: "table", label: m.timeoff_view_table(), icon: TableIcon },
+            {
+              value: "stats",
+              label: m.timeoff_view_statistics(),
+              icon: ChartNoAxesColumnIncreasingIcon,
+            },
+            ...(helperConnectionStatus === "connected"
+              ? [{ value: "team" as const, label: m.timeoff_view_team(), icon: UsersIcon }]
+              : []),
+          ]}
+        />
+        {(viewMode !== "table" || entries.length > 0) && (
+          <span className="text-sm text-muted-foreground">
+            {helpText[viewMode] ?? helpText[DEFAULT_TIME_OFF_VIEW]}
+          </span>
+        )}
+      </div>
+
+      {viewMode === "table" && (
+        <TimeOffTableView
+          eventCount={entries.length}
+          selectedCount={selectedIds.size}
+          onClearSelection={handleClearSelection}
+          onBulkDelete={() => setShowBulkDeleteConfirm(true)}
+          onImport={handleImport}
+          onExport={handleExport}
+          onPullFromHelper={canUseHdayHelperSync ? handlePullFromHelper : undefined}
+          isPullingFromHelper={isPullingFromHelper}
+          onPushToHelper={canUseHdayHelperSync ? handlePushToHelper : undefined}
+          isPushingToHelper={isPushingToHelper}
+          onAddEvent={handleOpenAddModal}
+          viewMode={viewMode}
+          entries={entries}
+          selectedIds={selectedIds}
+          onToggleSelection={handleToggleSelection}
+          onEditEvent={handleOpenEditModal}
+          onDeleteEvent={handleDeleteClick}
+          onSetSelection={handleSetSelection}
+          rawEditorText={rawEditorText}
+          rawEditorError={rawEditorError}
+          rawEditorSkippedLines={rawEditorSkippedLines}
+          isRawEditorDirty={isRawEditorDirty}
+          onChangeRawEditorText={handleRawEditorChange}
+          onApplyRawEditor={handleParseRawEditor}
+          onResetRawEditor={handleResetRawEditor}
+        />
+      )}
+
+      {viewMode === "stats" && (
+        <div role="region" aria-label={m.timeoff_vacation_stats()}>
+          <TimeOffStatsView entries={entries} />
+        </div>
+      )}
+
+      {viewMode === "team" && (
+        <div role="region" aria-label={m.timeoff_team_schedule_viewer_aria()}>
+          <TeamScheduleView />
+        </div>
+      )}
+
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".hday,text/plain"
+        className="hidden"
+        aria-label={m.timeoff_import_file_aria()}
+        onChange={handleFileChange}
+      />
+
+      {/* Event Modal */}
+      <EventModal
+        entries={entries}
+        editEntryId={editEntryId}
+        show={showEventModal}
+        mode={modalMode}
+        formRef={formRef}
+        eventType={eventType}
+        eventWeekday={eventWeekday}
+        eventStart={eventStart}
+        eventEnd={eventEnd}
+        eventTitle={eventTitle}
+        eventFlags={eventFlags}
+        startDateError={startDateError}
+        endDateError={endDateError}
+        previewLine={previewLine}
+        typeFlagOptions={getTypeFlagOptions()}
+        timeLocationFlagOptions={getTimeLocationFlagOptions()}
+        typeFlagsAsEventFlags={TYPE_FLAGS_AS_EVENT_FLAGS}
+        timeLocationFlagsAsEventFlags={TIME_LOCATION_FLAGS_AS_EVENT_FLAGS}
+        onHide={handleHideEventModal}
+        onEntered={() => formRef.current?.focus()}
+        onEventTypeChange={setEventType}
+        onEventTitleChange={setEventTitle}
+        onEventWeekdayChange={setEventWeekday}
+        onStartDateChange={setEventStart}
+        onEndDateChange={setEventEnd}
+        onTypeFlagChange={handleTypeFlagChange}
+        onTimeFlagChange={handleTimeFlagChange}
+        onResetForm={handleResetForm}
+        onSubmit={handleSubmitEvent}
+        onSwitchToEdit={handleSwitchToEdit}
+        onCancelEditMode={handleCancelEditMode}
+      />
+
+      <ConfirmationDialog
+        isOpen={showResetConfirm}
+        title={m.timeoff_reset_form_title()}
+        message={m.timeoff_reset_form_message()}
+        confirmLabel={m.timeoff_reset_btn()}
+        cancelLabel={m.timeoff_keep_editing()}
+        variant="warning"
+        onConfirm={handleConfirmResetForm}
+        onCancel={() => setShowResetConfirm(false)}
+      />
+
+      <ConfirmationDialog
+        isOpen={pendingImport !== null}
+        title={m.timeoff_import_preview_title()}
+        confirmLabel={
+          !importPreview?.entries.length
+            ? m.close()
+            : replaceImport
+              ? m.timeoff_import_replace()
+              : m.timeoff_import_merge()
+        }
+        cancelLabel={m.cancel()}
+        variant={replaceImport ? "danger" : "primary"}
+        onCancel={() => {
+          setPendingImport(null);
+          setReplaceImport(false);
+        }}
+        onConfirm={confirmImport}
+        message={
+          importPreview && (
+            <>
+              <p>
+                {!importPreview.entries.length
+                  ? m.timeoff_import_no_entries()
+                  : replaceImport
+                    ? m.timeoff_import_replace_warning({ count: entries.length })
+                    : m.timeoff_import_summary({
+                        added: importPreview.additions.length,
+                        duplicates: importPreview.duplicates,
+                      })}
+              </p>
+              {!replaceImport && importPreview.entries.length > 0 && (
+                <Button variant="outline" onClick={() => setReplaceImport(true)}>
+                  {m.timeoff_import_replace()}
+                </Button>
+              )}
+              <div className="max-h-48 overflow-y-auto" data-slot="timeoff-import-preview-rows">
+                <ul>
+                  {previewEntries.slice(0, previewRowLimit).map((entry) => (
+                    <li key={entry.id} className="truncate" title={timeOffEntriesToHday([entry])}>
+                      {timeOffEntriesToHday([entry])}
+                    </li>
+                  ))}
+                </ul>
+                {previewEntries.length > previewRowLimit && (
+                  <p>{m.timeoff_import_more({ count: previewEntries.length - previewRowLimit })}</p>
+                )}
+                <ul>
+                  {importPreview.invalidLines.slice(0, previewRowLimit).map(({ line, reason }) => (
+                    <li key={line}>
+                      {m.timeoff_import_invalid_line({
+                        line,
+                        reason:
+                          reason === "date"
+                            ? m.timeoff_import_invalid_date()
+                            : m.timeoff_import_invalid_syntax(),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+                {importPreview.invalidLines.length > previewRowLimit && (
+                  <p>
+                    {m.timeoff_import_more({
+                      count: importPreview.invalidLines.length - previewRowLimit,
+                    })}
+                  </p>
+                )}
+              </div>
+            </>
+          )
+        }
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showBulkDeleteConfirm}
+        title={m.timeoff_delete_selected_title()}
+        message={m.timeoff_delete_selected_message({ count: selectedIds.size })}
+        confirmLabel={m.delete()}
+        cancelLabel={m.cancel()}
+        variant="danger"
+        onConfirm={handleBulkDeleteConfirm}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+      />
+    </div>
+  );
+}

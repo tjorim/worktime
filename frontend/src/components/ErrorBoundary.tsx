@@ -1,12 +1,12 @@
 import { TriangleAlertIcon } from "lucide-react";
-import { Icon } from "@/components/shared/Icon";
+import { Icon } from "@/components/Icon";
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 import * as m from "@/paraglide/messages.js";
-import { logger } from "@/utils/logger";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;

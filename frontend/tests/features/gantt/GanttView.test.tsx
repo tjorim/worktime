@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsProvider, defaultLastUsed, defaultSettings } from "@/contexts/SettingsContext";
+import {
+  SettingsProvider,
+  defaultLastUsed,
+  defaultSettings,
+} from "@/app/providers/SettingsContext";
 
 vi.mock("frappe-gantt", () => ({
   default: class MockFrappeGantt {
@@ -12,7 +16,7 @@ vi.mock("frappe-gantt", () => ({
   },
 }));
 
-vi.mock("@/contexts/EventStoreContext", () => ({
+vi.mock("@/app/providers/EventStoreContext", () => ({
   useEventStore: () => ({
     entries: [
       {
@@ -79,7 +83,7 @@ vi.mock("@/features/gantt/GanttChart.tsx", () => ({
 }));
 
 import { GanttView } from "@/features/gantt/GanttView";
-import { ganttTasksCollection, tasksCollection } from "@/db/collections";
+import { ganttTasksCollection, tasksCollection } from "@/lib/db/collections";
 
 function clearTasksCollection() {
   for (const item of [...tasksCollection.toArray]) {

@@ -1,10 +1,10 @@
-import { isValidTaskInterval } from "@/lib/timeTracking/timeUtils";
+import { isValidTaskInterval } from "@/lib/time-tracking/timeUtils";
 import { useCallback, useEffect, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
-import { logger } from "@/utils/logger";
-import { dayjs } from "@/utils/dateTimeUtils";
-import { sanitizeLabels, type Label } from "@/lib/timeTracking/constants";
-import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
+import { logger } from "@/lib/logger";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { sanitizeLabels, type Label } from "@/lib/time-tracking/constants";
+import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import {
   labelsCollection,
   reassignAndDeleteLabel,
@@ -14,7 +14,7 @@ import {
   runMutationBatch,
   tasksCollection,
   templatesCollection,
-} from "@/db/collections";
+} from "@/lib/db/collections";
 
 type RawTask = {
   id: string;

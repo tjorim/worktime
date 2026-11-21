@@ -1,0 +1,402 @@
+import type { Dayjs } from "dayjs";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ScheduleOption } from "@/lib/schedule/rosters";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { getEffectiveTeam, getTeamCountForOption } from "@/lib/schedule/scheduleUtils";
+import {
+  calculateShift,
+  findOverlaps,
+  getShiftWindow,
+  type ShiftType,
+  type ShiftWindow,
+} from "@/lib/schedule/shiftCalculations";
+import { logger } from "@/lib/logger";
+
+export type TransferType = "handover" | "takeover";
+
+export interface TransferInfo {
+  date: Dayjs;
+  fromTeam: number;
+  toTeam: number;
+  fromShiftType: ShiftType;
+  toShiftType: ShiftType;
+  type: TransferType; // 'handover' = my team transfers to other team, 'takeover' = other team transfers to my team
+}
+
+interface UseTransferCalculationsProps {
+  myTeam: number | null; // The user's team from onboarding
+  limit?: number;
+  customStartDate?: string;
+  customEndDate?: string;
+  // Schedule the "other team" belongs to. Defaults to the user's own schedule
+  // (scheduleType from settings), which reproduces the original same-schedule
+  // behavior for existing callers.
+  otherScheduleType?: ScheduleOption | null;
+}
+
+interface UseTransferCalculationsReturn {
+  transfers: TransferInfo[];
+  hasMoreTransfers: boolean;
+  // Periods where the user's own shift and the other team's shift are both
+  // actively worked at the same time, regardless of whether they're on the
+  // same schedule. Unlike `transfers`, these aren't limited to same-schedule
+  // handover/takeover moments.
+  overlaps: ShiftWindow[];
+  hasMoreOverlaps: boolean;
+  availableOtherTeams: number[]; // Teams available to compare with (excludes user's team)
+  otherTeam: number; // Currently selected other team
+  setOtherTeam: (team: number) => void;
+  validatedMyTeam: number | null; // Validated user team (null if invalid or not set)
+  // The schedule actually used for the other team (otherScheduleType, or the
+  // user's own schedule when not provided).
+  otherScheduleType: ScheduleOption | null;
+}
+
+/**
+ * Create a TransferInfo when the current and next shift codes match the specified transition.
+ *
+ * @param currentShift - The shift on the current date
+ * @param nextShift - The shift on the next date
+ * @param fromShift - Expected code of the originating shift
+ * @param toShift - Expected code of the destination shift
+ * @param date - The date to assign to the transfer
+ * @param fromTeam - Team number initiating the transfer
+ * @param toTeam - Team number receiving the transfer
+ * @param type - Either `'handover'` or `'takeover'`
+ * @returns A TransferInfo describing the transfer if `currentShift.code === fromShift` and `nextShift.code === toShift`, `null` otherwise
+ */
+function checkTransfer(
+  currentShift: { code: ShiftType; name: string },
+  nextShift: { code: ShiftType; name: string },
+  fromShift: ShiftType,
+  toShift: ShiftType,
+  date: Dayjs,
+  fromTeam: number,
+  toTeam: number,
+  type: TransferType,
+): TransferInfo | null {
+  if (currentShift.code === fromShift && nextShift.code === toShift) {
+    return {
+      date,
+      fromTeam,
+      toTeam,
+      fromShiftType: currentShift.code,
+      toShiftType: nextShift.code,
+      type,
+    };
+  }
+  return null;
+}
+
+/**
+ * Compute transfer events (handovers and takeovers) between the user's team and a selected other team over a date window.
+ *
+ * Scans day-by-day from a start date (default today) up to an end date (optional) or a default forward window, detects shift transitions that represent handovers or takeovers, and returns sorted transfer entries up to the specified limit.
+ *
+ * @param myTeam - The user's team id; when `null` no transfers are calculated
+ * @param limit - Maximum number of transfers to return (default: 20)
+ * @param customStartDate - Optional start date string parseable by dayjs; defaults to today when omitted
+ * @param customEndDate - Optional end date string parseable by dayjs; when provided the scan is constrained to this inclusive end date
+ * @returns An object containing:
+ *  - `transfers`: an array of transfer records sorted by date (each record contains `date`, `fromTeam`, `toTeam`, `fromShiftType`, `toShiftType`, and `type`)
+ *  - `hasMoreTransfers`: `true` when the limit was reached and the date range is not fully exhausted, `false` otherwise
+ *  - `availableOtherTeams`: list of team ids available for comparison (excludes `myTeam`)
+ *  - `otherTeam`: the currently selected comparison team id
+ *  - `setOtherTeam`: setter function to change the selected comparison team
+ *
+ * @example
+ * // In a React component - show handover/takeover points between teams
+ * function TransferView({ myTeam }) {
+ *   const { transfers, otherTeam, setOtherTeam, availableOtherTeams, hasMoreTransfers } =
+ *     useTransferCalculations({ myTeam, limit: 10 });
+ *
+ *   return (
+ *     <div>
+ *       <select value={otherTeam} onChange={(e) => setOtherTeam(Number(e.target.value))}>
+ *         {availableOtherTeams.map(t => <option key={t} value={t}>Team {t}</option>)}
+ *       </select>
+ *
+ *       <h3>Transfers between Team {myTeam} and Team {otherTeam}</h3>
+ *       {transfers.map(t => (
+ *         <div key={t.date.format()}>
+ *           {t.date.format('MMM D')}: {t.type === 'handover' ? '→' : '←'}
+ *           {' '}T{t.fromTeam} ({t.fromShiftType}) to T{t.toTeam} ({t.toShiftType})
+ *         </div>
+ *       ))}
+ *       {hasMoreTransfers && <p>More transfers available...</p>}
+ *     </div>
+ *   );
+ * }
+ */
+export function useTransferCalculations({
+  myTeam,
+  limit = 20,
+  customStartDate,
+  customEndDate,
+  otherScheduleType,
+}: UseTransferCalculationsProps): UseTransferCalculationsReturn {
+  const { scheduleType } = useSettings();
+  const { lastUsed, updateLastOtherTeam } = useLastUsed();
+  const effectiveOtherScheduleType = otherScheduleType ?? scheduleType;
+  const sameSchedule = effectiveOtherScheduleType === scheduleType;
+  // The "other team" belongs to effectiveOtherScheduleType, which may have a
+  // different team count than the user's own schedule.
+  const teamCount = getTeamCountForOption(effectiveOtherScheduleType);
+
+  // Get effective team - for single-user schedules, this returns 1 when myTeam is null
+  const validatedMyTeam = useMemo(
+    () => getEffectiveTeam(myTeam, scheduleType),
+    [myTeam, scheduleType],
+  );
+
+  // Get available other teams (excludes user's team, only when comparing within the same schedule)
+  const availableOtherTeams = useMemo(() => {
+    const allTeams = Array.from({ length: teamCount }, (_, i) => i + 1);
+    return sameSchedule ? allTeams.filter((team) => team !== validatedMyTeam) : allTeams;
+  }, [validatedMyTeam, teamCount, sameSchedule]);
+
+  // State for selected other team to compare with — restore from persisted value when valid
+  const [otherTeam, setOtherTeamRaw] = useState<number>(() => {
+    if (lastUsed.otherTeam !== null && availableOtherTeams.includes(lastUsed.otherTeam)) {
+      return lastUsed.otherTeam;
+    }
+    return availableOtherTeams[0] || 1;
+  });
+
+  const setOtherTeam = useCallback(
+    (team: number) => {
+      setOtherTeamRaw(team);
+      updateLastOtherTeam(team);
+    },
+    [updateLastOtherTeam],
+  );
+
+  // Update other team when user's team changes and current other team is not available
+  useEffect(() => {
+    if (!availableOtherTeams.includes(otherTeam)) {
+      const fallback = availableOtherTeams[0] || 1;
+      setOtherTeamRaw(fallback);
+      updateLastOtherTeam(fallback);
+    }
+  }, [availableOtherTeams, otherTeam, updateLastOtherTeam]);
+
+  // Calculate transfers and overlaps based on current parameters
+  const transfersResult = useMemo(() => {
+    // Early return if no valid team or no other teams to compare with
+    if (!validatedMyTeam || availableOtherTeams.length === 0) {
+      return { transfers: [], hasMoreTransfers: false, overlaps: [], hasMoreOverlaps: false };
+    }
+
+    // Guard against stale otherTeam value during schedule transitions
+    if (!availableOtherTeams.includes(otherTeam)) {
+      return { transfers: [], hasMoreTransfers: false, overlaps: [], hasMoreOverlaps: false };
+    }
+
+    const foundTransfers: TransferInfo[] = [];
+    const allOverlaps: ShiftWindow[] = [];
+    let prevMyWindow: ShiftWindow | null = null;
+    let prevOtherWindow: ShiftWindow | null = null;
+
+    // Determine date range
+    const startDate = customStartDate ? dayjs(customStartDate) : dayjs();
+    const endDate = customEndDate ? dayjs(customEndDate) : null;
+    let lastScannedDate = startDate;
+
+    // If we have a date range, scan within it; otherwise scan forward from today
+    const maxDaysToScan = endDate ? endDate.diff(startDate, "day") + 1 : 365; // Default to scanning 1 year forward
+
+    // Add performance warning for large date ranges
+    if (endDate && endDate.diff(startDate, "day") > 365) {
+      logger.warn("Large date range detected. Consider limiting the range for better performance.");
+    }
+
+    // Bounded by both the transfer limit and the overlap limit: cross-schedule
+    // scans (the only realistic source of non-empty overlaps — see below)
+    // never satisfy the transfer condition since foundTransfers stays empty,
+    // so the overlap condition is what actually bounds them once enough
+    // overlaps are found.
+    for (
+      let day = 0;
+      day < maxDaysToScan && foundTransfers.length < limit && allOverlaps.length <= limit;
+      day++
+    ) {
+      const scanDate = startDate.add(day, "day");
+      const nextDate = scanDate.add(1, "day");
+
+      // If we have an end date, don't scan beyond it
+      if (endDate && scanDate.isAfter(endDate)) {
+        break;
+      }
+
+      // Collect shift windows for overlap detection — each side uses its own
+      // schedule, so this works whether or not the two teams share one.
+      const myWindow = getShiftWindow(scanDate, validatedMyTeam, scheduleType);
+      const otherWindow = getShiftWindow(scanDate, otherTeam, effectiveOtherScheduleType);
+
+      // A window spans at most ~24h from its own scan day, so two windows can
+      // only possibly overlap when they're from the same day or adjacent
+      // days — comparing today's windows against yesterday's (already
+      // collected) is sufficient; no need to keep or re-scan the full
+      // history. Overlaps are discovered in non-decreasing start-time order
+      // this way, which is what makes the loop's early exit above safe: once
+      // more than `limit` are found, the first `limit` sorted by start are
+      // already final and no later day can insert an earlier one.
+      const otherCandidates = [otherWindow, prevOtherWindow].filter(
+        (window): window is ShiftWindow => window !== null,
+      );
+      if (myWindow && otherCandidates.length > 0) {
+        allOverlaps.push(...findOverlaps([myWindow], otherCandidates));
+      }
+      if (otherWindow && prevMyWindow) {
+        allOverlaps.push(...findOverlaps([prevMyWindow], [otherWindow]));
+      }
+      prevMyWindow = myWindow;
+      prevOtherWindow = otherWindow;
+
+      // Handover/takeover moments only make sense when both teams share a
+      // schedule — the M/L/N code vocabulary (and its meaning) isn't
+      // comparable across different schedule types.
+      if (!sameSchedule) {
+        lastScannedDate = scanDate;
+        continue;
+      }
+
+      const myTeamShift = calculateShift(scanDate, validatedMyTeam, scheduleType);
+      const otherTeamShift = calculateShift(scanDate, otherTeam, scheduleType);
+      const myTeamNextShift = calculateShift(nextDate, validatedMyTeam, scheduleType);
+      const otherTeamNextShift = calculateShift(nextDate, otherTeam, scheduleType);
+
+      // Check for transfer patterns
+      const transfers = [
+        // Handovers: My team transfers to other team (same day)
+        checkTransfer(
+          myTeamShift,
+          otherTeamShift,
+          "M",
+          "L",
+          scanDate,
+          validatedMyTeam,
+          otherTeam,
+          "handover",
+        ),
+        checkTransfer(
+          myTeamShift,
+          otherTeamShift,
+          "L",
+          "N",
+          scanDate,
+          validatedMyTeam,
+          otherTeam,
+          "handover",
+        ),
+
+        // Handover: My team night shift to other team morning shift (next day)
+        !endDate || !nextDate.isAfter(endDate)
+          ? checkTransfer(
+              myTeamShift,
+              otherTeamNextShift,
+              "N",
+              "M",
+              nextDate,
+              validatedMyTeam,
+              otherTeam,
+              "handover",
+            )
+          : null,
+
+        // Takeovers: Other team transfers to my team (same day)
+        checkTransfer(
+          otherTeamShift,
+          myTeamShift,
+          "M",
+          "L",
+          scanDate,
+          otherTeam,
+          validatedMyTeam,
+          "takeover",
+        ),
+        checkTransfer(
+          otherTeamShift,
+          myTeamShift,
+          "L",
+          "N",
+          scanDate,
+          otherTeam,
+          validatedMyTeam,
+          "takeover",
+        ),
+
+        // Takeover: Other team night shift to my team morning shift (next day)
+        !endDate || !nextDate.isAfter(endDate)
+          ? checkTransfer(
+              otherTeamShift,
+              myTeamNextShift,
+              "N",
+              "M",
+              nextDate,
+              otherTeam,
+              validatedMyTeam,
+              "takeover",
+            )
+          : null,
+      ];
+
+      // Add valid transfers
+      transfers.forEach((transfer) => {
+        if (transfer) {
+          foundTransfers.push(transfer);
+        }
+      });
+
+      lastScannedDate = scanDate;
+    }
+
+    // Sort transfers by date
+    foundTransfers.sort((a, b) => a.date.valueOf() - b.date.valueOf());
+
+    // Check if there are more transfers available
+    const hasMoreTransfers =
+      foundTransfers.length >= limit && (!endDate || lastScannedDate.isBefore(endDate, "day"));
+
+    // Overlaps: real simultaneous working time between the two teams,
+    // accumulated during the scan above (not gated by the same-schedule
+    // guard, so this is the one place cross-schedule comparisons produce
+    // results). In a well-formed same-schedule rotation teams are staggered
+    // specifically to avoid overlap, so this is normally only non-empty when
+    // the two schedules differ.
+    allOverlaps.sort((a, b) => a.start.valueOf() - b.start.valueOf());
+    const overlaps = allOverlaps.slice(0, limit);
+    const hasMoreOverlaps = allOverlaps.length > overlaps.length;
+
+    return {
+      transfers: foundTransfers,
+      hasMoreTransfers,
+      overlaps,
+      hasMoreOverlaps,
+    };
+  }, [
+    validatedMyTeam,
+    otherTeam,
+    availableOtherTeams,
+    limit,
+    customStartDate,
+    customEndDate,
+    scheduleType,
+    effectiveOtherScheduleType,
+    sameSchedule,
+  ]);
+
+  return {
+    transfers: transfersResult.transfers,
+    hasMoreTransfers: transfersResult.hasMoreTransfers,
+    overlaps: transfersResult.overlaps,
+    hasMoreOverlaps: transfersResult.hasMoreOverlaps,
+    availableOtherTeams,
+    otherTeam,
+    setOtherTeam,
+    validatedMyTeam,
+    otherScheduleType: effectiveOtherScheduleType,
+  };
+}

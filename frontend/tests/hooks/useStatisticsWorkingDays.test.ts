@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { useStatisticsWorkingDays } from "@/hooks/useStatisticsWorkingDays";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 
-vi.mock("@/contexts/SettingsContext", () => ({
+vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: () => ({ myTeam: null, scheduleType: "9-5", settings: { homeCountry: "BE" } }),
 }));
 vi.mock("@/hooks/usePublicHolidays", () => ({

@@ -1,0 +1,88 @@
+import type { CreatedApiToken } from "@/api-types";
+import { jsonResponse, uncheckedJson } from "@/mocks/response";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PebblePairPage } from "@/features/pebble/PebblePairPage";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useApiClient } from "@/hooks/useApiClient";
+import * as m from "@/paraglide/messages.js";
+
+vi.mock("@/app/providers/AuthContext");
+vi.mock("@/hooks/useApiClient");
+describe("PebblePairPage", () => {
+  const apiFetch = vi.fn();
+
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isValidating: false,
+      userId: "user-1",
+      displayName: "Test User",
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      triggerLogin: vi.fn(),
+      triggerSignup: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn(),
+    });
+    vi.mocked(useApiClient).mockReturnValue(apiFetch);
+    apiFetch.mockReset();
+  });
+
+  it("allows retrying a transient token-creation failure", async () => {
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 503 })).mockResolvedValueOnce(
+      jsonResponse<CreatedApiToken>(
+        {
+          id: "token-1",
+          name: "Pebble",
+          scopes: ["pebble:read", "pebble:write"],
+          created_at: "2026-01-01T00:00:00Z",
+          token: "wtpat_retry-token",
+        },
+        { status: 201 },
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<PebblePairPage />);
+
+    expect(await screen.findByText(m.pebble_pair_failed())).toBeInTheDocument();
+    expect(screen.queryByText(/503/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: m.pebble_pair_retry() }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(m.pebble_pair_close_instruction())).toBeInTheDocument();
+  });
+
+  it("shows a translated reason for a recognised status", async () => {
+    apiFetch.mockResolvedValueOnce(
+      uncheckedJson(
+        "error",
+        { detail: "Rate limit exceeded: 5 per 1 minute" },
+        {
+          status: 429,
+        },
+      ),
+    );
+
+    render(<PebblePairPage />);
+
+    expect(await screen.findByText(m.error_rate_limited())).toBeInTheDocument();
+    expect(screen.queryByText(/Rate limit exceeded/)).not.toBeInTheDocument();
+  });
+
+  it("shows the surface's translated reason for a recognised error code", async () => {
+    apiFetch.mockResolvedValueOnce(
+      uncheckedJson(
+        "error",
+        { code: "oidc_session_required", detail: "This operation requires" },
+        { status: 403 },
+      ),
+    );
+
+    render(<PebblePairPage />);
+
+    expect(await screen.findByText(m.error_code_oidc_session_required())).toBeInTheDocument();
+    expect(screen.queryByText(/This operation requires/)).not.toBeInTheDocument();
+  });
+});

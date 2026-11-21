@@ -2,7 +2,7 @@
  * Date validation utilities for the .hday format (YYYY/MM/DD)
  */
 
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { isValidHdayDate } from "./dateValidation";
 
 /**

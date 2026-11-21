@@ -1,0 +1,183 @@
+import type { AuditEntryListResponse } from "@/api-types";
+import { jsonResponse } from "@/mocks/response";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
+import { useSettingsAuditTrail } from "@/features/settings/hooks/useSettingsAuditTrail";
+
+vi.mock("@/lib/db/collections", () => ({
+  tasksCollection: { toArray: [{ id: "entry-30", text: "Write report" }] },
+  ganttTasksCollection: { toArray: [] },
+  labelsCollection: { toArray: [] },
+}));
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
+const entry = (id: number) => ({
+  id,
+  actor_user_id: 7,
+  actor_label: "integration:Pebble",
+  subject: null,
+  auth_source: "integration_client",
+  action: "update",
+  resource_type: "time_entry",
+  resource_id: `entry-${id}`,
+  request_id: null,
+  details: { field: "stop_time" },
+  created_at: "2026-08-22T08:30:00Z",
+});
+
+function Harness({
+  fetchFn,
+  userId,
+  teamWide = false,
+}: {
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+  userId?: number;
+  teamWide?: boolean;
+}) {
+  const trail = useSettingsAuditTrail({ enabled: true, userId, fetchFn });
+  return (
+    <SettingsAuditTrailSection
+      {...trail}
+      teamWide={teamWide}
+      onLoadMore={() => void trail.loadMore()}
+    />
+  );
+}
+
+describe("SettingsAuditTrailSection", () => {
+  it("loads the personal trail with an explicit user scope and renders its client", async () => {
+    const fetchFn = vi.fn(async () =>
+      jsonResponse<AuditEntryListResponse>(
+        { items: [entry(30)], total: 1 },
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    render(<Harness fetchFn={fetchFn} userId={7} />);
+
+    expect(await screen.findByText("Updated · Time entry entry-30")).toBeInTheDocument();
+    expect(screen.getByText("Pebble")).toBeInTheDocument();
+    expect(fetchFn).toHaveBeenCalledWith("/api/audit?limit=25&user_id=7");
+  });
+
+  it("paginates the team-wide trail without adding a user filter", async () => {
+    const firstPage = Array.from({ length: 25 }, (_, index) => entry(100 - index));
+    const fetchFn = vi.fn(async (input: string) => {
+      const items = input.includes("before_id=76") ? [entry(75)] : firstPage;
+      return jsonResponse<AuditEntryListResponse>(
+        { items, total: items.length },
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    });
+    const user = userEvent.setup();
+
+    render(<Harness fetchFn={fetchFn} teamWide />);
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByText("Updated · Time entry entry-75")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchFn).toHaveBeenLastCalledWith("/api/audit?limit=25&before_id=76");
+    });
+    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
+
+  it("ignores a stale pagination response after the API client changes", async () => {
+    const stalePage = deferred<Response>();
+    const firstPage = Array.from({ length: 25 }, (_, index) => entry(100 - index));
+    const initialFetch = vi
+      .fn<(input: string) => Promise<Response>>()
+      .mockResolvedValueOnce(
+        jsonResponse<AuditEntryListResponse>({ items: firstPage, total: firstPage.length }),
+      )
+      .mockReturnValueOnce(stalePage.promise);
+    const renewedFetch = vi.fn(async () =>
+      jsonResponse<AuditEntryListResponse>(
+        { items: [entry(200)], total: 1 },
+        {
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness fetchFn={initialFetch} teamWide />);
+
+    await user.click(await screen.findByRole("button", { name: "Load more" }));
+    rerender(<Harness fetchFn={renewedFetch} teamWide />);
+    expect(await screen.findByText("Updated · Time entry entry-200")).toBeInTheDocument();
+
+    await act(async () => {
+      stalePage.resolve(
+        jsonResponse<AuditEntryListResponse>(
+          { items: [entry(75)], total: 1 },
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+      await stalePage.promise;
+    });
+
+    expect(screen.queryByText("Updated · Time entry entry-75")).not.toBeInTheDocument();
+    expect(screen.queryByText("Updated · Time entry entry-100")).not.toBeInTheDocument();
+  });
+});
+
+it("uses names and preserves fallback ids without CSS capitalisation", () => {
+  const named = {
+    ...entry(1),
+    actor_label: "user:7",
+    resource_type: "time_tracking_task",
+    action: "create_task",
+    resource_display_name: "Write report",
+  };
+  render(
+    <SettingsAuditTrailSection
+      entries={[named, { ...entry(2), resource_id: "a8ff-Ae1d1c24" }]}
+      users={[{ id: 7, display_name: "Alex" }]}
+      isLoading={false}
+      isLoadingMore={false}
+      error={null}
+      hasMore={false}
+      onLoadMore={() => {}}
+    />,
+  );
+  expect(screen.getByText("Created · Task Write report")).toBeVisible();
+  expect(screen.getByText("Alex")).toBeVisible();
+  expect(screen.getByText("Pebble")).toBeVisible();
+  const fallback = screen.getByText("Updated · Time entry a8ff-Ae1d1c24");
+  expect(fallback).toBeVisible();
+  expect(fallback).not.toHaveClass("capitalize");
+});
+
+it("resolves existing personal task names and avoids cross-account name collisions", async () => {
+  const fetchFn = vi.fn(async () =>
+    jsonResponse<AuditEntryListResponse>({
+      total: 2,
+      items: [
+        { ...entry(30), resource_type: "time_tracking_task" },
+        {
+          ...entry(31),
+          actor_user_id: 8,
+          resource_id: "entry-30",
+          resource_type: "time_tracking_task",
+        },
+      ],
+    }),
+  );
+  render(<Harness fetchFn={fetchFn} userId={7} />);
+  expect(await screen.findByText("Updated · Task Write report")).toBeVisible();
+  expect(screen.getByText("Updated · Task entry-30")).toBeVisible();
+});

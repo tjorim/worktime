@@ -3,18 +3,18 @@ import { createRoot } from "react-dom/client";
 import { useRef, useState } from "react";
 import "@/styles/tailwind.css";
 import { EventModal } from "@/components/EventModal";
-import { MonthCalendar } from "@/components/calendar/MonthCalendar";
-import { TimeOffTableView } from "@/components/timeOff/TimeOffTableView";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { MonthCalendar } from "@/features/calendar/month/MonthCalendar";
+import { TimeOffTableView } from "@/features/time-off/TimeOffTableView";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
-import { dayjs } from "@/utils/dateTimeUtils";
+import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   getTypeFlagOptions,
   getTimeLocationFlagOptions,
   TYPE_FLAGS_AS_EVENT_FLAGS,
   TIME_LOCATION_FLAGS_AS_EVENT_FLAGS,
-} from "@/data/timeoffConstants";
-import type { TimeOffEntry } from "@/lib/timeOff/types";
+} from "@/lib/time-off/timeoffConstants";
+import type { TimeOffEntry } from "@/lib/time-off/types";
 import { setLocale } from "@/paraglide/runtime.js";
 const params = new URLSearchParams(location.search);
 document.documentElement.setAttribute("data-theme", params.get("theme") ?? "light");

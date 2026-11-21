@@ -1,5 +1,5 @@
 import { test as setup } from "@playwright/test";
-import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
+import { USER_STATE_OWNER_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 
 /**
  * Playwright's documented "authenticate once, reuse everywhere" pattern
@@ -51,7 +51,7 @@ function buildFakeOidcUser() {
 }
 
 // Matches SettingsContext.tsx's WorktimeUserState shape, persisted as plain
-// JSON under USER_STATE_STORAGE_KEY (constants/storageKeys.ts). Setting
+// JSON under USER_STATE_STORAGE_KEY (config/storageKeys.ts). Setting
 // hasCompletedOnboarding skips the "Welcome to Worktime" wizard entirely
 // (App.tsx: `useState(() => !hasCompletedOnboarding)`), scheduleType clears
 // the "select your schedule" prompt, and settings.enableTimeTracking exposes

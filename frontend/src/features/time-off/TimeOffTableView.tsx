@@ -1,0 +1,545 @@
+import { getOverlappingEntries } from "@/lib/time-off/overlap";
+import { TriangleAlertIcon } from "lucide-react";
+import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
+import { useEffect, useMemo, useState } from "react";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TableSearchInput } from "@/components/TableSearchInput";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import type { SortingState } from "@tanstack/react-table";
+import type { TimeOffEntry } from "@/lib/time-off/types";
+import { EmptyState } from "@/components/EmptyState";
+import { SortableHeaderCell } from "@/components/SortableHeaderCell";
+import { TablePagination } from "@/components/TablePagination";
+import {
+  createDataColumnHelper,
+  DATA_TABLE_DEFAULT_PAGE_SIZE,
+  useDataTable,
+} from "@/hooks/useDataTable";
+import {
+  getEventColorUtilities,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "@/lib/hday/presentation";
+import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
+import {
+  getTimeOffEntrySortKey,
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
+import { TimeOffToolbar } from "@/features/time-off/TimeOffToolbar";
+import { TimeOffRawView } from "@/features/time-off/TimeOffRawView";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
+import type { TimeOffViewMode } from "@/lib/time-off/timeoffConstants";
+import * as m from "@/paraglide/messages.js";
+
+type TimeOffRow = {
+  entry: TimeOffEntry;
+  flags: ReturnType<typeof getEntryFlagsForDisplay>;
+  typeLabel: string;
+  title: string;
+  dateSortKey: string;
+  searchText: string;
+};
+
+const columnHelper = createDataColumnHelper<TimeOffRow>();
+
+// Same order the data layer stores entries in, so the table opens unchanged.
+const DEFAULT_SORTING: SortingState = [{ id: "date", desc: false }];
+
+/** Whether a row matches the search box. The one definition, used for filtering and for selection. */
+function matchesSearch(row: TimeOffRow, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return !needle || row.searchText.includes(needle);
+}
+
+type TimeOffTableViewProps = {
+  eventCount: number;
+  selectedCount: number;
+  onClearSelection: () => void;
+  onBulkDelete: () => void;
+  onImport: () => void;
+  onExport: () => void;
+  onPullFromHelper?: () => void;
+  isPullingFromHelper: boolean;
+  onPushToHelper?: () => void;
+  isPushingToHelper: boolean;
+  onAddEvent: () => void;
+  viewMode: TimeOffViewMode;
+  entries: TimeOffEntry[];
+  selectedIds: Set<string>;
+  onToggleSelection: (id: string) => void;
+  onEditEvent: (id: string) => void;
+  onDeleteEvent: (id: string) => void;
+  /** Selects (or deselects) exactly these entries, leaving the rest of the selection untouched. */
+  onSetSelection: (ids: string[], selected: boolean) => void;
+  rawEditorText: string;
+  rawEditorError?: string;
+  rawEditorSkippedLines?: string[];
+  isRawEditorDirty: boolean;
+  onChangeRawEditorText: (value: string) => void;
+  onApplyRawEditor: () => void;
+  onResetRawEditor: () => void;
+};
+
+export function TimeOffTableView({
+  eventCount,
+  selectedCount,
+  onClearSelection,
+  onBulkDelete,
+  onImport,
+  onExport,
+  onPullFromHelper,
+  isPullingFromHelper,
+  onPushToHelper,
+  isPushingToHelper,
+  onAddEvent,
+  viewMode,
+  entries,
+  selectedIds,
+  onToggleSelection,
+  onEditEvent,
+  onDeleteEvent,
+  onSetSelection,
+  rawEditorText,
+  rawEditorError,
+  rawEditorSkippedLines,
+  isRawEditorDirty,
+  onChangeRawEditorText,
+  onApplyRawEditor,
+  onResetRawEditor,
+}: TimeOffTableViewProps) {
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 639.98px)").matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639.98px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const [search, setSearch] = useState("");
+
+  const rows = useMemo<TimeOffRow[]>(
+    () =>
+      entries.map((entry) => {
+        const flags = getEntryFlagsForDisplay(entry);
+        const typeLabel = getEventTypeLabel(flags);
+        const title = entry.note || typeLabel;
+        return {
+          entry,
+          flags,
+          typeLabel,
+          title,
+          dateSortKey: getTimeOffEntrySortKey(entry),
+          // Newline-joined so a query can't match across two fields ("holiday" + "2026" ≈ "day 2").
+          searchText: [
+            typeLabel,
+            entry.note ?? "",
+            flags.map(getEventFlagLabel).join(", "),
+            getEntryDisplayDateText(entry),
+            getEntryIsoDateText(entry),
+          ]
+            .join("\n")
+            .toLowerCase(),
+        };
+      }),
+    [entries],
+  );
+
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "select",
+          enableSorting: false,
+          header: () => null,
+          cell: () => null,
+        }),
+        columnHelper.accessor("typeLabel", {
+          id: "type",
+          header: () => m.timeoff_col_type(),
+          sortFn: "text",
+        }),
+        columnHelper.accessor("dateSortKey", {
+          id: "date",
+          header: () => m.timeoff_col_date_pattern(),
+          sortFn: "basic",
+        }),
+        columnHelper.accessor((row) => row.entry.note ?? "", {
+          id: "title",
+          header: () => m.timeoff_col_title(),
+          sortFn: "text",
+        }),
+        columnHelper.accessor((row) => row.flags.map(getEventFlagLabel).join(", "), {
+          id: "flags",
+          header: () => m.timeoff_col_flags(),
+          sortFn: "text",
+        }),
+        columnHelper.display({
+          id: "actions",
+          enableSorting: false,
+          header: () => m.timeoff_col_actions(),
+          cell: () => null,
+        }),
+      ]),
+    [],
+  );
+
+  const table = useDataTable(
+    {
+      data: rows,
+      columns,
+      state: { sorting, globalFilter: search },
+      initialState: { pagination: { pageIndex: 0, pageSize: DATA_TABLE_DEFAULT_PAGE_SIZE } },
+      getRowId: (row) => row.entry.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setSearch,
+      globalFilterFn: (row, _columnId, filterValue) =>
+        matchesSearch(row.original, String(filterValue)),
+    },
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      pagination: state.pagination,
+    }),
+  );
+
+  const visibleRows = table.getRowModel().rows;
+  const visibleIds = visibleRows.map((row) => row.original.entry.id);
+  const selectedVisibleCount = visibleIds.filter((id) => selectedIds.has(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  const isFiltering = search.trim() !== "";
+  // Every row the search leaves in, across all pages: what "Select all" means while searching.
+  const filteredIds = table.getPrePaginatedRowModel().rows.map((row) => row.original.entry.id);
+
+  // Selection must never include rows the search hides, or a bulk delete could remove entries
+  // the user cannot see. Changing the search therefore drops hidden rows from the selection.
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    const hiddenSelected = rows
+      .filter((row) => selectedIds.has(row.entry.id) && !matchesSearch(row, value))
+      .map((row) => row.entry.id);
+    if (hiddenSelected.length > 0) onSetSelection(hiddenSelected, false);
+  };
+
+  return (
+    <>
+      <Card>
+        <TimeOffToolbar
+          eventCount={eventCount}
+          selectedCount={selectedCount}
+          onSelectAll={() => onSetSelection(filteredIds, true)}
+          selectableCount={filteredIds.length}
+          isFiltered={isFiltering}
+          onClearSelection={onClearSelection}
+          onBulkDelete={onBulkDelete}
+          onImport={onImport}
+          onExport={onExport}
+          onPullFromHelper={onPullFromHelper}
+          isPullingFromHelper={isPullingFromHelper}
+          onPushToHelper={onPushToHelper}
+          isPushingToHelper={isPushingToHelper}
+          onAddEvent={onAddEvent}
+          viewMode={viewMode}
+        />
+        <CardContent>
+          {entries.length === 0 ? (
+            <EmptyState
+              icon={CalendarXIcon}
+              title={m.timeoff_no_events_title()}
+              description={m.timeoff_no_events_desc()}
+            />
+          ) : (
+            <>
+              <TableSearchInput
+                type="search"
+                className="mb-3"
+                placeholder={m.timeoff_search_placeholder()}
+                aria-label={m.timeoff_search_aria()}
+                value={search}
+                onChange={(event) => handleSearchChange(event.target.value)}
+              />
+              {isMobile && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <NativeSelect
+                    aria-label={m.timeoff_sort_by()}
+                    value={sorting[0]?.id ?? "date"}
+                    onChange={(event) =>
+                      setSorting([{ id: event.target.value, desc: sorting[0]?.desc ?? false }])
+                    }
+                  >
+                    <option value="date">{m.timeoff_col_date_pattern()}</option>
+                    <option value="type">{m.timeoff_col_type()}</option>
+                    <option value="title">{m.timeoff_col_title()}</option>
+                    <option value="flags">{m.timeoff_col_flags()}</option>
+                  </NativeSelect>
+                  <NativeSelect
+                    aria-label={m.timeoff_sort_order()}
+                    value={sorting[0]?.desc ? "desc" : "asc"}
+                    onChange={(event) =>
+                      setSorting([
+                        { id: sorting[0]?.id ?? "date", desc: event.target.value === "desc" },
+                      ])
+                    }
+                  >
+                    <option value="asc">{m.timeoff_sort_ascending()}</option>
+                    <option value="desc">{m.timeoff_sort_descending()}</option>
+                  </NativeSelect>
+                </div>
+              )}
+              {visibleRows.length === 0 && isFiltering ? (
+                <EmptyState
+                  icon={SearchIcon}
+                  title={m.timeoff_no_results_title()}
+                  description={m.timeoff_no_results_desc()}
+                />
+              ) : isMobile ? (
+                <ul data-slot="timeoff-card-list" className="m-0 mb-3 list-none space-y-3 p-0">
+                  {visibleRows.map(({ original: { entry, flags, title, typeLabel } }) => (
+                    <li key={entry.id} className="rounded-lg border border-border p-3">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          aria-label={m.timeoff_select_event_aria({ name: title })}
+                          checked={selectedIds.has(entry.id)}
+                          onCheckedChange={() => onToggleSelection(entry.id)}
+                        />
+                        <Badge
+                          data-event-type-badge
+                          className={getEventColorUtilities(
+                            flags,
+                            isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+                          )}
+                        >
+                          {getTimeLocationSymbol(flags)} {typeLabel}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-sm">{renderEntryDisplayDate(entry)}</div>
+                      {entry.note && <p className="my-2 wrap-anywhere">{entry.note}</p>}
+                      {getOverlappingEntries(entry, entries).length > 0 && (
+                        <span className="flex items-center gap-1 text-sm text-warning">
+                          <Icon icon={TriangleAlertIcon} />
+                          {m.timeoff_overlap()}
+                        </span>
+                      )}
+                      {flags.length > 0 && (
+                        <p className="my-2 text-sm text-muted-foreground">
+                          {flags.map(getEventFlagLabel).join(", ")}
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          className="min-h-11"
+                          onClick={() => onEditEvent(entry.id)}
+                          aria-label={m.timeoff_card_action_aria({ action: m.edit(), name: title })}
+                        >
+                          <Icon icon={PencilIcon} />
+                          {m.edit()}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="min-h-11"
+                          onClick={() => onDeleteEvent(entry.id)}
+                          aria-label={m.timeoff_card_action_aria({
+                            action: m.delete(),
+                            name: title,
+                          })}
+                        >
+                          <Icon icon={TrashIcon} />
+                          {m.delete()}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => {
+                          if (header.column.id === "select") {
+                            return (
+                              <TableHead key={header.id} scope="col">
+                                <Checkbox
+                                  indeterminate={selectedVisibleCount > 0 && !allVisibleSelected}
+                                  aria-label={m.timeoff_select_all_events_aria()}
+                                  checked={allVisibleSelected}
+                                  onCheckedChange={(checked) => onSetSelection(visibleIds, checked)}
+                                />
+                              </TableHead>
+                            );
+                          }
+
+                          return <SortableHeaderCell key={header.id} header={header} />;
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {visibleRows.map((tableRow) => {
+                      const { entry, flags, title, typeLabel } = tableRow.original;
+                      const eventColors = getEventColorUtilities(
+                        flags,
+                        isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+                      );
+                      const symbol = getTimeLocationSymbol(flags);
+
+                      return (
+                        <TableRow key={entry.id}>
+                          <TableCell>
+                            <Checkbox
+                              aria-label={m.timeoff_select_event_aria({ name: title })}
+                              checked={selectedIds.has(entry.id)}
+                              onCheckedChange={() => onToggleSelection(entry.id)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Badge data-event-type-badge className={eventColors}>
+                              {symbol && `${symbol} `}
+                              {typeLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
+                          <TableCell>
+                            {entry.note || <span className="text-muted-foreground">—</span>}
+                            {getOverlappingEntries(entry, entries).length > 0 && (
+                              <span className="flex items-center gap-1 text-sm text-warning">
+                                <Icon icon={TriangleAlertIcon} />
+                                {m.timeoff_overlap()}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {flags.length ? (
+                              <span className="text-sm text-muted-foreground">
+                                {flags.map(getEventFlagLabel).join(", ")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEditEvent(entry.id)}
+                              className="mr-2"
+                              aria-label={m.edit_with_name({ name: title })}
+                            >
+                              <Icon icon={PencilIcon} />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => onDeleteEvent(entry.id)}
+                              aria-label={m.delete_with_name({ name: title })}
+                            >
+                              <Icon icon={TrashIcon} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+              <TablePagination
+                total={table.getPrePaginatedRowModel().rows.length}
+                pageIndex={table.state.pagination.pageIndex}
+                pageSize={table.state.pagination.pageSize}
+                canPreviousPage={table.getCanPreviousPage()}
+                canNextPage={table.getCanNextPage()}
+                onPreviousPage={() => table.previousPage()}
+                onNextPage={() => table.nextPage()}
+                onPageSizeChange={(size) => table.setPageSize(size)}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <TimeOffRawView
+        rawText={rawEditorText}
+        error={rawEditorError}
+        skippedLines={rawEditorSkippedLines}
+        isDirty={isRawEditorDirty}
+        onChangeRawText={onChangeRawEditorText}
+        onApply={onApplyRawEditor}
+        onReset={onResetRawEditor}
+      />
+    </>
+  );
+}
+
+function toDisplayDate(value: string): string {
+  return formatDisplayDate(value);
+}
+
+const WEEKDAY_MESSAGES = [
+  m.weekday_mon,
+  m.weekday_tue,
+  m.weekday_wed,
+  m.weekday_thu,
+  m.weekday_fri,
+  m.weekday_sat,
+  m.weekday_sun,
+] as const;
+
+function getEntryDisplayDateText(entry: TimeOffEntry): string {
+  if (isTimeOffWeeklyEntry(entry)) {
+    const weekdayMsg = WEEKDAY_MESSAGES[entry.weekday - 1];
+    return weekdayMsg ? m.timeoff_every_weekday({ day: weekdayMsg() }) : "";
+  }
+  if (isTimeOffRangeEntry(entry)) {
+    return entry.start === entry.end
+      ? toDisplayDate(entry.start)
+      : `${toDisplayDate(entry.start)} - ${toDisplayDate(entry.end)}`;
+  }
+  return toDisplayDate(entry.date);
+}
+
+/** ISO form of the dates, so searching "2026-01" works as well as "2026/01". */
+function getEntryIsoDateText(entry: TimeOffEntry): string {
+  if (isTimeOffWeeklyEntry(entry)) return "";
+  if (isTimeOffRangeEntry(entry)) return `${entry.start} ${entry.end}`;
+  return entry.date;
+}
+
+function renderEntryDisplayDate(entry: TimeOffEntry) {
+  if (isTimeOffWeeklyEntry(entry)) {
+    const weekdayMsg = WEEKDAY_MESSAGES[entry.weekday - 1];
+    return weekdayMsg ? m.timeoff_every_weekday({ day: weekdayMsg() }) : "↻ —";
+  }
+
+  if (isTimeOffRangeEntry(entry)) {
+    if (entry.start === entry.end) {
+      return <span>{toDisplayDate(entry.start)}</span>;
+    }
+    return (
+      <>
+        <span>{toDisplayDate(entry.start)}</span>
+        {" - "}
+        <span>{toDisplayDate(entry.end)}</span>
+      </>
+    );
+  }
+
+  return isTimeOffDateEntry(entry) ? toDisplayDate(entry.date) : "";
+}

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { GanttTaskModal } from "@/features/gantt/GanttTaskModal";
-import { labelsCollection, tasksCollection } from "@/db/collections";
+import { labelsCollection, tasksCollection } from "@/lib/db/collections";
 
 describe("GanttTaskModal", () => {
   it.each([

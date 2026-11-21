@@ -1,0 +1,259 @@
+import { PlugIcon } from "lucide-react";
+import { useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import {
+  SettingsHint,
+  SettingsItem,
+  SettingsList,
+  SettingsLoading,
+  SettingsSection,
+  SettingsSecret,
+} from "@/features/settings/SettingsParts";
+import { useToast } from "@/app/providers/ToastContext";
+import type { CreatedIntegrationClient, IntegrationClient } from "@/api-types";
+import type { IntegrationClientScope } from "@/features/settings/hooks/useSettingsIntegrationClients";
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import * as m from "@/paraglide/messages.js";
+
+/** Matches `IntegrationClientCreate.name` (`max_length=120`) in the backend schema. */
+const INTEGRATION_CLIENT_NAME_MAX_LENGTH = 120;
+
+interface Props {
+  clients: IntegrationClient[] | null;
+  isLoading: boolean;
+  onRetry?: () => void;
+  error: string | null;
+  isCreating: boolean;
+  createdClient: CreatedIntegrationClient | null;
+  busyClientId: number | null;
+  isAdmin: boolean;
+  onDismissCreatedClient: () => void;
+  onCreateClient: (name: string, scopes: IntegrationClientScope[]) => void;
+  onRotateClient: (id: number) => void;
+  onRevokeClient: (id: number) => void;
+}
+
+export function SettingsIntegrationClientsSection(props: Props) {
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [adminScope, setAdminScope] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    action: "rotate" | "revoke";
+    client: IntegrationClient;
+  } | null>(null);
+  const mutationInFlight = props.isCreating || props.busyClientId !== null;
+
+  // Clear the draft the moment a client is created, as a same-render response
+  // to the prop changing rather than a follow-up effect.
+  const [prevCreatedClient, setPrevCreatedClient] = useState(props.createdClient);
+  if (props.createdClient !== prevCreatedClient) {
+    setPrevCreatedClient(props.createdClient);
+    if (props.createdClient) {
+      setName("");
+      setAdminScope(false);
+    }
+  }
+
+  const copyKey = async () => {
+    if (!props.createdClient) return;
+    try {
+      await navigator.clipboard.writeText(props.createdClient.key);
+      toast?.showSuccess(m.integration_clients_copied());
+    } catch {
+      toast?.showError(m.integration_clients_copy_failed());
+    }
+  };
+
+  const formLocked = mutationInFlight || props.createdClient !== null;
+
+  return (
+    <SettingsSection icon={PlugIcon} title={m.integration_clients_section_title()}>
+      <SettingsHint className="mb-3">{m.integration_clients_description()}</SettingsHint>
+      {/* Announce the result without putting the secret itself in a live region. */}
+      <div role="status" className="sr-only">
+        {props.createdClient ? m.integration_clients_created_title() : ""}
+      </div>
+      {props.createdClient ? (
+        <Alert role="note" variant="success" className="mb-3 gap-2">
+          <div className="font-medium">{m.integration_clients_created_title()}</div>
+          <div>{m.integration_clients_created_warning()}</div>
+          <SettingsSecret>{props.createdClient.key}</SettingsSecret>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => void copyKey()}>
+              {m.api_tokens_copy_btn()}
+            </Button>
+            <Button size="sm" onClick={props.onDismissCreatedClient}>
+              {m.api_tokens_done_btn()}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+      <div className="mb-3 flex flex-col gap-3">
+        <Field>
+          <FieldLabel htmlFor="integration-client-name">
+            {m.integration_clients_name_label()}
+          </FieldLabel>
+          <Input
+            id="integration-client-name"
+            maxLength={INTEGRATION_CLIENT_NAME_MAX_LENGTH}
+            aria-describedby="integration-client-name-help"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={m.integration_clients_name_placeholder()}
+            disabled={formLocked}
+          />
+        </Field>
+        <Field orientation="horizontal">
+          <Checkbox
+            id="integration-client-mcp-scope"
+            checked
+            readOnly
+            aria-describedby="integration-client-mcp-scope-help"
+          />
+          <FieldLabel htmlFor="integration-client-mcp-scope">worktime:mcp</FieldLabel>
+        </Field>
+        <FieldDescription id="integration-client-mcp-scope-help" className="-mt-2">
+          {m.integration_clients_mcp_scope_help()}
+        </FieldDescription>
+        {props.isAdmin ? (
+          <Field orientation="horizontal">
+            <Checkbox
+              id="integration-client-admin-scope"
+              checked={adminScope}
+              disabled={formLocked}
+              onCheckedChange={setAdminScope}
+              aria-describedby="integration-client-admin-scope-help"
+            />
+            <FieldLabel htmlFor="integration-client-admin-scope">
+              {m.integration_clients_admin_scope_label()}
+            </FieldLabel>
+          </Field>
+        ) : null}
+        {props.isAdmin ? (
+          <FieldDescription id="integration-client-admin-scope-help" className="-mt-2">
+            {m.integration_clients_admin_scope_help()}
+          </FieldDescription>
+        ) : null}
+        <div>
+          <Button
+            size="sm"
+            aria-describedby="integration-client-name-help"
+            disabled={formLocked || !name.trim()}
+            onClick={() =>
+              props.onCreateClient(
+                name,
+                adminScope ? ["worktime:mcp", "worktime:admin"] : ["worktime:mcp"],
+              )
+            }
+          >
+            {props.isCreating
+              ? m.integration_clients_creating_btn()
+              : m.integration_clients_create_btn()}
+          </Button>
+        </div>
+        <FieldDescription id="integration-client-name-help" className="-mt-2">
+          {m.integration_clients_name_help({ max: INTEGRATION_CLIENT_NAME_MAX_LENGTH })}
+        </FieldDescription>
+      </div>
+      {props.error ? (
+        <Alert role={props.onRetry ? "note" : "alert"} variant="destructive" className="mb-3">
+          {props.error}
+          {props.onRetry ? (
+            <Button variant="outline" size="sm" onClick={props.onRetry}>
+              {m.sync_retry_in_label()}
+            </Button>
+          ) : null}
+        </Alert>
+      ) : null}
+      {props.isLoading ? (
+        <SettingsLoading>{m.loading()}</SettingsLoading>
+      ) : props.clients?.length ? (
+        <SettingsList>
+          {props.clients.map((client) => (
+            <SettingsItem
+              key={client.id}
+              className="flex flex-wrap items-start justify-between gap-3"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 font-medium">
+                  {client.name}
+                  {!client.is_active ? (
+                    <Badge variant="secondary">{m.integration_clients_revoked()}</Badge>
+                  ) : null}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  •••• {client.key_preview} · {m.api_tokens_created_at_label()}{" "}
+                  {formatDisplayDate(client.created_at)} · {m.api_tokens_last_used_label()}{" "}
+                  {client.last_used_at
+                    ? formatDisplayDate(client.last_used_at)
+                    : m.api_tokens_last_used_never()}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {m.api_tokens_scopes_label()}: {client.scopes.join(", ")} ·{" "}
+                  {m.integration_clients_rate_limit({ count: client.rate_limit_per_minute })}
+                </div>
+              </div>
+              {client.is_active ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={formLocked}
+                    onClick={() => setConfirmation({ action: "rotate", client })}
+                  >
+                    {m.integration_clients_rotate_btn()}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={mutationInFlight}
+                    onClick={() => setConfirmation({ action: "revoke", client })}
+                  >
+                    {m.api_tokens_revoke_btn()}
+                  </Button>
+                </div>
+              ) : null}
+            </SettingsItem>
+          ))}
+        </SettingsList>
+      ) : (
+        <SettingsHint>{m.integration_clients_empty()}</SettingsHint>
+      )}
+      <ConfirmationDialog
+        isOpen={confirmation !== null}
+        title={
+          confirmation?.action === "rotate"
+            ? m.integration_clients_rotate_confirm_title()
+            : m.integration_clients_revoke_confirm_title()
+        }
+        message={
+          confirmation?.action === "rotate"
+            ? m.integration_clients_rotate_confirm_message({ name: confirmation.client.name })
+            : m.integration_clients_revoke_confirm_message({
+                name: confirmation?.client.name ?? "",
+              })
+        }
+        confirmLabel={
+          confirmation?.action === "rotate"
+            ? m.integration_clients_rotate_btn()
+            : m.api_tokens_revoke_btn()
+        }
+        cancelLabel={m.cancel()}
+        onConfirm={() => {
+          if (confirmation?.action === "rotate") props.onRotateClient(confirmation.client.id);
+          if (confirmation?.action === "revoke") props.onRevokeClient(confirmation.client.id);
+          setConfirmation(null);
+        }}
+        onCancel={() => setConfirmation(null)}
+        variant="danger"
+        icon={PlugIcon}
+      />
+    </SettingsSection>
+  );
+}

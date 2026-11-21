@@ -1,12 +1,12 @@
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
-import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
-import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
+import { TimeTrackingDailyView } from "@/features/time-tracking/TimeTrackingDailyView";
+import { TimeTrackingWeeklyView } from "@/features/time-tracking/TimeTrackingWeeklyView";
+import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { setLocale } from "@/paraglide/runtime.js";
 import "@/styles/tailwind.css";
 const params = new URLSearchParams(location.search);

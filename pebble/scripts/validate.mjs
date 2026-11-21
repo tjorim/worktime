@@ -38,7 +38,7 @@ if (manifest.modules?.["*"] !== "./main") throw new Error("Embedded main module 
 const watchSource = readFileSync(resolve(root, "src/embeddedjs/main.js"), "utf8");
 const phoneSource = readFileSync(resolve(root, "src/pkjs/index.js"), "utf8");
 const pairingSource = readFileSync(
-  resolve(repoRoot, "frontend/src/pages/PebblePairPage.tsx"),
+  resolve(repoRoot, "frontend/src/features/pebble/PebblePairPage.tsx"),
   "utf8",
 );
 const tokenServiceSource = readFileSync(

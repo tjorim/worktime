@@ -1,0 +1,57 @@
+/**
+ * Translated messages for the stable error codes the backend sends
+ * (`backend/app/core/errors.py`), grouped by the surface that can hit them.
+ * Pass one to `getErrorMessage(error, fallback, codeMessages)`; a code a map does
+ * not list falls back to the surface's operation message. See `docs/api-errors.md`.
+ */
+import * as m from "@/paraglide/messages.js";
+import type { ErrorCodeMessages } from "@/lib/api/apiError";
+
+/** Token management and pairing need an interactive session, never an API token. */
+export const accessTokenErrorMessages: ErrorCodeMessages = {
+  oidc_session_required: () => m.error_code_oidc_session_required(),
+  access_token_not_found: () => m.error_code_access_token_not_found(),
+};
+
+export const integrationClientErrorMessages: ErrorCodeMessages = {
+  oidc_session_required: () => m.error_code_oidc_session_required(),
+  admin_scope_required: () => m.error_code_admin_scope_required(),
+  integration_client_not_found: () => m.error_code_integration_client_not_found(),
+};
+
+export const accountDeleteErrorMessages: ErrorCodeMessages = {
+  oidc_session_required: () => m.error_code_oidc_session_required(),
+  user_not_found: () => m.error_code_user_not_found(),
+};
+
+export const adminUserDeleteErrorMessages: ErrorCodeMessages = {
+  oidc_session_required: () => m.error_code_oidc_session_required(),
+  admin_required: () => m.error_code_admin_required(),
+  admin_self_delete_forbidden: () => m.account_admin_users_delete_self_blocked(),
+  user_not_found: () => m.error_code_user_not_found(),
+};
+
+export const pebblePairErrorMessages: ErrorCodeMessages = {
+  oidc_session_required: () => m.error_code_oidc_session_required(),
+};
+
+export const ganttDependencyErrorMessages: ErrorCodeMessages = {
+  gantt_dependency_unknown: () => m.error_code_gantt_dependency_unknown(),
+  gantt_dependency_self: () => m.error_code_gantt_dependency_self(),
+  gantt_dependency_cycle: () => m.error_code_gantt_dependency_cycle(),
+};
+
+export const taskValidationErrorMessages: ErrorCodeMessages = {
+  ...ganttDependencyErrorMessages,
+  task_overlap: () => m.error_code_task_overlap(),
+  label_required: () => m.tt_error_configure_label(),
+  task_text_invalid: () => m.error_code_task_text_invalid(),
+  task_duration_invalid: () => m.error_code_task_duration_invalid(),
+  task_timezone_required: () => m.error_code_task_timezone_required(),
+};
+
+export const accountProfileErrorMessages: ErrorCodeMessages = {
+  username_invalid: () => m.error_code_username_invalid(),
+  username_reserved: () => m.error_code_username_reserved(),
+  display_name_invalid: () => m.error_code_display_name_invalid(),
+};

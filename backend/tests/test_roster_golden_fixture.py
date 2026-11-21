@@ -1,13 +1,13 @@
 """Cross-checks the backend's hand-copied roster config and shift-code algorithm
-against the frontend's source of truth (frontend/src/data/rosters.ts and
-frontend/src/utils/shiftCalculations.ts), via a golden fixture generated from
+against the frontend's source of truth (frontend/src/lib/schedule/rosters.ts and
+frontend/src/lib/schedule/shiftCalculations.ts), via a golden fixture generated from
 the frontend.
 
 See #1107: nothing else ties the two implementations together, so a roster
 change applied to rosters.ts alone (a new schedule, a corrected reference
 date, adjusted shift hours) would otherwise silently desync the Pebble
 dashboard and MCP schedule tools from the web UI, with no failing check
-anywhere. After changing frontend/src/data/rosters.ts, run
+anywhere. After changing frontend/src/lib/schedule/rosters.ts, run
 "pnpm run fixtures:generate" in frontend/ and commit the regenerated
 fixture; frontend `pnpm typecheck` (fixtures:check) fails if that step was
 skipped, and this test fails if the backend's copy in

@@ -1,6 +1,6 @@
 # Daily and weekly time tracking migration (#1393)
 
-All `features/timeTracking` files now use owned UI components and prefixed Tailwind
+All `features/time-tracking` files now use owned UI components and prefixed Tailwind
 utilities; no react-bootstrap imports or Bootstrap layout/control classes remain there.
 
 ## Decisions
@@ -13,7 +13,7 @@ utilities; no react-bootstrap imports or Bootstrap layout/control classes remain
   and hover tooltips need their own geometry. Segments keep `role="progressbar"`.
 - Runtime values never become free-form inline styles. User label colours use the existing
   `--label-bg`/`--label-fg` custom properties (`LabelChip`); segment widths, the Now position
-  and the daily ring use `--seg-w`, `--now-pos` and `--ring-pct`. `features/timeTracking/cssVars.ts`
+  and the daily ring use `--seg-w`, `--now-pos` and `--ring-pct`. `features/time-tracking/cssVars.ts`
   validates them (hex-only label colours with a theme fallback, percentages clamped to 0–100).
 - `tw:progress-stripes` (planned time) and `tw:progress-ring` (daily total) are the only new
   utilities, plus `success-solid`/`warning-solid` tokens for filled bars.
@@ -28,7 +28,7 @@ utilities; no react-bootstrap imports or Bootstrap layout/control classes remain
 
 The generated legacy class inventory went from **2,285 to 2,282** classes. Removed:
 `.progress-thin`, `.time-tracking-label` and `.time-tracking-codeblock`. All
-`features/timeTracking/*` entries were removed from `legacy-inline-styles.json`.
+`features/time-tracking/*` entries were removed from `legacy-inline-styles.json`.
 
 Still shared with another area: `.textarea-mono` (`TimeOffRawView`), and the global Bootstrap
 layout/control selectors other migration groups still use. `GanttTableView` still imports

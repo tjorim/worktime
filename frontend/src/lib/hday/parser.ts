@@ -65,7 +65,7 @@ import { normalizeEventFlags } from "./flags";
 import { isValidHdayDate } from "./dateValidation";
 import type { EventFlag, HdayEvent } from "./types";
 // Relative path: hday-helper (bun) imports this file directly and has no "@" alias.
-import { clampTimeOffNote } from "../../constants/timeOff";
+import { clampTimeOffNote } from "../../config/timeOff";
 
 /**
  * Convert a string of single-character flags into the corresponding event flags.

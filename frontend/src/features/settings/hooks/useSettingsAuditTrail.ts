@@ -1,0 +1,136 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as m from "@/paraglide/messages.js";
+import { logger } from "@/lib/logger";
+import { tasksCollection, ganttTasksCollection, labelsCollection } from "@/lib/db/collections";
+import { ApiError } from "@/lib/api/apiError";
+import type { AuditEntryListResponse, AuditEntryRead } from "@/api-types";
+
+/** An audit entry plus the name of its resource, which the client looks up in its own collections. */
+export type AuditEntry = AuditEntryRead & { resource_display_name?: string };
+
+const PAGE_SIZE = 25;
+
+interface UseSettingsAuditTrailParams {
+  enabled: boolean;
+  userId?: number;
+  resourceOwnerId?: number;
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
+}
+
+export function useSettingsAuditTrail({
+  enabled,
+  userId,
+  resourceOwnerId = userId,
+  fetchFn,
+}: UseSettingsAuditTrailParams) {
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const requestGenerationRef = useRef(0);
+
+  const fetchPage = useCallback(
+    async (beforeId?: number) => {
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (userId !== undefined) params.set("user_id", String(userId));
+      if (beforeId !== undefined) params.set("before_id", String(beforeId));
+
+      const response = await fetchFn(`/api/audit?${params.toString()}`);
+      if (!response.ok) throw await ApiError.fromResponse(response);
+      const payload = (await response.json()) as AuditEntryListResponse;
+      return (payload.items ?? []).map((entry) => {
+        // Local collections belong to the signed-in account. Never resolve another
+        // user's ids against them in the team-wide trail; deleted items retain ids.
+        if (resourceOwnerId === undefined || entry.actor_user_id !== resourceOwnerId) return entry;
+        const collection =
+          entry.resource_type === "time_tracking_task"
+            ? tasksCollection
+            : entry.resource_type === "gantt_task"
+              ? ganttTasksCollection
+              : entry.resource_type === "label"
+                ? labelsCollection
+                : null;
+        const resource = collection?.toArray.find((item) => item.id === entry.resource_id);
+        const name =
+          resource &&
+          ("text" in resource ? resource.text : "name" in resource ? resource.name : undefined);
+        return typeof name === "string" ? { ...entry, resource_display_name: name } : entry;
+      });
+    },
+    [fetchFn, userId, resourceOwnerId],
+  );
+
+  // Reset the loaded entries the moment the trail becomes disabled, rather
+  // than in an effect: this is a same-render response to that prop flipping,
+  // not a side effect that needs to synchronize with anything external.
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (!enabled) {
+      setEntries([]);
+      setError(null);
+      setHasMore(false);
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    const requestGeneration = ++requestGenerationRef.current;
+    if (!enabled) {
+      return;
+    }
+
+    let isCancelled = false;
+    setIsLoading(true);
+    setIsLoadingMore(false);
+    setError(null);
+
+    fetchPage()
+      .then((items) => {
+        if (isCancelled || requestGenerationRef.current !== requestGeneration) return;
+        setEntries(items);
+        setHasMore(items.length === PAGE_SIZE);
+      })
+      .catch((loadError) => {
+        if (isCancelled || requestGenerationRef.current !== requestGeneration) return;
+        logger.error("Failed to load audit trail:", loadError);
+        setError(m.audit_trail_load_failed());
+      })
+      .finally(() => {
+        if (!isCancelled && requestGenerationRef.current === requestGeneration) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [enabled, fetchPage]);
+
+  const loadMore = async () => {
+    const beforeId = entries.at(-1)?.id;
+    if (beforeId === undefined || isLoadingMore) return;
+    const requestGeneration = requestGenerationRef.current;
+
+    setIsLoadingMore(true);
+    setError(null);
+    try {
+      const items = await fetchPage(beforeId);
+      if (requestGenerationRef.current !== requestGeneration) return;
+      setEntries((current) => [...current, ...items]);
+      setHasMore(items.length === PAGE_SIZE);
+    } catch (loadError) {
+      if (requestGenerationRef.current !== requestGeneration) return;
+      logger.error("Failed to load more audit entries:", loadError);
+      setError(m.audit_trail_load_failed());
+    } finally {
+      if (requestGenerationRef.current === requestGeneration) {
+        setIsLoadingMore(false);
+      }
+    }
+  };
+
+  return { entries, isLoading, isLoadingMore, error, hasMore, loadMore };
+}

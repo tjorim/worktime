@@ -2,18 +2,18 @@ import type { VapidPublicKeyResponse, PushSubscriptionRead } from "@/api-types";
 import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { invalidatePushRegistration } from "@/utils/pushNotifications";
+import { invalidatePushRegistration } from "@/lib/push/pushNotifications";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useApiClient } from "@/hooks/useApiClient";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSettings, defaultSettings } from "@/contexts/SettingsContext";
-import type { AuthContextType } from "@/contexts/AuthContext";
-import type { UserSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useSettings, defaultSettings } from "@/app/providers/SettingsContext";
+import type { AuthContextType } from "@/app/providers/AuthContext";
+import type { UserSettings } from "@/app/providers/SettingsContext";
 
 vi.mock("@/hooks/useApiClient");
-vi.mock("@/contexts/AuthContext");
-vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
+vi.mock("@/app/providers/AuthContext");
+vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/providers/SettingsContext")>();
   return { ...actual, useSettings: vi.fn() };
 });
 
