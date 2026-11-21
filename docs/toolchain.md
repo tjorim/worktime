@@ -1,8 +1,8 @@
 # Node and pnpm toolchain
 
-Use Node 26.13.1 (the `.node-version` pin) and pnpm 12.20.0 (the
+Use Node 26.13.1 (the `.node-version` pin) and pnpm 12.21.0 (the
 `packageManager` pin). CI reads those files; install pnpm directly with
-`npm install --global pnpm@12.20.0`, since Node 26 does not bundle Corepack.
+`npm install --global pnpm@12.21.0`, since Node 26 does not bundle Corepack.
 
 The pnpm 10 to 12 migration keeps dependency versions locked. Configuration
 belongs in `pnpm-workspace.yaml`; `allowBuilds` retains explicit dependency
