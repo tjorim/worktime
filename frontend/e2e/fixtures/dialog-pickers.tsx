@@ -8,7 +8,7 @@ import { TemplateModal } from "@/features/timeTracking/TemplateModal";
 import { TaskEditModal } from "@/components/TaskEditModal";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
-import { WelcomeWizard } from "@/components/WelcomeWizard";
+import { WelcomeWizard } from "@/features/onboarding/WelcomeWizard";
 import { AuthProvider } from "@/app/providers/AuthContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";

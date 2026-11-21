@@ -2,10 +2,10 @@ import { Outlet } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
 import { AboutModal } from "@/app/layout/AboutModal";
 import { FeatureIntroAlert } from "@/app/layout/FeatureIntroAlert";
-import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
+import { FirstSyncConflictDialog } from "@/features/sync/FirstSyncConflictDialog";
 import { Header } from "@/app/layout/Header";
 import { KeyboardShortcutsModal } from "@/app/layout/KeyboardShortcutsModal";
-import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
+import { OngoingConflictDialog } from "@/features/sync/OngoingConflictDialog";
 import { useAppShellContext } from "@/app/providers/AppShellContext";
 import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
 import { useSettings } from "@/app/providers/SettingsContext";
@@ -13,7 +13,7 @@ import { useSettings } from "@/app/providers/SettingsContext";
 // Shown on first run and from the settings only: its steps (country, team and
 // schedule pickers) load when it first opens, not on every page load.
 const WelcomeWizard = lazy(() =>
-  import("@/components/WelcomeWizard").then((module) => ({ default: module.WelcomeWizard })),
+  import("@/features/onboarding/WelcomeWizard").then((module) => ({ default: module.WelcomeWizard })),
 );
 
 /**

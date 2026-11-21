@@ -17,13 +17,13 @@ import { Progress } from "@/components/ui/progress";
 
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
-import { useCountdown } from "@/hooks/useCountdown";
+import { useCountdown } from "@/features/status/useCountdown";
 import { dayjs, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { UpcomingShiftResult, ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { getAllTeamsShifts, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
-import { ShiftTimeDisplay } from "@/components/shared/ShiftTimeDisplay";
-import { CountdownBadge } from "@/components/shared/CountdownBadge";
+import { ShiftTimeDisplay } from "@/features/status/ShiftTimeDisplay";
+import { CountdownBadge } from "@/features/status/CountdownBadge";
 import { ShiftBadge } from "@/components/ShiftBadge";
 import { EmptyState } from "@/components/EmptyState";
 import * as m from "@/paraglide/messages.js";

@@ -5,7 +5,7 @@ import {
   getTotalSteps,
   getStepIndex,
   getStepConfig,
-} from "@/components/wizardStepConfig";
+} from "@/features/onboarding/wizardStepConfig";
 
 /**
  * Tests for WelcomeWizard configuration-driven step navigation.

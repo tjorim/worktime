@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAppShellContext } from "@/app/providers/AppShellContext";
-import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
+import { SyncStatusIndicator } from "@/features/sync/SyncStatusIndicator";
 import * as m from "@/paraglide/messages.js";
 
 /**

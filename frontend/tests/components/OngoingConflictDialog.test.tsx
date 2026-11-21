@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
+import { OngoingConflictDialog } from "@/features/sync/OngoingConflictDialog";
 import type { SyncPushPayload } from "@/lib/sync/syncClient";
 
 function emptyPayload(): SyncPushPayload {

@@ -10,15 +10,15 @@ import { formatTimeByPreference, formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";
 import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
-import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
-import { GenericStatusContent } from "@/components/status/GenericStatus";
+import { PersonalizedStatusContent } from "@/features/status/PersonalizedStatus";
+import { GenericStatusContent } from "@/features/status/GenericStatus";
 import { SetupActionButton } from "@/components/SetupActionButton";
-import { ShiftTimeline } from "@/components/ShiftTimeline";
+import { ShiftTimeline } from "@/features/status/ShiftTimeline";
 import * as m from "@/paraglide/messages.js";
 
 // Keep optional help out of the initial Base UI dependency closure.
 const DateCodeHelp = lazy(() =>
-  import("@/components/shared/DateCodeHelp").then((module) => ({ default: module.DateCodeHelp })),
+  import("@/features/status/DateCodeHelp").then((module) => ({ default: module.DateCodeHelp })),
 );
 
 interface CurrentStatusProps {

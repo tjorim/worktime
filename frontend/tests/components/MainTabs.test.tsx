@@ -10,7 +10,7 @@ import { TestProviders } from "@tests/utils/testProviders";
 
 // Mock the child components. The schedule mock keeps local state, so a test
 // can tell whether it stayed mounted while another tab was shown.
-vi.mock("@/components/ScheduleTabView", async () => {
+vi.mock("@/features/schedule/ScheduleTabView", async () => {
   const { useState } = await import("react");
   return {
     ScheduleTabView: ({ myTeam }: { myTeam: number | null }) => {

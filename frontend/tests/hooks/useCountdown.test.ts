@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useCountdown } from "@/hooks/useCountdown";
+import { useCountdown } from "@/features/status/useCountdown";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 describe("useCountdown", () => {

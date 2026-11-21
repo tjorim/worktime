@@ -22,15 +22,15 @@ import {
   getTotalSteps,
   getVisibleSteps,
 } from "./wizardStepConfig";
-import { Step1Welcome } from "./wizard/Step1Welcome";
-import { Step2Features } from "./wizard/Step2Features";
-import { Step3ScheduleSelection } from "./wizard/Step3ScheduleSelection";
-import { Step4TeamSelection } from "./wizard/Step4TeamSelection";
-import { Step5TimeOffSetup } from "./wizard/Step5TimeOffSetup";
-import { Step6TimeTrackingSetup } from "./wizard/Step6TimeTrackingSetup";
-import { Step7GanttSetup } from "./wizard/Step7GanttSetup";
-import { Step8WorkLocationSetup } from "./wizard/Step8WorkLocationSetup";
-import { Step9AccountSetup } from "./wizard/Step9AccountSetup";
+import { Step1Welcome } from "./Step1Welcome";
+import { Step2Features } from "./Step2Features";
+import { Step3ScheduleSelection } from "./Step3ScheduleSelection";
+import { Step4TeamSelection } from "./Step4TeamSelection";
+import { Step5TimeOffSetup } from "./Step5TimeOffSetup";
+import { Step6TimeTrackingSetup } from "./Step6TimeTrackingSetup";
+import { Step7GanttSetup } from "./Step7GanttSetup";
+import { Step8WorkLocationSetup } from "./Step8WorkLocationSetup";
+import { Step9AccountSetup } from "./Step9AccountSetup";
 import { createDefaultLabel } from "@/lib/time-tracking/constants";
 import * as m from "@/paraglide/messages.js";
 

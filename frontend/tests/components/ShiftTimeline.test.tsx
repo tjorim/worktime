@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { Dayjs } from "dayjs";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ShiftTimeline } from "@/components/ShiftTimeline";
+import { ShiftTimeline } from "@/features/status/ShiftTimeline";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";

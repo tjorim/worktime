@@ -1,18 +1,18 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PersonalizedStatusContent } from "@/components/status/PersonalizedStatus";
-import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
-import { useTodayActualStart } from "@/hooks/useTodayActualStart";
-import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
+import { PersonalizedStatusContent } from "@/features/status/PersonalizedStatus";
+import { useLiveShiftStatus } from "@/features/status/useLiveShiftStatus";
+import { useTodayActualStart } from "@/features/status/useTodayActualStart";
+import { useFlexStartOverride } from "@/features/status/useFlexStartOverride";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: () => ({ settings: { timeFormat: "24h", enableTimeTracking: false } }),
 }));
-vi.mock("@/hooks/useLiveShiftStatus");
-vi.mock("@/hooks/useTodayActualStart");
-vi.mock("@/hooks/useFlexStartOverride");
-vi.mock("@/components/status/FlexStartEditor", () => ({ FlexStartEditor: () => null }));
+vi.mock("@/features/status/useLiveShiftStatus");
+vi.mock("@/features/status/useTodayActualStart");
+vi.mock("@/features/status/useFlexStartOverride");
+vi.mock("@/features/status/FlexStartEditor", () => ({ FlexStartEditor: () => null }));
 
 const shift = {
   code: "M" as const,

@@ -14,14 +14,14 @@ vi.mock("@/app/layout/AppLayout", () => ({ AppLayout: () => <Header /> }));
 vi.mock("@/app/providers/AppShellContext", () => ({
   useAppShellContext: () => ({ openShortcuts: vi.fn() }),
 }));
-vi.mock("@/components/sync/SyncStatusIndicator", () => ({ SyncStatusIndicator: () => null }));
+vi.mock("@/features/sync/SyncStatusIndicator", () => ({ SyncStatusIndicator: () => null }));
 vi.mock("@/hooks/useKeyboardShortcuts", () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock("@/app/home/HomePage", () => ({ HomePage: () => null }));
 vi.mock("@/pages/SettingsPage", () => ({ SettingsPage: () => null }));
-vi.mock("@/pages/PrivacyPage", () => ({ PrivacyPage: () => null }));
-vi.mock("@/pages/PebblePairPage", () => ({ PebblePairPage: () => null }));
-vi.mock("@/pages/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));
-vi.mock("@/pages/SilentRenewCallbackPage", () => ({ SilentRenewCallbackPage: () => null }));
+vi.mock("@/features/legal/PrivacyPage", () => ({ PrivacyPage: () => null }));
+vi.mock("@/features/pebble/PebblePairPage", () => ({ PebblePairPage: () => null }));
+vi.mock("@/features/auth/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));
+vi.mock("@/features/auth/SilentRenewCallbackPage", () => ({ SilentRenewCallbackPage: () => null }));
 
 describe("home route preloading", () => {
   let router: typeof appRouter;

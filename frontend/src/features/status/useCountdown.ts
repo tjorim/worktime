@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { useLiveTime } from "./useLiveTime";
+import { useLiveTime } from "@/hooks/useLiveTime";
 
 export interface CountdownResult {
   days: number;

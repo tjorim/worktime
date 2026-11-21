@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useLiveShiftStatus } from "@/hooks/useLiveShiftStatus";
+import { useLiveShiftStatus } from "@/features/status/useLiveShiftStatus";
 import { formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import {
   calculateShift,

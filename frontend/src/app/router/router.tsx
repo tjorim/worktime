@@ -3,18 +3,18 @@ import { AppLayout } from "@/app/layout/AppLayout";
 import { RouteError, RoutePending } from "@/app/router/RouteStatus";
 import { preloadSyncCollections } from "@/lib/db/collections";
 import { lazyRoute } from "@/app/router/lazyRoute";
-import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { AuthCallbackPage } from "@/features/auth/AuthCallbackPage";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { HomePage } from "@/app/home/HomePage";
-import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
+import { SilentRenewCallbackPage } from "@/features/auth/SilentRenewCallbackPage";
 
 // Secondary routes are code-split: Settings alone pulls in backup/restore, the
 // account/admin sections and their dialogs. Home, the auth callbacks and the
 // layout stay in the entry chunk so sign-in and the first paint never wait on
 // a second download.
 const SettingsPage = lazyRoute(() => import("@/pages/SettingsPage"), "SettingsPage");
-const PrivacyPage = lazyRoute(() => import("@/pages/PrivacyPage"), "PrivacyPage");
-const PebblePairPage = lazyRoute(() => import("@/pages/PebblePairPage"), "PebblePairPage");
+const PrivacyPage = lazyRoute(() => import("@/features/legal/PrivacyPage"), "PrivacyPage");
+const PebblePairPage = lazyRoute(() => import("@/features/pebble/PebblePairPage"), "PebblePairPage");
 
 const rootRoute = createRootRoute({
   component: AppLayout,

@@ -23,7 +23,7 @@ import { MobileQuickActions } from "@/app/home/MobileQuickActions";
 // Kept mounted once visited (keepMounted), but loaded only then: its team
 // selector and transfer accordion are not needed on the calendar tab.
 const ScheduleTabView = lazy(() =>
-  import("@/components/ScheduleTabView").then((module) => ({
+  import("@/features/schedule/ScheduleTabView").then((module) => ({
     default: module.ScheduleTabView,
   })),
 );

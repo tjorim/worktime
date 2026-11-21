@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
+import { SyncStatusIndicator } from "@/features/sync/SyncStatusIndicator";
 
 const mocks = vi.hoisted(() => ({
   auth: { isAuthenticated: true },

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { TeamCarousel } from "@/components/shared/TeamCarousel";
+import { TeamCarousel } from "@/features/schedule/TeamCarousel";
 
 function renderPager(activeIndex = 0) {
   const onSelect = vi.fn();

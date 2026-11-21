@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { useSettings } from "@/app/providers/SettingsContext";
-import { TransferView } from "@/components/TransferView";
-import { WeekView } from "@/components/schedule/WeekView";
-import { TodayView } from "@/components/schedule/TodayView";
+import { TransferView } from "@/features/schedule/TransferView";
+import { WeekView } from "@/features/schedule/WeekView";
+import { TodayView } from "@/features/schedule/TodayView";
 import { ChoiceToggleGroup } from "@/components/ChoiceToggleGroup";
 import * as m from "@/paraglide/messages.js";
 

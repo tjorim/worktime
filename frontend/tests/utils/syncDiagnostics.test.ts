@@ -3,7 +3,7 @@ import {
   createSyncAttemptDiagnostics,
   reportSyncDiagnostic,
   trackSyncRequests,
-} from "@/utils/syncDiagnostics";
+} from "@/features/sync/syncDiagnostics";
 import type { FetchFn } from "@/lib/sync/syncClient";
 
 function responseWithRequestId(requestId: string | null): Response {

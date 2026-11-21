@@ -2,11 +2,11 @@ import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TransferView } from "@/components/TransferView";
+import { TransferView } from "@/features/schedule/TransferView";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { EventStoreProvider, useEventStore } from "@/app/providers/EventStoreContext";
-import { useTransferCalculations } from "@/hooks/useTransferCalculations";
-import type { TransferType } from "@/hooks/useTransferCalculations";
+import { useTransferCalculations } from "@/features/schedule/useTransferCalculations";
+import type { TransferType } from "@/features/schedule/useTransferCalculations";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { CalendarEvent } from "@/lib/events/types";
 
@@ -57,7 +57,7 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 // Mock the useTransferCalculations hook
-vi.mock("@/hooks/useTransferCalculations", () => ({
+vi.mock("@/features/schedule/useTransferCalculations", () => ({
   useTransferCalculations: vi.fn(),
 }));
 

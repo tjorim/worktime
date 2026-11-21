@@ -1,4 +1,4 @@
-import { CurrentStatus } from "@/components/CurrentStatus";
+import { CurrentStatus } from "@/features/status/CurrentStatus";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MainTabs } from "@/app/home/MainTabs";
 import { useAppShellContext } from "@/app/providers/AppShellContext";

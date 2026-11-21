@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
+import { AuthCallbackPage } from "@/features/auth/AuthCallbackPage";
 
 const state = vi.hoisted(() => ({
   navigate: vi.fn(),

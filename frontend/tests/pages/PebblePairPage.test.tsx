@@ -3,7 +3,7 @@ import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PebblePairPage } from "@/pages/PebblePairPage";
+import { PebblePairPage } from "@/features/pebble/PebblePairPage";
 import { useAuth } from "@/app/providers/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";

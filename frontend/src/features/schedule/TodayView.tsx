@@ -12,7 +12,7 @@ import { useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { TeamCarousel } from "@/components/shared/TeamCarousel";
+import { TeamCarousel } from "@/features/schedule/TeamCarousel";
 
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

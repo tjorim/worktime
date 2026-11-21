@@ -75,7 +75,7 @@ import {
   trackSyncRequests,
   type SyncAttemptDiagnostics,
   type SyncDiagnosticPhase,
-} from "@/utils/syncDiagnostics";
+} from "@/features/sync/syncDiagnostics";
 
 export type FirstSyncPhase =
   /** Not authenticated, or sync already set up — nothing to do. */

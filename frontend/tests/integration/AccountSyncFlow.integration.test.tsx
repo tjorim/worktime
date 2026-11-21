@@ -41,10 +41,10 @@ import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import App from "@/app/App";
-import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
+import { FirstSyncConflictDialog } from "@/features/sync/FirstSyncConflictDialog";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
+import { useFirstSyncFlow } from "@/features/sync/useFirstSyncFlow";
 import { getSyncCursorKey, getSyncOutboxKey } from "@/config/storageKeys";
 import { tasksCollection, setSyncCollectionAuth } from "@/lib/db/collections";
 import {

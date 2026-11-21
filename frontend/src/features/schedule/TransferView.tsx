@@ -40,7 +40,7 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { resolveEventPaletteVars } from "@/lib/hday/presentation";
-import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";
+import { useTransferCalculations, type TransferInfo } from "@/features/schedule/useTransferCalculations";
 import {
   dayjs,
   formatDisplayDate,
@@ -49,11 +49,11 @@ import {
 } from "@/lib/dates/dateTimeUtils";
 import { getTeamCountForOption, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
 import { getShift, type ShiftWindow } from "@/lib/schedule/shiftCalculations";
-import { EmptyState } from "./EmptyState";
-import { SetupActionButton } from "./SetupActionButton";
-import { ShiftBadge } from "./ShiftBadge";
-import { TeamSelector } from "./TeamSelector";
-import { ErrorBoundary } from "./ErrorBoundary";
+import { EmptyState } from "@/components/EmptyState";
+import { SetupActionButton } from "@/components/SetupActionButton";
+import { ShiftBadge } from "@/components/ShiftBadge";
+import { TeamSelector } from "@/components/TeamSelector";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 

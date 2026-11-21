@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { ScheduleTabView } from "@/components/ScheduleTabView";
+import { ScheduleTabView } from "@/features/schedule/ScheduleTabView";
 import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
@@ -11,7 +11,7 @@ import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 
 // Mock the child components with schedule type support
-vi.mock("@/components/schedule/TodayView", () => ({
+vi.mock("@/features/schedule/TodayView", () => ({
   TodayView: ({
     myTeam,
     viewingScheduleType,
@@ -28,7 +28,7 @@ vi.mock("@/components/schedule/TodayView", () => ({
   ),
 }));
 
-vi.mock("@/components/schedule/WeekView", () => ({
+vi.mock("@/features/schedule/WeekView", () => ({
   WeekView: ({
     myTeam,
     viewingScheduleType,
@@ -42,7 +42,7 @@ vi.mock("@/components/schedule/WeekView", () => ({
   ),
 }));
 
-vi.mock("@/components/TransferView", () => ({
+vi.mock("@/features/schedule/TransferView", () => ({
   TransferView: ({
     myTeam,
     otherScheduleType,

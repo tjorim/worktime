@@ -3,10 +3,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import RealDayjs from "dayjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CurrentStatus } from "@/components/CurrentStatus";
+import { CurrentStatus } from "@/features/status/CurrentStatus";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
-import * as useCountdownHook from "@/hooks/useCountdown";
+import * as useCountdownHook from "@/features/status/useCountdown";
 import { dayjs, formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import * as shiftCalculations from "@/lib/schedule/shiftCalculations";
 
@@ -83,7 +83,7 @@ vi.mock("@/lib/schedule/shiftCalculations", () => ({
 
 // getShiftClassName is now part of shiftCalculations mock
 
-vi.mock("@/hooks/useCountdown", () => ({
+vi.mock("@/features/status/useCountdown", () => ({
   useCountdown: vi.fn(),
 }));
 

@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { formatYYWWD } from "@/lib/dates/dateTimeUtils";
-import { useLiveTime } from "./useLiveTime";
+import { useLiveTime } from "@/hooks/useLiveTime";
 import type { OffDayProgress, ShiftResult, UpcomingShiftResult } from "@/lib/schedule/shiftCalculations";
 import {
   calculateShift,

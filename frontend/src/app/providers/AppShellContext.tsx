@@ -1,11 +1,11 @@
 import type { Dayjs } from "dayjs";
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
-import type { WizardCompletionPayload } from "@/components/WelcomeWizard";
-import type { WizardStep } from "@/components/wizardStepConfig";
+import type { WizardCompletionPayload } from "@/features/onboarding/WelcomeWizard";
+import type { WizardStep } from "@/features/onboarding/wizardStepConfig";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import type { TabKey } from "@/app/providers/SettingsContext";
-import type { ConflictChoice, FirstSyncConflictCounts } from "@/hooks/useFirstSyncFlow";
+import type { ConflictChoice, FirstSyncConflictCounts } from "@/features/sync/useFirstSyncFlow";
 
 export interface FeatureAnnouncement {
   name: string;

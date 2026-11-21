@@ -42,7 +42,7 @@ vi.mock("@/app/layout/Header", () => ({
   Header: () => <div data-testid="header">Header</div>,
 }));
 
-vi.mock("@/components/CurrentStatus", () => ({
+vi.mock("@/features/status/CurrentStatus", () => ({
   CurrentStatus: () => <div data-testid="current-status">CurrentStatus</div>,
 }));
 
@@ -50,7 +50,7 @@ vi.mock("@/app/home/MainTabs", () => ({
   MainTabs: () => <div data-testid="main-tabs">MainTabs</div>,
 }));
 
-vi.mock("@/components/WelcomeWizard", () => ({
+vi.mock("@/features/onboarding/WelcomeWizard", () => ({
   WelcomeWizard: () => <div data-testid="welcome-wizard">WelcomeWizard</div>,
 }));
 

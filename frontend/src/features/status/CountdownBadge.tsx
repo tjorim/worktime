@@ -2,7 +2,7 @@ const TWO_HOURS_IN_SECONDS = 7200;
 const ONE_DAY_IN_SECONDS = 86400;
 import { Badge } from "@/components/ui/badge";
 import type { Dayjs } from "dayjs";
-import type { CountdownResult } from "@/hooks/useCountdown";
+import type { CountdownResult } from "@/features/status/useCountdown";
 import * as m from "@/paraglide/messages.js";
 
 interface CountdownBadgeProps {

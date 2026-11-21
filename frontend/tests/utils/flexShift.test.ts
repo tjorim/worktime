@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/utils/flexShift";
+import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/features/status/flexShift";
 
 describe("flexShift utils", () => {
   describe("getFlexWindow", () => {

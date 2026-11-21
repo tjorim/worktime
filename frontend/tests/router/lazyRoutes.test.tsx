@@ -18,10 +18,10 @@ vi.mock("@/app/layout/AppLayout", async () => {
   return { AppLayout: () => <Outlet /> };
 });
 vi.mock("@/app/home/HomePage", () => ({ HomePage: () => <p>home</p> }));
-vi.mock("@/pages/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));
-vi.mock("@/pages/SilentRenewCallbackPage", () => ({ SilentRenewCallbackPage: () => null }));
-vi.mock("@/pages/PrivacyPage", () => ({ PrivacyPage: () => <p>privacy page</p> }));
-vi.mock("@/pages/PebblePairPage", () => ({ PebblePairPage: () => null }));
+vi.mock("@/features/auth/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));
+vi.mock("@/features/auth/SilentRenewCallbackPage", () => ({ SilentRenewCallbackPage: () => null }));
+vi.mock("@/features/legal/PrivacyPage", () => ({ PrivacyPage: () => <p>privacy page</p> }));
+vi.mock("@/features/pebble/PebblePairPage", () => ({ PebblePairPage: () => null }));
 
 // Each test needs a fresh "@/app/router/router": lazy routes remember what they loaded.
 async function makeRouter(path: string) {

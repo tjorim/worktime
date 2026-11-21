@@ -9,7 +9,7 @@ import { jsonBody } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
-import { useFirstSyncFlow } from "@/hooks/useFirstSyncFlow";
+import { useFirstSyncFlow } from "@/features/sync/useFirstSyncFlow";
 import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_UNCLAIMED_STORAGE_KEY,

@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "@/app/App";
-import { WelcomeWizard } from "@/components/WelcomeWizard";
+import { WelcomeWizard } from "@/features/onboarding/WelcomeWizard";
 import { AuthProvider } from "@/app/providers/AuthContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";

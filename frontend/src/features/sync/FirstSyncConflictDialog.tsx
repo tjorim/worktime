@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { ConflictChoice, FirstSyncConflictCounts } from "@/hooks/useFirstSyncFlow";
+import type { ConflictChoice, FirstSyncConflictCounts } from "@/features/sync/useFirstSyncFlow";
 import * as m from "@/paraglide/messages.js";
 
 interface FirstSyncConflictDialogProps {

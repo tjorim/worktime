@@ -5,7 +5,7 @@ import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
 import App from "@/app/App";
-import { WelcomeWizard } from "@/components/WelcomeWizard";
+import { WelcomeWizard } from "@/features/onboarding/WelcomeWizard";
 import { AuthProvider } from "@/app/providers/AuthContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
