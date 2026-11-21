@@ -23,7 +23,7 @@ from typing import Any
 
 import pytest
 
-from app.read_models import ScheduleType
+from app.schemas.read_models import ScheduleType
 from app.services.read_models_service import _SCHEDULES, _shift_code_for  # noqa: PLC2701
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "roster_golden.json"

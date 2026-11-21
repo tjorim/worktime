@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.datetime import as_utc
 from app.models import TimeOffEntry
-from app.read_models import (
+from app.routers.auth import AuthenticatedPrincipal
+from app.schemas.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,
     NextShiftItemReadModel,
@@ -32,7 +33,6 @@ from app.read_models import (
     TimeOffSummaryItemReadModel,
     TimeOffSummaryReadModel,
 )
-from app.routers.auth import AuthenticatedPrincipal
 from app.services.db_service import (
     get_user,
     get_user_preferences,
