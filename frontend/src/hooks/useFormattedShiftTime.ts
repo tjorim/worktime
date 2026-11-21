@@ -1,4 +1,4 @@
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { getFormattedShiftTime } from "@/utils/shiftCalculations";
 
 /**

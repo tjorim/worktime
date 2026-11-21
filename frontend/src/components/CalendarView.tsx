@@ -19,9 +19,9 @@ import {
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
-import { useEventStore } from "@/contexts/EventStoreContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useEventStore } from "@/app/providers/EventStoreContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";

@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsIntegrationClientsSection } from "@/components/settings/account/SettingsIntegrationClientsSection";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 

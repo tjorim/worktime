@@ -14,11 +14,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => mocks.auth,
 }));
 
-vi.mock("@/contexts/OngoingSyncContext", () => ({
+vi.mock("@/app/providers/OngoingSyncContext", () => ({
   useOngoingSyncContext: () => mocks.sync,
 }));
 

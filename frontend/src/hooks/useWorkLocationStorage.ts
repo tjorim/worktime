@@ -2,7 +2,7 @@ import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 import type { WorkLocationEntry } from "@/types/workLocation";

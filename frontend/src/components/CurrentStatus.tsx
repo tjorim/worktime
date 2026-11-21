@@ -4,7 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { formatTimeByPreference, formatYYWWD } from "@/utils/dateTimeUtils";
 import { getLocale } from "@/paraglide/runtime.js";

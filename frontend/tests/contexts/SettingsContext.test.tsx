@@ -3,8 +3,8 @@ import { jsonBody } from "@/mocks/response";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useLastUsed } from "@/contexts/LastUsedContext";
-import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import {
   ANONYMOUS_USER_STATE_OWNER,
   USER_STATE_OWNER_STORAGE_KEY,

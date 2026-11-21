@@ -9,9 +9,9 @@ import { TaskEditModal } from "@/components/shared/TaskEditModal";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import { oidcConfig } from "@/config/oidc";
 import { WelcomeWizard } from "@/components/WelcomeWizard";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { AuthProvider } from "@/app/providers/AuthContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { GanttTaskModal } from "@/features/gantt/GanttTaskModal";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   usePlannedTaskNotifications,
   type PlannedTaskNotificationOptions,
-} from "@/hooks/usePlannedTaskNotifications";
+} from "@/app/hooks/usePlannedTaskNotifications";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import * as m from "@/paraglide/messages.js";
 

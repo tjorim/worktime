@@ -1,5 +1,5 @@
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 

@@ -12,13 +12,13 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { ScheduleOption } from "@/data/rosters";
-import { useSettings } from "@/contexts/SettingsContext";
-import type { TabKey } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import type { TabKey } from "@/app/providers/SettingsContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSyncedState } from "@/hooks/useSyncedState";
 import * as m from "@/paraglide/messages.js";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
-import { MobileQuickActions } from "@/components/MobileQuickActions";
+import { MobileQuickActions } from "@/app/home/MobileQuickActions";
 
 // Kept mounted once visited (keepMounted), but loaded only then: its team
 // selector and transfer accordion are not needed on the calendar tab.

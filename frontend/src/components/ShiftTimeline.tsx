@@ -4,7 +4,7 @@ import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { shiftColors, ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ShiftResult } from "@/utils/shiftCalculations";

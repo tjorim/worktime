@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 
 describe("TimeTrackingWeeklyView Component", () => {

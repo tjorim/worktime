@@ -3,14 +3,14 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { WeekView } from "@/components/schedule/WeekView";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 
 // Mock useSettings to provide scheduleType
-vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
+vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/providers/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({

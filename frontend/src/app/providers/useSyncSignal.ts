@@ -32,7 +32,7 @@
 import { EventSourceParserStream } from "eventsource-parser/stream";
 import { useEffect, useRef } from "react";
 import { getSyncCursorKey } from "@/constants/storageKeys";
-import type { TriggerPullFn } from "@/hooks/useOngoingSync";
+import type { TriggerPullFn } from "@/app/providers/useOngoingSync";
 import { logger } from "@/utils/logger";
 
 // ---------------------------------------------------------------------------

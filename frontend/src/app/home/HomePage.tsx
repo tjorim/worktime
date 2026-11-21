@@ -1,7 +1,7 @@
 import { CurrentStatus } from "@/components/CurrentStatus";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { MainTabs } from "@/components/MainTabs";
-import { useAppShellContext } from "@/contexts/AppShellContext";
+import { MainTabs } from "@/app/home/MainTabs";
+import { useAppShellContext } from "@/app/providers/AppShellContext";
 
 // The status card is central to Calendar and Schedule on larger screens. On
 // mobile it starts compact everywhere so the selected tab remains in reach.

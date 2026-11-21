@@ -1,7 +1,7 @@
 import { DownloadIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { usePwaInstall } from "@/contexts/PwaInstallContext";
-import { useToast } from "@/contexts/ToastContext";
+import { usePwaInstall } from "@/app/providers/PwaInstallContext";
+import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 
 const ENGAGEMENT_VISIT_THRESHOLD = 3;

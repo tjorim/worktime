@@ -1,8 +1,8 @@
 import type { Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ScheduleOption } from "@/data/rosters";
-import { useLastUsed } from "@/contexts/LastUsedContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam, getTeamCountForOption } from "@/utils/scheduleUtils";
 import {

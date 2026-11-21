@@ -1,11 +1,11 @@
 import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
-import { AppLayout } from "@/components/AppLayout";
-import { RouteError, RoutePending } from "@/components/RouteStatus";
+import { AppLayout } from "@/app/layout/AppLayout";
+import { RouteError, RoutePending } from "@/app/router/RouteStatus";
 import { preloadSyncCollections } from "@/db/collections";
-import { lazyRoute } from "@/lib/lazyRoute";
+import { lazyRoute } from "@/app/router/lazyRoute";
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage";
-import { NotFoundPage } from "@/pages/NotFoundPage";
-import { HomePage } from "@/pages/HomePage";
+import { NotFoundPage } from "@/app/router/NotFoundPage";
+import { HomePage } from "@/app/home/HomePage";
 import { SilentRenewCallbackPage } from "@/pages/SilentRenewCallbackPage";
 
 // Secondary routes are code-split: Settings alone pulls in backup/restore, the

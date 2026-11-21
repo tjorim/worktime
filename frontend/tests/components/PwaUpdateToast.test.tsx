@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PwaUpdateToast } from "@/components/PwaUpdateToast";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { PwaUpdateToast } from "@/app/pwa/PwaUpdateToast";
+import { ToastProvider } from "@/app/providers/ToastContext";
 
 const updateServiceWorker = vi.fn();
 let needRefresh = false;

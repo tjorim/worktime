@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import * as m from "@/paraglide/messages.js";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { logger } from "@/utils/logger";
 import { setSyncCollectionAuthResolving } from "@/db/collections";
 import { discardPendingSyncOutbox } from "@/utils/syncClient";

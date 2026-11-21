@@ -8,7 +8,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { WorkLocationDayHeader } from "@/features/timeTracking/WorkLocationDayHeader";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/utils/dateTimeUtils";

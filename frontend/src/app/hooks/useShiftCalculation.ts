@@ -1,7 +1,7 @@
 import type { Dayjs } from "dayjs";
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import {

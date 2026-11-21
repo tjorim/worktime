@@ -5,7 +5,7 @@ import "@/styles/tailwind.css";
 import { EventModal } from "@/components/EventModal";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import { TimeOffTableView } from "@/components/timeOff/TimeOffTableView";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { useEventForm } from "@/hooks/useEventForm";
 import { dayjs } from "@/utils/dateTimeUtils";
 import {

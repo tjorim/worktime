@@ -13,17 +13,17 @@ const gate = vi.hoisted(() => {
 });
 
 vi.mock("@/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
-vi.mock("@/components/AppLayout", async () => {
+vi.mock("@/app/layout/AppLayout", async () => {
   const { Outlet } = await import("@tanstack/react-router");
   return { AppLayout: () => <Outlet /> };
 });
-vi.mock("@/pages/HomePage", () => ({ HomePage: () => <p>home</p> }));
+vi.mock("@/app/home/HomePage", () => ({ HomePage: () => <p>home</p> }));
 vi.mock("@/pages/AuthCallbackPage", () => ({ AuthCallbackPage: () => null }));
 vi.mock("@/pages/SilentRenewCallbackPage", () => ({ SilentRenewCallbackPage: () => null }));
 vi.mock("@/pages/PrivacyPage", () => ({ PrivacyPage: () => <p>privacy page</p> }));
 vi.mock("@/pages/PebblePairPage", () => ({ PebblePairPage: () => null }));
 
-// Each test needs a fresh "@/router": lazy routes remember what they loaded.
+// Each test needs a fresh "@/app/router/router": lazy routes remember what they loaded.
 async function makeRouter(path: string) {
   vi.doMock("@/pages/SettingsPage", async () => {
     gate.imports += 1;
@@ -36,7 +36,7 @@ async function makeRouter(path: string) {
       },
     };
   });
-  const { router: appRouter } = await import("@/router");
+  const { router: appRouter } = await import("@/app/router/router");
   return createRouter({
     ...appRouter.options,
     history: createMemoryHistory({ initialEntries: [path] }),

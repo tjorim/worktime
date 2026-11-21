@@ -1,6 +1,6 @@
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 

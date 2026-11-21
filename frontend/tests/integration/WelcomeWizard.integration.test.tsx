@@ -9,11 +9,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "@/App";
+import App from "@/app/App";
 import { WelcomeWizard } from "@/components/WelcomeWizard";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { AuthProvider } from "@/app/providers/AuthContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 
 // SuperTokens mocks are provided globally by tests/setup.ts
 

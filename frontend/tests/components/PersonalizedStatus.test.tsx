@@ -6,7 +6,7 @@ import { useTodayActualStart } from "@/hooks/useTodayActualStart";
 import { useFlexStartOverride } from "@/hooks/useFlexStartOverride";
 import { dayjs } from "@/utils/dateTimeUtils";
 
-vi.mock("@/contexts/SettingsContext", () => ({
+vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: () => ({ settings: { timeFormat: "24h", enableTimeTracking: false } }),
 }));
 vi.mock("@/hooks/useLiveShiftStatus");

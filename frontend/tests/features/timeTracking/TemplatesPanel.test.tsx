@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
 
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import type { Label } from "@/lib/timeTracking/constants";
 import type { TimeTrackingTemplate } from "@/lib/timeTracking/types";
 

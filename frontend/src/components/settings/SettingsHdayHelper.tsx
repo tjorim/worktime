@@ -7,8 +7,8 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { SettingsHeading, SettingsHint } from "@/components/settings/SettingsParts";
-import { useHdayHelper, type HdayHelperStatus } from "@/contexts/HdayHelperContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useHdayHelper, type HdayHelperStatus } from "@/app/providers/HdayHelperContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { isHdayHelperMixedContentBlocked } from "@/utils/hdayHelper";
 import * as m from "@/paraglide/messages.js";
 

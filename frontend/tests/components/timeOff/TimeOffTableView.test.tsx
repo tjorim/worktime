@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 import { TimeOffTableView } from "@/components/timeOff/TimeOffTableView";
 import type { TimeOffEntry } from "@/lib/timeOff/types";

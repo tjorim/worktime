@@ -8,7 +8,7 @@ import type {
 import { uncheckedBody, jsonBody } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/hooks/useOngoingSync";
+import { useOngoingSync, INITIAL_BACK_OFF_MS } from "@/app/providers/useOngoingSync";
 import {
   SYNC_WRITE_ACTIVITY_EVENT,
   appendToSyncOutbox,

@@ -21,7 +21,7 @@ import {
   getSyncCursorKey,
   getSyncOutboxKey,
 } from "@/constants/storageKeys";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
 import { getPreferenceOwner } from "@/utils/preferenceStorage";
 import { buildLocalSyncPushPayload, reconcilePreferences } from "@/utils/syncClient";

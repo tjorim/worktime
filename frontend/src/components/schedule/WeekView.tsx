@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { ScheduleOption } from "@/data/rosters";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/utils/dateTimeUtils";

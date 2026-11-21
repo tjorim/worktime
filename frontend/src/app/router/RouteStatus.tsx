@@ -4,7 +4,7 @@ import { Icon } from "@/components/shared/Icon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { RouteChunkLoadError } from "@/lib/lazyRoute";
+import { RouteChunkLoadError } from "@/app/router/lazyRoute";
 import * as m from "@/paraglide/messages.js";
 
 /** Shown while a lazily loaded route chunk downloads. */

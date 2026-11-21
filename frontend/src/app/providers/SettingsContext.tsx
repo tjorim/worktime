@@ -2,7 +2,7 @@ import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
-import { LastUsedProvider, type LastUsedContextType } from "@/contexts/LastUsedContext";
+import { LastUsedProvider, type LastUsedContextType } from "@/app/providers/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { CountryCode } from "@/types/countries";
 import { isValidCountryCode } from "@/types/countries";

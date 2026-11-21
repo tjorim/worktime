@@ -36,8 +36,8 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/data/rosters";
-import { useSettings } from "@/contexts/SettingsContext";
-import { useEventStore } from "@/contexts/EventStoreContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useEventStore } from "@/app/providers/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { resolveEventPaletteVars } from "@/lib/hday/presentation";
 import { useTransferCalculations, type TransferInfo } from "@/hooks/useTransferCalculations";

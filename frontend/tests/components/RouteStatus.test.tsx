@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RouteError } from "@/components/RouteStatus";
+import { RouteError } from "@/app/router/RouteStatus";
 import * as m from "@/paraglide/messages.js";
 
 describe("RouteError", () => {

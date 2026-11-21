@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import RealDayjs from "dayjs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentStatus } from "@/components/CurrentStatus";
-import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import * as useCountdownHook from "@/hooks/useCountdown";
 import { dayjs, formatYYWWD } from "@/utils/dateTimeUtils";
 import * as shiftCalculations from "@/utils/shiftCalculations";
@@ -14,8 +14,8 @@ const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
 const originalViewport = { width: window.innerWidth, height: window.innerHeight };
 
 // Mock useSettings to provide scheduleType
-vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
+vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/providers/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MobileQuickActions } from "@/components/MobileQuickActions";
+import { MobileQuickActions } from "@/app/home/MobileQuickActions";
 import { TestProviders } from "@tests/utils/testProviders";
 
 const { mockAddTask, mockUpdateTaskTimes, mockSwitchRunningTask, mockStorage } = vi.hoisted(() => ({

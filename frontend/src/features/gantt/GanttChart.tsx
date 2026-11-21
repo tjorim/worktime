@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
 import { EmptyState } from "@/components/shared/EmptyState";
-import type { GanttViewMode } from "@/contexts/SettingsContext";
+import type { GanttViewMode } from "@/app/providers/SettingsContext";
 import { formatLoggedDuration } from "@/utils/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";

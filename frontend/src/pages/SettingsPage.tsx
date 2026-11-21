@@ -18,12 +18,12 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useAppShellContext } from "@/contexts/AppShellContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { useToast } from "@/contexts/ToastContext";
-import { usePwaInstall } from "@/contexts/PwaInstallContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEventStore } from "@/contexts/EventStoreContext";
+import { useAppShellContext } from "@/app/providers/AppShellContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useToast } from "@/app/providers/ToastContext";
+import { usePwaInstall } from "@/app/providers/PwaInstallContext";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useEventStore } from "@/app/providers/EventStoreContext";
 import {
   getAppBackupValidationError,
   preloadAppBackupCollections,
@@ -58,7 +58,7 @@ import { SettingsSyncSection } from "@/components/settings/account/SettingsSyncS
 import { useApiClient } from "@/hooks/useApiClient";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
+import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
 import { useSettingsAccount } from "@/pages/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { useSettingsIntegrationClients } from "@/pages/settings/hooks/useSettingsIntegrationClients";

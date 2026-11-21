@@ -1,9 +1,9 @@
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
 import { TimeTrackingWeeklyView } from "@/features/timeTracking/TimeTrackingWeeklyView";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";

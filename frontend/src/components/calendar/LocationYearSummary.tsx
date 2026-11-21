@@ -30,7 +30,7 @@ import {
   type SortingState,
   useTable,
 } from "@tanstack/react-table";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { aggregateLocationCounts } from "@/utils/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
 import { WORK_LOCATION_ICONS } from "@/components/calendar/workLocationConstants";

@@ -22,12 +22,12 @@ import {
 } from "@/components/settings/account/SettingsAccountSection";
 import { SettingsApiTokensSection } from "@/components/settings/account/SettingsApiTokensSection";
 import { SettingsAdminUsersSection } from "@/components/settings/admin/SettingsAdminUsersSection";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
+import { AuthProvider } from "@/app/providers/AuthContext";
+import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
+import { PwaInstallProvider } from "@/app/providers/PwaInstallContext";
 import { server } from "@/mocks/server";
 import { syncStore } from "@/mocks/data/syncStore";
 import { labelsCollection } from "@/db/collections";
@@ -38,7 +38,7 @@ import { useSettingsAdminUsers } from "@/pages/settings/hooks/useSettingsAdminUs
 import * as m from "@/paraglide/messages.js";
 
 const routeState = vi.hoisted(() => ({ section: "scheduleTeam", navigate: vi.fn() }));
-vi.mock("@/contexts/AppShellContext", () => ({
+vi.mock("@/app/providers/AppShellContext", () => ({
   useAppShellContext: () => ({ openAbout: vi.fn(), openShortcuts: vi.fn() }),
 }));
 
@@ -625,7 +625,7 @@ describe("SettingsPage Account Section", () => {
     const triggerPullMock = vi.fn();
     mockAuthenticatedUser("Alice");
     useOngoingSyncContextSpy = vi
-      .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
+      .spyOn(await import("@/app/providers/OngoingSyncContext"), "useOngoingSyncContext")
       .mockReturnValue(
         createMockSyncContext({
           outboxCount: 2,
@@ -648,7 +648,7 @@ describe("SettingsPage Account Section", () => {
   it("disables pull action button while sync is in progress", async () => {
     mockAuthenticatedUser("Alice");
     useOngoingSyncContextSpy = vi
-      .spyOn(await import("@/contexts/OngoingSyncContext"), "useOngoingSyncContext")
+      .spyOn(await import("@/app/providers/OngoingSyncContext"), "useOngoingSyncContext")
       .mockReturnValue(createMockSyncContext({ isSyncing: true }));
 
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);

@@ -3,7 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import App from "@/App";
+import App from "@/app/App";
 
 const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
 const originalColorScheme = happyDOM.settings.device.prefersColorScheme;

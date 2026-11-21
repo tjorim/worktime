@@ -1,7 +1,7 @@
 import { RotateCwIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/utils/logger";
 

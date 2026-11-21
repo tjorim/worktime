@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { SettingsScheduleSection } from "@/components/settings/SettingsScheduleSection";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
 import type { ScheduleOption } from "@/data/rosters";
 import * as m from "@/paraglide/messages.js";
 

@@ -4,7 +4,7 @@ import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
 import { TemplatesPanel } from "@/features/timeTracking/TemplatesPanel";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 
 const labels = [{ id: "a", name: "Support", color: "#123456" }];
 const templates = [{ id: "t", text: "Work", label: "a", start: "09:00", stop: "10:00" }];

@@ -4,10 +4,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeOffView } from "@/components/TimeOffView";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { hdayToTimeOffEntries } from "@/lib/timeOff/codecs";
 import { timeOffCollection } from "@/db/collections";
 import {

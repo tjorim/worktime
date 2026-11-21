@@ -14,7 +14,7 @@ import {
   SettingsSection,
   SettingsSecret,
 } from "@/components/settings/SettingsParts";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import type { ApiToken, CreatedApiToken } from "@/api-types";
 import { API_TOKEN_NAME_MAX_LENGTH } from "@/pages/settings/hooks/useSettingsApiTokens";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";

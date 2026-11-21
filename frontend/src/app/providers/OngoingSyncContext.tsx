@@ -16,12 +16,12 @@
 
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { ApiError, getErrorMessage } from "@/utils/apiError";
 import { taskValidationErrorMessages } from "@/utils/apiErrorCodes";
 import { setSyncTaskRejectionHandler } from "@/utils/syncClient";
 import * as m from "@/paraglide/messages.js";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useAuth } from "./AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import {
@@ -30,12 +30,12 @@ import {
   type EnqueueChangeFn,
   type TriggerPullFn,
   type ResolveOngoingConflictsFn,
-} from "@/hooks/useOngoingSync";
+} from "@/app/providers/useOngoingSync";
 import {
   useSyncSignal,
   createFetchSseTransport,
   type SyncSignalTransport,
-} from "@/hooks/useSyncSignal";
+} from "@/app/providers/useSyncSignal";
 import {
   setSyncCollectionAuth,
   setSyncCollectionTriggerPull,

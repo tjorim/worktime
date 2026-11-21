@@ -1,14 +1,14 @@
 import { Outlet } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
-import { AboutModal } from "@/components/AboutModal";
-import { FeatureIntroAlert } from "@/components/FeatureIntroAlert";
+import { AboutModal } from "@/app/layout/AboutModal";
+import { FeatureIntroAlert } from "@/app/layout/FeatureIntroAlert";
 import { FirstSyncConflictDialog } from "@/components/FirstSyncConflictDialog";
-import { Header } from "@/components/Header";
-import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
+import { Header } from "@/app/layout/Header";
+import { KeyboardShortcutsModal } from "@/app/layout/KeyboardShortcutsModal";
 import { OngoingConflictDialog } from "@/components/sync/OngoingConflictDialog";
-import { useAppShellContext } from "@/contexts/AppShellContext";
-import { useOngoingSyncContext } from "@/contexts/OngoingSyncContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useAppShellContext } from "@/app/providers/AppShellContext";
+import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 
 // Shown on first run and from the settings only: its steps (country, team and
 // schedule pickers) load when it first opens, not on every page load.

@@ -4,11 +4,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PebblePairPage } from "@/pages/PebblePairPage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
 
-vi.mock("@/contexts/AuthContext");
+vi.mock("@/app/providers/AuthContext");
 vi.mock("@/hooks/useApiClient");
 describe("PebblePairPage", () => {
   const apiFetch = vi.fn();

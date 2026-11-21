@@ -5,7 +5,7 @@ import { Icon } from "@/components/shared/Icon";
 import { useCallback, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { JsonExample, RawJsonEditor } from "./RawJsonEditor";

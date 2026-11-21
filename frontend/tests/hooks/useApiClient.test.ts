@@ -17,11 +17,11 @@ const toast = vi.hoisted(() => ({
   showWarning: vi.fn(),
 }));
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => auth,
 }));
 
-vi.mock("@/contexts/ToastContext", () => ({
+vi.mock("@/app/providers/ToastContext", () => ({
   useToast: () => toast,
 }));
 

@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ReactNode } from "react";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 

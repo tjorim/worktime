@@ -15,7 +15,7 @@ import {
   SettingsSection,
   SettingsSecret,
 } from "@/components/settings/SettingsParts";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import type { CreatedIntegrationClient, IntegrationClient } from "@/api-types";
 import type { IntegrationClientScope } from "@/pages/settings/hooks/useSettingsIntegrationClients";
 import { formatDisplayDate } from "@/utils/dateTimeUtils";

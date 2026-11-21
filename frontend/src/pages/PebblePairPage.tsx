@@ -3,7 +3,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 import { Spinner } from "@/components/ui/spinner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import * as m from "@/paraglide/messages.js";
 import { ApiError, getErrorMessage } from "@/utils/apiError";

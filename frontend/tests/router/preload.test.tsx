@@ -3,20 +3,20 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { preloadSyncCollections } from "@/db/collections";
-import { router as appRouter } from "@/router";
-import { Header } from "@/components/Header";
+import { router as appRouter } from "@/app/router/router";
+import { Header } from "@/app/layout/Header";
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => ({ isAuthenticated: true, isValidating: false, triggerLogin: vi.fn() }),
 }));
 vi.mock("@/db/collections", () => ({ preloadSyncCollections: vi.fn() }));
-vi.mock("@/components/AppLayout", () => ({ AppLayout: () => <Header /> }));
-vi.mock("@/contexts/AppShellContext", () => ({
+vi.mock("@/app/layout/AppLayout", () => ({ AppLayout: () => <Header /> }));
+vi.mock("@/app/providers/AppShellContext", () => ({
   useAppShellContext: () => ({ openShortcuts: vi.fn() }),
 }));
 vi.mock("@/components/sync/SyncStatusIndicator", () => ({ SyncStatusIndicator: () => null }));
 vi.mock("@/hooks/useKeyboardShortcuts", () => ({ useKeyboardShortcuts: vi.fn() }));
-vi.mock("@/pages/HomePage", () => ({ HomePage: () => null }));
+vi.mock("@/app/home/HomePage", () => ({ HomePage: () => null }));
 vi.mock("@/pages/SettingsPage", () => ({ SettingsPage: () => null }));
 vi.mock("@/pages/PrivacyPage", () => ({ PrivacyPage: () => null }));
 vi.mock("@/pages/PebblePairPage", () => ({ PebblePairPage: () => null }));

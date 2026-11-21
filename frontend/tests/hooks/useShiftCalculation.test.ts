@@ -2,8 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import React from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { useShiftCalculation } from "@/hooks/useShiftCalculation";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { useShiftCalculation } from "@/app/hooks/useShiftCalculation";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { calculateShift, getShiftCode } from "@/utils/shiftCalculations";
 

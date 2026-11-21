@@ -13,7 +13,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => state.navigate,
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }));
-vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => state }));
+vi.mock("@/app/providers/AuthContext", () => ({ useAuth: () => state }));
 vi.mock("react-oidc-context", () => ({ useAuth: () => state }));
 beforeEach(() => {
   state.navigate.mockClear();

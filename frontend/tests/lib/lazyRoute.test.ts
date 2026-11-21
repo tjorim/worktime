@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { lazyRoute, RouteChunkLoadError } from "@/lib/lazyRoute";
+import { lazyRoute, RouteChunkLoadError } from "@/app/router/lazyRoute";
 
 describe("lazyRoute", () => {
   it("suspends until the chunk loads, then renders the component", async () => {

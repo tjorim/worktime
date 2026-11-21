@@ -16,7 +16,7 @@ import { Hint } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 
 import type { ScheduleOption } from "@/data/rosters";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig, isValidScheduleType } from "@/utils/scheduleUtils";
 import { useCountdown } from "@/hooks/useCountdown";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";

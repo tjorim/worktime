@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/native-select";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { Hint } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";

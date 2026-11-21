@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { LocationYearSummary } from "@/components/calendar/LocationYearSummary";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { toCountryCode } from "@/types/workLocation";
 import type { WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";

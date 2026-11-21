@@ -3,8 +3,8 @@ import type { Dayjs } from "dayjs";
 import { useEffect, useRef, useState } from "react";
 
 import type { ScheduleOption } from "@/data/rosters";
-import { useLastUsed } from "@/contexts/LastUsedContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { TransferView } from "@/components/TransferView";
 import { WeekView } from "@/components/schedule/WeekView";
 import { TodayView } from "@/components/schedule/TodayView";

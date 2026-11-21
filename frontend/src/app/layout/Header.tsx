@@ -1,11 +1,11 @@
 import { ArrowLeftIcon, RotateCcwClockIcon, SettingsIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useAppShellContext } from "@/contexts/AppShellContext";
+import { useAppShellContext } from "@/app/providers/AppShellContext";
 import { SyncStatusIndicator } from "@/components/sync/SyncStatusIndicator";
 import * as m from "@/paraglide/messages.js";
 

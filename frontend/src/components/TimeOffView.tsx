@@ -28,11 +28,11 @@ import {
   getEntryTypeFromDisplayFlags,
 } from "@/lib/timeOff/codecs";
 import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/lib/timeOff/importPreview";
-import { useEventStore } from "@/contexts/EventStoreContext";
-import { useHdayHelper } from "@/contexts/HdayHelperContext";
-import { useLastUsed } from "@/contexts/LastUsedContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useEventStore } from "@/app/providers/EventStoreContext";
+import { useHdayHelper } from "@/app/providers/HdayHelperContext";
+import { useLastUsed } from "@/app/providers/LastUsedContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useEventForm } from "@/hooks/useEventForm";
 import {

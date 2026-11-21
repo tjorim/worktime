@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { LabelsPanel } from "@/features/timeTracking/LabelsPanel";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { SettingsReplacementError } from "@/utils/apiError";
 import type { Label } from "@/lib/timeTracking/constants";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tasksCollection, timeOffCollection } from "@/db/collections";
 import { useCalendarRangeData } from "@/features/calendar/useCalendarRangeData";
 
-vi.mock("@/contexts/SettingsContext", () => ({
+vi.mock("@/app/providers/SettingsContext", () => ({
   useSettings: () => ({ myTeam: null, scheduleType: "9-5" }),
 }));
 

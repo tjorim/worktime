@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render as renderView, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 
 const toastWrapper = ({ children }: { children: React.ReactNode }) => (
   <ToastProvider>{children}</ToastProvider>

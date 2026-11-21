@@ -9,7 +9,7 @@ import {
   SettingsLoading,
   SettingsSection,
 } from "@/components/settings/SettingsParts";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/utils/dateTimeUtils";
 import { logger } from "@/utils/logger";

@@ -4,11 +4,11 @@ import "@testing-library/jest-dom";
 import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as oidcContext from "react-oidc-context";
-import App from "@/App";
+import App from "@/app/App";
 import { WelcomeWizard } from "@/components/WelcomeWizard";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { AuthProvider } from "@/app/providers/AuthContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { labelsCollection } from "@/db/collections";
 
 // OIDC mocks are provided globally by tests/setup.ts

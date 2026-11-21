@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
-import { MainTabs } from "@/components/MainTabs";
+import { MainTabs } from "@/app/home/MainTabs";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { Dayjs } from "dayjs";
-import type { TabKey } from "@/contexts/SettingsContext";
+import type { TabKey } from "@/app/providers/SettingsContext";
 import { TestProviders } from "@tests/utils/testProviders";
 
 // Mock the child components. The schedule mock keeps local state, so a test

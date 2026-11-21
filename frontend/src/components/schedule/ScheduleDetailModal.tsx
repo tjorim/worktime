@@ -40,7 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "@/data/rosters";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 import { dayjs, getLocalizedShiftTime } from "@/utils/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";

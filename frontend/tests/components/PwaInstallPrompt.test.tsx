@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
-import { PwaInstallProvider } from "@/contexts/PwaInstallContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { PwaInstallPrompt } from "@/app/pwa/PwaInstallPrompt";
+import { PwaInstallProvider } from "@/app/providers/PwaInstallContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";
 

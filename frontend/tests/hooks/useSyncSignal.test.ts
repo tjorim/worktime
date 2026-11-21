@@ -4,7 +4,7 @@ import {
   createFetchSseTransport,
   useSyncSignal,
   type SyncSignalTransport,
-} from "@/hooks/useSyncSignal";
+} from "@/app/providers/useSyncSignal";
 import { storeSyncCursor } from "@/utils/syncClient";
 import { getSyncCursorKey } from "@/constants/storageKeys";
 

@@ -3,7 +3,7 @@ import { act, render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
-import { defaultSettings } from "@/contexts/SettingsContext";
+import { defaultSettings } from "@/app/providers/SettingsContext";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/timeTracking/types";
 import { dayjs } from "@/utils/dateTimeUtils";
 import { ganttTasksCollection, timeOffCollection } from "@/db/collections";

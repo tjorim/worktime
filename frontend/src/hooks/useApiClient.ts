@@ -1,6 +1,6 @@
 import { useCallback, useRef, useLayoutEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useToast } from "@/app/providers/ToastContext";
 import { apiFetch } from "@/utils/apiClient";
 import { isUnauthorizedError } from "@/utils/apiError";
 import * as m from "@/paraglide/messages.js";

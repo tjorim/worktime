@@ -3,8 +3,8 @@ import "@testing-library/jest-dom";
 import type React from "react";
 import { describe, expect, it } from "vitest";
 import { ScheduleDetailModal } from "@/components/schedule/ScheduleDetailModal";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 function renderWithSettings(ui: React.ReactElement) {

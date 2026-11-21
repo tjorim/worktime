@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
 import { getEffectiveTeam } from "@/utils/scheduleUtils";
 import { DEFAULT_COUNTRY } from "@/constants/holidayDefaults";

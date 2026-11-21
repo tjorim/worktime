@@ -4,11 +4,11 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeOffView } from "@/components/TimeOffView";
-import { HdayHelperProvider, useHdayHelper } from "@/contexts/HdayHelperContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { HdayHelperProvider, useHdayHelper } from "@/app/providers/HdayHelperContext";
+import { useSettings } from "@/app/providers/SettingsContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/constants/storageKeys";
 import { http, HttpResponse } from "msw/http";
 import { hdayChangeEmitter } from "@/mocks/data/hdayChangeEmitter";

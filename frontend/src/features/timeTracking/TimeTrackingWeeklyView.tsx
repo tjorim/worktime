@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { WeekNavigationButtonGroup } from "@/components/shared/NavigationButtonGroup";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { dayjs } from "@/utils/dateTimeUtils";

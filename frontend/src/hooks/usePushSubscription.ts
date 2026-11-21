@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/app/providers/AuthContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useApiClient } from "@/hooks/useApiClient";
 import { readErrorDetail } from "@/utils/apiClient";
 import {

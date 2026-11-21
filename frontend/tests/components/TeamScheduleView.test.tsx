@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw/http";
 import { delay } from "msw/utils/delay";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TeamScheduleView } from "@/components/TeamScheduleView";
-import { useHdayHelper } from "@/contexts/HdayHelperContext";
+import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { server } from "@/mocks/server";
 import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/constants/storageKeys";
 import * as m from "@/paraglide/messages.js";

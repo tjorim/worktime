@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { CalendarEvent } from "@schedule-x/calendar";
 import { useLiveQuery } from "@tanstack/react-db";
 import { timeOffCollection } from "@/db/collections";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import type { StoredTimeTrackingTask } from "@/lib/timeTracking/types";
 import type { TimeOffEntry, TimeOffWeeklyEntry } from "@/lib/timeOff/types";

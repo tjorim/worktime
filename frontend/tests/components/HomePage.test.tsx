@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { describe, expect, it } from "vitest";
-import App from "@/App";
+import App from "@/app/App";
 
 describe("HomePage", () => {
   it("renders exactly one main landmark on the home route", async () => {

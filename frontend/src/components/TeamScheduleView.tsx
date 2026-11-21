@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Hint } from "@/components/ui/tooltip";
 import { DetailsHeader, PopoverBody } from "@/components/ui/popover";
-import { useHdayHelper } from "@/contexts/HdayHelperContext";
+import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import type { HdayEvent } from "@/lib/hday/types";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorUtilities } from "@/lib/hday/presentation";

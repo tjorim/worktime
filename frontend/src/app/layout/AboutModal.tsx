@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Grid, GridItem } from "@/components/ui/grid";
 import { Link } from "@tanstack/react-router";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings } from "@/app/providers/SettingsContext";
 import { CONFIG } from "@/utils/config";
 import { getScheduleConfig } from "@/utils/scheduleUtils";
 import * as m from "@/paraglide/messages.js";

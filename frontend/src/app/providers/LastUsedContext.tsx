@@ -7,7 +7,7 @@ import type {
   TabKey,
   TimeOffViewKey,
   TimeTrackingViewKey,
-} from "@/contexts/SettingsContext";
+} from "@/app/providers/SettingsContext";
 import type { ScheduleOption } from "@/data/rosters";
 
 export interface LastUsedContextType {

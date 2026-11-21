@@ -3,10 +3,10 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ScheduleTabView } from "@/components/ScheduleTabView";
-import { HdayHelperProvider } from "@/contexts/HdayHelperContext";
-import { EventStoreProvider } from "@/contexts/EventStoreContext";
-import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
-import { ToastProvider } from "@/contexts/ToastContext";
+import { HdayHelperProvider } from "@/app/providers/HdayHelperContext";
+import { EventStoreProvider } from "@/app/providers/EventStoreContext";
+import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
+import { ToastProvider } from "@/app/providers/ToastContext";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ScheduleOption } from "@/data/rosters";
 

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import App from "@/App";
+import App from "@/app/App";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { ShiftResult } from "@/utils/shiftCalculations";
 
@@ -22,8 +22,8 @@ vi.mock("@/hooks/usePushSubscription", async (importOriginal) => ({
   usePushSubscription: usePushSubscriptionSpy,
 }));
 
-vi.mock("@/hooks/useSyncSignal", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/hooks/useSyncSignal")>()),
+vi.mock("@/app/providers/useSyncSignal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/providers/useSyncSignal")>()),
   useSyncSignal: useSyncSignalSpy,
 }));
 
@@ -38,7 +38,7 @@ vi.mock("@/utils/dateTimeUtils", () => {
 });
 
 // Mock all the child components to focus on App structure
-vi.mock("@/components/Header", () => ({
+vi.mock("@/app/layout/Header", () => ({
   Header: () => <div data-testid="header">Header</div>,
 }));
 
@@ -46,7 +46,7 @@ vi.mock("@/components/CurrentStatus", () => ({
   CurrentStatus: () => <div data-testid="current-status">CurrentStatus</div>,
 }));
 
-vi.mock("@/components/MainTabs", () => ({
+vi.mock("@/app/home/MainTabs", () => ({
   MainTabs: () => <div data-testid="main-tabs">MainTabs</div>,
 }));
 
@@ -60,7 +60,7 @@ vi.mock("@/components/ErrorBoundary", () => ({
   ),
 }));
 
-vi.mock("@/components/AboutModal", () => ({
+vi.mock("@/app/layout/AboutModal", () => ({
   AboutModal: () => <div data-testid="about-modal">AboutModal</div>,
 }));
 
@@ -110,7 +110,7 @@ const mockTodayShifts: ShiftResult[] = [
 ];
 
 // Mock the shift calculation hook with realistic data
-vi.mock("@/hooks/useShiftCalculation", () => ({
+vi.mock("@/app/hooks/useShiftCalculation", () => ({
   useShiftCalculation: () => ({
     myTeam: 1,
     setMyTeam: vi.fn(),

@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AboutModal } from "@/components/AboutModal";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { AboutModal } from "@/app/layout/AboutModal";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
 
 // Stub <Link> so tests don't need a RouterProvider context.
 vi.mock("@tanstack/react-router", async (importOriginal) => {

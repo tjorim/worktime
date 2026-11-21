@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
-import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
+import { EventStoreProvider, useEventStore } from "@/app/providers/EventStoreContext";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/timeOff/codecs";
 import { setSyncCollectionAuth } from "@/db/collections";
 import type { TimeOffEntry } from "@/lib/timeOff/types";

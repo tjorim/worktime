@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import "@testing-library/jest-dom";
 import { ShiftBadge } from "@/components/shared/ShiftBadge";
-import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
 import type { Shift } from "@/utils/shiftCalculations";
 
 function renderBadge(shift: Shift) {

@@ -3,16 +3,16 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TransferView } from "@/components/TransferView";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { EventStoreProvider, useEventStore } from "@/contexts/EventStoreContext";
+import { SettingsProvider } from "@/app/providers/SettingsContext";
+import { EventStoreProvider, useEventStore } from "@/app/providers/EventStoreContext";
 import { useTransferCalculations } from "@/hooks/useTransferCalculations";
 import type { TransferType } from "@/hooks/useTransferCalculations";
 import { dayjs } from "@/utils/dateTimeUtils";
 import type { CalendarEvent } from "@/lib/events/types";
 
 // Mock useSettings to provide scheduleType
-vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/SettingsContext")>();
+vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/providers/SettingsContext")>();
   return {
     ...actual,
     useSettings: vi.fn(() => ({
@@ -38,8 +38,8 @@ vi.mock("@/contexts/SettingsContext", async (importOriginal) => {
 
 // Mock useEventStore so tests can seed time-off events without wiring up the
 // real TanStack DB-backed collection.
-vi.mock("@/contexts/EventStoreContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/EventStoreContext")>();
+vi.mock("@/app/providers/EventStoreContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/app/providers/EventStoreContext")>();
   return {
     ...actual,
     useEventStore: vi.fn(() => ({ getEventsInRange: () => [] })),

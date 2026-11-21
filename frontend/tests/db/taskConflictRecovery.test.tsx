@@ -12,7 +12,7 @@ import {
   ganttTasksCollection,
 } from "@/db/collections";
 import { USER_STATE_OWNER_STORAGE_KEY } from "@/constants/storageKeys";
-import { useOngoingSync } from "@/hooks/useOngoingSync";
+import { useOngoingSync } from "@/app/providers/useOngoingSync";
 import { storeSyncCursor, type SyncPushPayload, type SyncPullResponse } from "@/utils/syncClient";
 
 const snapshot: SyncPullResponse = {

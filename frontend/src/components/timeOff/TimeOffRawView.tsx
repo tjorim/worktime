@@ -1,7 +1,7 @@
 import { CircleCheckIcon, ClipboardIcon, RotateCcwIcon, SquareCodeIcon } from "lucide-react";
 import { Icon } from "@/components/shared/Icon";
 import { useId } from "react";
-import { useToast } from "@/contexts/ToastContext";
+import { useToast } from "@/app/providers/ToastContext";
 import {
   Accordion,
   AccordionItem,

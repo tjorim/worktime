@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "@/app/App";
 import "./styles/tailwind.css";
 import { getLocale } from "./paraglide/runtime.js";
 import { logger } from "@/utils/logger";
