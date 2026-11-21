@@ -26,8 +26,6 @@ from app.db import init_db
 from app.services.sse import sync_event_manager
 
 from .core.errors import (
-    ApiHTTPException,
-    handle_api_http_exception,
     handle_http_exception,
     handle_label_validation_error,
     handle_unhandled_exception,
@@ -204,7 +202,6 @@ else:
 # a request ID, timing header, and access-log entry like any other response.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, handle_rate_limit_exceeded)
-app.add_exception_handler(ApiHTTPException, handle_api_http_exception)
 app.add_exception_handler(StarletteHTTPException, handle_http_exception)
 app.add_exception_handler(RequestValidationError, handle_label_validation_error)
 app.add_exception_handler(Exception, handle_unhandled_exception)

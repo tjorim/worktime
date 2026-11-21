@@ -10,7 +10,7 @@ import type { ReadinessResponseDatabase } from './readinessResponseDatabase';
 import type { ReadinessResponseStatus } from './readinessResponseStatus';
 
 /**
- * Result of the dependency checks; returned with HTTP 200 (``ok``) or 503 (``degraded``).
+ * Result of the dependency checks; returned with HTTP 200 (``ready``) or 503 (``not_ready``).
  */
 export type ReadinessResponse = {
   status: ReadinessResponseStatus;

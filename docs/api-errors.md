@@ -25,7 +25,7 @@ branches on the wording of `detail`.
 
 | Failure | Status | `code` | Handler (`backend/app/core/errors.py`) |
 |---|---|---|---|
-| `api_error(...)` raised by a route or service | its own | its own (`user_not_found`, ...) | `handle_api_http_exception` |
+| `api_error(...)` raised by a route or service | its own | its own (`user_not_found`, ...) | `handle_http_exception` (an `ApiHTTPException` is an `HTTPException` that carries its own `code`) |
 | Framework or dependency `HTTPException` (unknown route, wrong method, a missing credential, a bare `HTTPException`) | its own | `bad_request` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `method_not_allowed` (405), else `http_<status>` | `handle_http_exception` |
 | Request validation | 422 | `validation_error` (`label_required` for a missing time-tracking label) | `handle_label_validation_error`, `handle_validation_error` |
 | Unhandled exception | 500 | `internal_error` | `handle_unhandled_exception` |
