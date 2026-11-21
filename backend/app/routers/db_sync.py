@@ -23,13 +23,13 @@ from app.schemas import (
     SyncStatusResponse,
 )
 from app.services.db_service import NotFoundError, ValidationError
+from app.services.sse import notify_sync_changed, sync_event_manager
 from app.services.sync_service import (
     BulkDeleteGuardError,
     get_sync_status,
     pull_changes,
     push_changes,
 )
-from app.utils.sse_manager import notify_sync_changed, sync_event_manager
 
 logger = logging.getLogger(__name__)
 

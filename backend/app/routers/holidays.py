@@ -34,8 +34,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ErrorCode, api_error
 from app.db.engine import get_session
 from app.models import CachedHoliday
+from app.services.cache.store import get_cache
 
-from ..cache.store import get_cache
 from ..schemas import LongWeekendRead, PublicHolidayRead, SchoolHolidayRead
 
 logger = logging.getLogger(__name__)

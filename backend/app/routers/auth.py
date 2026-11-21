@@ -18,7 +18,6 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import AuditActor
 from app.core.config import settings
 from app.core.errors import ErrorCode, api_error
 from app.core.oidc import OIDCTokenError, decode_token, get_or_create_local_user
@@ -26,6 +25,7 @@ from app.db.engine import get_session, get_session_factory
 from app.schemas import OidcDiscoveryConfig
 from app.services.access_token_service import TOKEN_PREFIX as _PAT_PREFIX
 from app.services.access_token_service import authenticate_access_token
+from app.services.audit.db import AuditActor
 
 logger = logging.getLogger(__name__)
 

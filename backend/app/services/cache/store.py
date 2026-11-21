@@ -9,8 +9,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from app.cache.models import HolidayCacheEntry
 from app.core.config import settings
+from app.services.cache.models import HolidayCacheEntry
 
 logger = logging.getLogger(__name__)
 

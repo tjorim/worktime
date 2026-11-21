@@ -16,9 +16,9 @@ from hashlib import sha256
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import AuditActor, write_audit_entry
 from app.core.config import settings
 from app.models import IntegrationClient, User
+from app.services.audit.db import AuditActor, write_audit_entry
 from app.services.db_service import NotFoundError
 
 KEY_PREFIX = "wtic_"

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.audit import logger as audit_logger
+from app.services.audit import logger as audit_logger
 
 
 @pytest.fixture
@@ -238,7 +238,7 @@ def test_audit_append_dispatches_to_thread_inside_event_loop(temp_audit_dir, mon
 
 def test_audit_log_rotates_past_max_bytes(temp_audit_dir, monkeypatch):
     """The audit log rotates to a backup file once it exceeds the size cap."""
-    from app.audit import logger as audit_module
+    from app.services.audit import logger as audit_module
 
     audit_dir, audit_file = temp_audit_dir
     monkeypatch.setattr(audit_module, "_MAX_BYTES", 200)

@@ -1,10 +1,10 @@
 """Transactional, durable mutation audit trail (issue #1054).
 
-This is the authoritative audit record. Unlike ``app.audit.logger`` (from
+This is the authoritative audit record. Unlike ``app.services.audit.logger`` (from
 #984 — a fire-and-forget, rotated file write outside the mutation's
 transaction), entries here are staged onto the *same* SQLAlchemy session as
 the mutation they describe and committed atomically with it: either both
-persist or neither does. ``app.audit.logger`` keeps running unchanged as
+persist or neither does. ``app.services.audit.logger`` keeps running unchanged as
 secondary, best-effort operational telemetry (e.g. for tailing/grepping on
 the host) — it is no longer treated as the source of truth for "did this
 mutation happen and who did it".

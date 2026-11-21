@@ -118,7 +118,7 @@ class Settings(BaseSettings):
 
     # Cap on concurrent SSE connections one account can hold *per worker
     # process* (SyncEventManager's queue registry lives in process memory, not
-    # shared across workers — see app/utils/sse_manager.py). The effective
+    # shared across workers — see app/services/sse.py). The effective
     # per-account bound across a deployment is this value times the worker
     # count. /api/sync/events is exempt from RATE_LIMIT_DEFAULT (a long-lived
     # stream is one connection, not one unit of request work), so this is the

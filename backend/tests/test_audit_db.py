@@ -14,15 +14,15 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import (
+from app.schemas import LabelCreate, UserCreate
+from app.services import db_service
+from app.services.audit.db import (
     MAX_AUDIT_LIMIT,
     AuditActor,
     AuditAuthorizationError,
     list_audit_entries,
     write_audit_entry,
 )
-from app.schemas import LabelCreate, UserCreate
-from app.services import db_service
 from app.services.db_service import NotFoundError
 from tests.task_helpers import task_payload
 

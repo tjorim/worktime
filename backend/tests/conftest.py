@@ -17,12 +17,12 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.cache.store import get_cache
 from app.db import sqlite
 from app.db.engine import get_session
 from app.main import app
 from app.models import Base
 from app.routers.auth import AuthenticatedPrincipal, AuthType, get_bearer_principal, get_principal_shortlived
+from app.services.cache.store import get_cache
 
 _TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",

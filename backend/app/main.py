@@ -21,6 +21,7 @@ from app.core.config import settings
 from app.core.cors import get_cors_origins
 from app.core.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware
 from app.db import init_db
+from app.services.sse import sync_event_manager
 
 from .core.errors import ApiHTTPException, handle_api_http_exception, handle_label_validation_error
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter, rate_limit
@@ -32,7 +33,6 @@ from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
 from .routers.metrics import router as metrics_router
 from .schemas import McpCapabilities
-from .utils.sse_manager import sync_event_manager
 from .version import APP_VERSION
 
 # Configure logging

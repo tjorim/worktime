@@ -22,7 +22,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # Audit log location (in backend data directory, not on shared drive)
-AUDIT_LOG_DIR = Path(__file__).parent.parent.parent / "data"
+AUDIT_LOG_DIR = Path(__file__).parent.parent.parent.parent / "data"
 AUDIT_LOG_FILE = AUDIT_LOG_DIR / "audit.log"
 
 # Rotate at 10 MiB, keeping 5 backups (~50 MiB max on disk) so the log

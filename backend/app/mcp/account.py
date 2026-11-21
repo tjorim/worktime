@@ -6,7 +6,6 @@ from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit.db import DEFAULT_AUDIT_LIMIT, MAX_AUDIT_LIMIT, list_audit_entries
 from app.mcp.context import WorktimeMcpContext, actor_from_context
 from app.schemas import (
     AuditEntryRead,
@@ -14,6 +13,7 @@ from app.schemas import (
     IntegrationClientScope,
     UserPreferencesRead,
 )
+from app.services.audit.db import DEFAULT_AUDIT_LIMIT, MAX_AUDIT_LIMIT, list_audit_entries
 from app.services.db_service import get_user_preferences
 from app.services.integration_client_service import (
     ADMIN_SCOPE,

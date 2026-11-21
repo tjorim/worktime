@@ -12,12 +12,12 @@ from app.models.base import Base, _utc_now
 class AuditEntry(Base):
     """Transactional, durable record of a mutation performed via REST or MCP.
 
-    Written by ``app.audit.db.write_audit_entry`` into the *same* database
+    Written by ``app.services.audit.db.write_audit_entry`` into the *same* database
     transaction as the mutation it describes (staged via ``session.add`` and
     committed by the caller), so a mutation can never commit without leaving
     an audit trail, and a failed mutation never leaves an orphaned entry.
     This is the authoritative audit record; the rotated file logger in
-    ``app.audit.logger`` (from #984) remains as secondary, best-effort
+    ``app.services.audit.logger`` (from #984) remains as secondary, best-effort
     operational telemetry only.
 
     Exception: bulk changes applied via ``sync_service.push_changes`` (the

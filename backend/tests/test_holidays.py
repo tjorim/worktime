@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.cache.store import get_cache
 from app.core.config import settings
 from app.models import CachedHoliday
 from app.routers.holidays import (
@@ -20,6 +19,7 @@ from app.routers.holidays import (
     _payday_for_month,
     compute_paydates,
 )
+from app.services.cache.store import get_cache
 
 # ── sample upstream payloads ──────────────────────────────────────────────────
 

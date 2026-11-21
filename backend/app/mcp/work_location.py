@@ -8,9 +8,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import logger as audit
 from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.schemas import WorkLocationCreate, WorkLocationRead
+from app.services.audit import logger as audit
 from app.services.db_service import create_or_update_work_location, delete_work_location, list_work_locations
 
 

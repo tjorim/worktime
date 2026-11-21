@@ -4,8 +4,8 @@ This module provides in-memory caching infrastructure for holiday data
 with TTL expiry support.
 """
 
-from app.cache.models import HolidayCacheEntry
-from app.cache.store import FileCache, get_cache
+from app.services.cache.models import HolidayCacheEntry
+from app.services.cache.store import FileCache, get_cache
 
 __all__ = [
     "HolidayCacheEntry",

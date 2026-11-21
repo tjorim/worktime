@@ -593,7 +593,7 @@ async def test_start_and_stop_time_entry(
     tmp_path: Any,
 ) -> None:
     """start_time_entry creates a running task; stop_time_entry closes it."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -634,7 +634,7 @@ async def test_start_time_entry_blocks_second_running_task(
     tmp_path: Any,
 ) -> None:
     """start_time_entry raises ValueError (mapped from ConflictError) when a running task already exists."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -667,7 +667,7 @@ async def test_stop_time_entry_no_running_task(
     tmp_path: Any,
 ) -> None:
     """stop_time_entry raises ValueError (mapped from NotFoundError) when no running task exists."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -690,7 +690,7 @@ async def test_create_time_tracking_task(
     tmp_path: Any,
 ) -> None:
     """create_time_tracking_task creates a completed task and returns it."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -728,7 +728,7 @@ async def test_update_time_tracking_task(
     tmp_path: Any,
 ) -> None:
     """update_time_tracking_task updates the task and returns the new state."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -766,7 +766,7 @@ async def test_update_time_tracking_task_unauthorized(
     tmp_path: Any,
 ) -> None:
     """update_time_tracking_task raises ValueError (mapped from NotFoundError) for another user's task."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -804,7 +804,7 @@ async def test_create_update_delete_time_tracking_task(
     tmp_path: Any,
 ) -> None:
     """Full lifecycle: create, update, delete a time-tracking task."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -848,7 +848,7 @@ async def test_delete_time_tracking_task_unauthorized(
     tmp_path: Any,
 ) -> None:
     """delete_time_tracking_task raises ValueError (mapped from NotFoundError) for another user's task."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -885,7 +885,7 @@ async def test_set_work_location(
     tmp_path: Any,
 ) -> None:
     """set_work_location creates a work-location entry and returns it."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -921,7 +921,7 @@ async def test_delete_work_location(
     tmp_path: Any,
 ) -> None:
     """delete_work_location removes the entry and returns a confirmation."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -958,7 +958,7 @@ async def test_set_work_location_invalid_country(
     tmp_path: Any,
 ) -> None:
     """set_work_location reports an invalid country code as an argument error naming the field."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -984,7 +984,7 @@ async def test_create_update_delete_time_off_event(
     tmp_path: Any,
 ) -> None:
     """Full lifecycle: create, update, delete a time-off event."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1026,7 +1026,7 @@ async def test_create_time_off_event_idempotent_with_entry_id(
     tmp_path: Any,
 ) -> None:
     """create_time_off_event with a fixed entry_id is idempotent (upsert)."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1061,7 +1061,7 @@ async def test_delete_time_off_event_unauthorized(
     tmp_path: Any,
 ) -> None:
     """delete_time_off_event raises ValueError (mapped from NotFoundError) for another user's entry."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1090,7 +1090,7 @@ async def test_create_update_delete_gantt_task(
     tmp_path: Any,
 ) -> None:
     """Full lifecycle: create, update, delete a Gantt task."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1134,7 +1134,7 @@ async def test_create_gantt_task_invalid_date_range(
     tmp_path: Any,
 ) -> None:
     """create_gantt_task raises an error when end_date < start_date."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1161,7 +1161,7 @@ async def test_delete_gantt_task_unauthorized(
     tmp_path: Any,
 ) -> None:
     """delete_gantt_task raises ValueError (mapped from NotFoundError) for another user's task."""
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
     monkeypatch.setattr(audit_module, "AUDIT_LOG_FILE", tmp_path / "audit.log")
@@ -1194,7 +1194,7 @@ async def test_write_tools_produce_audit_log_entries(
     """Write tools should append entries to the audit log."""
     import json
 
-    import app.audit.logger as audit_module
+    import app.services.audit.logger as audit_module
 
     audit_file = tmp_path / "audit.log"
     monkeypatch.setattr(audit_module, "AUDIT_LOG_DIR", tmp_path)
