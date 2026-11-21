@@ -7,8 +7,10 @@ the reason; see ``docs/api-errors.md``. Body shape::
     {"code": "snake_case_code", "detail": "English diagnostic"}
 
 Raise ``api_error(...)`` wherever a route would raise ``HTTPException`` for an error
-a user can reach. Errors raised as plain ``HTTPException`` keep the ``{"detail": ...}``
-body and the client falls back to its generic message for the status. An unhandled
+a user can reach. Errors raised as plain ``HTTPException`` (and the framework's own: an
+unknown route, a wrong method) keep their ``detail`` and get a ``code`` from the status
+(``handle_http_exception``); the client falls back to its generic message for the status
+unless it knows the code. An unhandled
 exception answers ``{"detail": "Internal server error", "code": "internal_error"}``
 (``handle_unhandled_exception``).
 """
@@ -23,6 +25,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +152,40 @@ async def handle_unhandled_exception(request: Request, exc: Exception) -> Respon
     response = internal_error_response()
     response.headers[REQUEST_ID_HEADER] = request_id
     return response
+
+
+_STATUS_CODES = {
+    400: "bad_request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not_found",
+    405: "method_not_allowed",
+}
+
+
+def default_error_code(status_code: int) -> str:
+    """The stable ``code`` for an HTTP error that carries none of its own (``http_<status>`` when not listed)."""
+    return _STATUS_CODES.get(status_code, f"http_{status_code}")
+
+
+async def handle_http_exception(request: Request, exc: Exception) -> Response:
+    """Render a framework or dependency ``HTTPException`` with its ``detail`` unchanged and a ``code`` added.
+
+    Replaces FastAPI's default handler (unknown route, wrong method, a bare ``HTTPException``). A ``code`` the
+    exception already carries (``ApiHTTPException``) is kept, and its headers (``WWW-Authenticate``, ``Retry-After``,
+    ``Allow``) are passed on.
+    """
+    if not isinstance(exc, StarletteHTTPException):
+        raise exc
+    headers = getattr(exc, "headers", None)
+    if exc.status_code < 200 or exc.status_code in (204, 304):
+        return Response(status_code=exc.status_code, headers=headers)
+    code = getattr(exc, "code", None) or default_error_code(exc.status_code)
+    return JSONResponse(
+        {"detail": exc.detail, "code": str(getattr(code, "value", code))},
+        status_code=exc.status_code,
+        headers=headers,
+    )
 
 
 async def handle_label_validation_error(request: Request, exc: Exception):

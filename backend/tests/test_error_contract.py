@@ -50,19 +50,26 @@ def test_an_invalid_bearer_token_is_a_coded_401() -> None:
     assert response.json()["code"] == "invalid_token"
 
 
-def test_framework_failures_are_json_with_a_detail() -> None:
-    # Unknown paths, wrong methods and a missing credential are answered by Starlette/FastAPI before any app handler:
-    # ``detail`` only, no ``code`` (recorded as a follow-up; adding one changes the body clients see).
+def test_framework_failures_keep_their_detail_and_get_a_code_from_the_status() -> None:
+    # Unknown paths, wrong methods and a missing credential are raised by Starlette/FastAPI, not by an app rule.
     client = TestClient(app)
-    for response, status in (
-        (client.get("/api/does-not-exist"), 404),
-        (client.delete("/api/health"), 405),
-        (client.get("/api/users/me"), 401),
+    for response, status, code in (
+        (client.get("/api/does-not-exist"), 404, "not_found"),
+        (client.delete("/api/health"), 405, "method_not_allowed"),
+        (client.get("/api/users/me"), 401, "unauthorized"),
     ):
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json"
-        assert set(response.json()) == {"detail"}
+        assert set(response.json()) == {"code", "detail"}
+        assert response.json()["code"] == code
         assert isinstance(response.json()["detail"], str)
+
+
+def test_framework_failures_keep_their_headers() -> None:
+    client = TestClient(app)
+
+    assert "DELETE" not in client.delete("/api/health").headers["Allow"]
+    assert client.get("/api/users/me").headers["WWW-Authenticate"] == "Bearer"
 
 
 def test_validation_failures_list_the_field_errors(
