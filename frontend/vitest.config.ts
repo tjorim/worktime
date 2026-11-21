@@ -46,6 +46,9 @@ export default defineConfig({
       include: ["src/**"],
       exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**"],
       reporter: ["text", "lcov"],
+      // Floors just below the measured totals (statements 84.28, branches 79.54, functions 84.54, lines 86.19), so
+      // coverage cannot regress unnoticed. Raise them as tests are added; never lower them to land a change.
+      thresholds: { statements: 84, branches: 79, functions: 84, lines: 86 },
     },
   },
 });

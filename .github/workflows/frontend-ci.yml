@@ -43,8 +43,9 @@ jobs:
       - name: Format check
         run: pnpm run format:check
 
-      - name: Test
-        run: pnpm run test
+      # Coverage floors live in vitest.config.ts.
+      - name: Test (with coverage thresholds)
+        run: pnpm run test --coverage
 
       - name: Build
         run: pnpm run build

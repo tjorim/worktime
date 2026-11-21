@@ -29,6 +29,12 @@ coverage
 # nyc test coverage
 .nyc_output
 
+# Python coverage (pytest --cov)
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # Playwright e2e artifacts and saved auth state
 frontend/playwright-report/
 frontend/test-results/
