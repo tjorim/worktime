@@ -17,6 +17,36 @@ arguments (#1472); keep it true (#1473).
 - `apiFetch` throws `ApiError` for 401 and 403, so `useApiClient` recognises a 401 by
   `status`, not by matching message text (`isUnauthorizedError`).
 
+## Body shape of every error
+
+Every JSON error the API sends has a `detail` and a stable `code`. `detail` is an English
+diagnostic for developers and logs; the interface chooses its text by `code` (below) and never
+branches on the wording of `detail`.
+
+| Failure | Status | `code` | Handler (`backend/app/core/errors.py`) |
+|---|---|---|---|
+| `api_error(...)` raised by a route or service | its own | its own (`user_not_found`, ...) | `handle_api_http_exception` |
+| Framework or dependency `HTTPException` (unknown route, wrong method, a missing credential, a bare `HTTPException`) | its own | `bad_request` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `method_not_allowed` (405), else `http_<status>` | `handle_http_exception` |
+| Request validation | 422 | `validation_error` (`label_required` for a missing time-tracking label) | `handle_label_validation_error`, `handle_validation_error` |
+| Unhandled exception | 500 | `internal_error` | `handle_unhandled_exception` |
+
+- `handle_http_exception` keeps `detail` as it was and adds `code` only when the exception has none; a code
+  an `ApiHTTPException` carries is never replaced. Headers (`WWW-Authenticate`, `Retry-After`, `Allow`) are
+  passed on.
+- A 422 keeps FastAPI's `detail` list of `{type, loc, msg}` entries; `input` and `ctx` are dropped from every
+  entry because they echo what the caller sent and can carry secrets or personal data. `code` is added next to
+  the list (`detail` stays a list: the frontend and the generated client only read string details, and a
+  list is ignored by them).
+- An unhandled exception answers `{"detail": "Internal server error", "code": "internal_error"}` and carries
+  `X-Request-ID`. The stack trace is logged on the server (and sent to Sentry when configured), never in the
+  body. Starlette's outermost `ServerErrorMiddleware` sends the response after `RequestIdMiddleware` has
+  unwound, so the handler attaches the id itself from `request.state`.
+- The rate limiter's 429 answers `{"error": ..., "code": "rate_limited"}` (`app/middleware/rate_limit.py`).
+- OpenAPI documents FastAPI's default 422 schema only, not these error bodies.
+
+`backend/tests/test_error_contract.py` pins this on the assembled app;
+`backend/tests/core/test_api_errors.py` covers the handlers in isolation.
+
 ## Showing an error
 
 ```ts
@@ -49,7 +79,8 @@ hooks) translate inside the hook, so views never see an `Error`.
 1. Add an `ErrorCode` member in `backend/app/core/errors.py` and raise
    `api_error(status, ErrorCode.X, "English detail")` instead of `HTTPException`. The
    handler renders `{ "code": "snake_case_code", "detail": "…" }`. Plain `HTTPException`s
-   keep `{ "detail": "…" }` and the client shows its status/operation message.
+   keep their `detail` and get a generic status code (`not_found`, `forbidden`, ...), which the
+   client does not map, so it shows its status/operation message.
    Codes are permanent: never rename or reuse one.
 2. Add a message to `messages/en.json` and `nl.json`.
 3. Add it to the surface's map in `src/lib/api/apiErrorCodes.ts` and pass that map as
@@ -68,8 +99,8 @@ client may branch on have their own: `sync_cursor_expired` (410; `detail` stays 
 
 Not every code has a client message. Add one to `messages/` and `apiErrorCodes.ts` only when a
 surface shows that error to people. Push registration, for example, is best-effort and silent by
-design, so `push_not_configured` is not mapped. FastAPI request-validation errors (422) are still
-the framework's `{ "detail": [...] }` shape.
+design, so `push_not_configured` is not mapped. FastAPI request-validation errors (422) keep the
+framework's `detail` list (without `input` and `ctx`) next to `code: "validation_error"`.
 
 ## Tests
 
