@@ -79,7 +79,7 @@ class _ResolvedShift:
 
 _OFF_SHIFT = _ShiftDefinition(name="Off", start=None, end=None, display_code="O")
 
-# Hand-copied from frontend/src/data/rosters.ts (the source of truth per
+# Hand-copied from frontend/src/lib/schedule/rosters.ts (the source of truth per
 # AGENTS.md) because the frontend and backend build/deploy independently and
 # neither serves its roster config to the other at runtime (see #1107 for why
 # that tradeoff was made). tests/test_roster_golden_fixture.py cross-checks

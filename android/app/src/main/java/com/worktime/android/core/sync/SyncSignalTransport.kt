@@ -3,7 +3,7 @@ package com.worktime.android.core.sync
 /**
  * Transport-neutral interface for receiving `sync_changed` signals from the backend's
  * notify-then-pull SSE channel (`GET /api/sync/events` -- see AGENTS.md "Live updates").
- * Mirrors the frontend's `SyncSignalTransport` (`frontend/src/hooks/useSyncSignal.ts`), so the
+ * Mirrors the frontend's `SyncSignalTransport` (`frontend/src/app/providers/useSyncSignal.ts`), so the
  * consumer (see [com.worktime.android.feature.dashboard.DashboardViewModel]) depends only on
  * this interface -- the concrete transport (SSE today) is an implementation detail.
  */

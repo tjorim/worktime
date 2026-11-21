@@ -31,6 +31,6 @@ describe("config", () => {
   });
 
   // Note: TEAMS_COUNT, SHIFT_CYCLE_DAYS, REFERENCE_DATE, and REFERENCE_TEAM have been
-  // moved to roster-specific configurations in src/data/rosters.ts. Each schedule now
+  // moved to roster-specific configurations in src/lib/schedule/rosters.ts. Each schedule now
   // defines its own reference values, making the system more flexible and self-contained.
 });

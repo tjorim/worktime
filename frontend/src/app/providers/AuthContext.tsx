@@ -85,7 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const lastDisplayedOidcErrorRef = useRef<unknown>(null);
   const sessionWarningToastIdRef = useRef<string | null>(null);
 
-  // Let db/collections.ts tell a write made right now apart from a write
+  // Let lib/db/collections.ts tell a write made right now apart from a write
   // made once we're settled as signed-out/local-only — see
   // setSyncCollectionAuthResolving's own comment for why that distinction
   // matters (a shared-device cross-account data leak, not just staleness).

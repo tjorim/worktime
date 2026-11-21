@@ -3,7 +3,7 @@
  *
  * Imported by:
  *  - App.tsx (<QueryClientProvider client={queryClient}>)
- *  - src/db/collections.ts (passed to every QueryCollection)
+ *  - src/lib/db/collections.ts (passed to every QueryCollection)
  *
  * A single QueryClient is required so that QueryCollection observers and
  * standalone useQuery hooks share the same cache.

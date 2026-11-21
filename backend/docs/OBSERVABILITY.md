@@ -94,7 +94,7 @@ Sentry is initialised at startup if `SENTRY_DSN` is set (optional install: `uv a
 
 ## Frontend Error Correlation
 
-`getRequestId(response)` in `frontend/src/utils/apiClient.ts` reads the `X-Request-ID` header. The 401 and 403 error messages include the request ID:
+`getRequestId(response)` in `frontend/src/lib/api/apiClient.ts` reads the `X-Request-ID` header. The 401 and 403 error messages include the request ID:
 
 ```
 Unauthorized (request-id: 3fa85f64-…)

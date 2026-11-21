@@ -2,7 +2,7 @@
 
 How Worktime tries to make it safe to put a user's data in the cloud, what is
 deliberately guarded against, and what is still open. Read alongside
-`backend/app/services/sync_service.py` and `frontend/src/hooks/useFirstSyncFlow.ts`.
+`backend/app/services/sync_service.py` and `frontend/src/features/sync/useFirstSyncFlow.ts`.
 The stable-identity and retry rules are specified separately in
 [`idempotency-contract.md`](idempotency-contract.md).
 
@@ -127,7 +127,7 @@ dropping it loses data silently. Quarantining does neither.
 ## Local durability
 
 The sync-backed collections are snapshotted to IndexedDB
-(`src/db/persistence.ts`), so the last known state survives a reload and an
+(`src/lib/db/persistence.ts`), so the last known state survives a reload and an
 offline launch of the installed PWA.
 
 - Snapshots are written on any change — local mutation, server pull, or SSE

@@ -44,17 +44,17 @@ own recommended pattern instead — set up once, save the session, reuse it:
    would leave behind (matching `src/config/oidc.ts`'s storage format), so
    the header shows "Synced" instead of an anonymous/offline state.
 2. The app's own `worktime_user_state` entry (see
-   `src/contexts/SettingsContext.tsx`) with `hasCompletedOnboarding: true`,
+   `src/app/providers/SettingsContext.tsx`) with `hasCompletedOnboarding: true`,
    a `scheduleType`, and `settings.enableTimeTracking: true` — the same shape
    the app itself persists after a real user finishes the wizard.
 3. The preferences owner (`USER_STATE_OWNER_STORAGE_KEY` in
-   `src/constants/storageKeys.ts`), set to the fake OIDC user's subject. This
+   `src/config/storageKeys.ts`), set to the fake OIDC user's subject. This
    makes the seeded preferences account-owned rather than unclaimed legacy
    state, which the account-isolation flow deliberately restores instead of
    uploading.
 
 This is test/dev tooling only — `src/config/oidc.ts`,
-`src/contexts/AuthContext.tsx`, and `src/contexts/SettingsContext.tsx` are
+`src/app/providers/AuthContext.tsx`, and `src/app/providers/SettingsContext.tsx` are
 untouched, and a real first-time visitor sees exactly the same wizard as
 before.
 

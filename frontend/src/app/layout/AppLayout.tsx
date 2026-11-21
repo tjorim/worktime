@@ -13,7 +13,9 @@ import { useSettings } from "@/app/providers/SettingsContext";
 // Shown on first run and from the settings only: its steps (country, team and
 // schedule pickers) load when it first opens, not on every page load.
 const WelcomeWizard = lazy(() =>
-  import("@/features/onboarding/WelcomeWizard").then((module) => ({ default: module.WelcomeWizard })),
+  import("@/features/onboarding/WelcomeWizard").then((module) => ({
+    default: module.WelcomeWizard,
+  })),
 );
 
 /**

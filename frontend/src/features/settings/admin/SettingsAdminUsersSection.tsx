@@ -2,11 +2,7 @@ import { TrashIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import {
-  SettingsHint,
-  SettingsLoading,
-  SettingsSection,
-} from "@/features/settings/SettingsParts";
+import { SettingsHint, SettingsLoading, SettingsSection } from "@/features/settings/SettingsParts";
 import { AdminUsersTable } from "./AdminUsersTable";
 import * as m from "@/paraglide/messages.js";
 

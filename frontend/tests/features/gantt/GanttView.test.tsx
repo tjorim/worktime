@@ -3,7 +3,11 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsProvider, defaultLastUsed, defaultSettings } from "@/app/providers/SettingsContext";
+import {
+  SettingsProvider,
+  defaultLastUsed,
+  defaultSettings,
+} from "@/app/providers/SettingsContext";
 
 vi.mock("frappe-gantt", () => ({
   default: class MockFrappeGantt {

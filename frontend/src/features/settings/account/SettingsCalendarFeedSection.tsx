@@ -4,11 +4,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
-import {
-  SettingsHint,
-  SettingsLoading,
-  SettingsSection,
-} from "@/features/settings/SettingsParts";
+import { SettingsHint, SettingsLoading, SettingsSection } from "@/features/settings/SettingsParts";
 import { useToast } from "@/app/providers/ToastContext";
 import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";

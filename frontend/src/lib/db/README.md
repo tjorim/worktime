@@ -8,7 +8,7 @@ This repository uses a single frontend server-state pattern:
 
 ## Collection-backed domains (sync-managed)
 
-These domains must be read/written through collections in `src/db/collections.ts`:
+These domains must be read/written through collections in `src/lib/db/collections.ts`:
 
 - Time tracking: `tasks`, `templates`, `labels`
 - Event store / synced events: `timeOffCollection` (consumed via `EventStoreContext`)
@@ -27,7 +27,7 @@ The following remain non-collection by design:
 
 The home route starts `preloadSyncCollections()` on navigation and intent preload,
 without awaiting it. This warms the same collections consumed by the home tabs
-(including Gantt), backed by the shared `src/lib/queryClient.ts` instance used by
+(including Gantt), backed by the shared `src/lib/query/queryClient.ts` instance used by
 `QueryClientProvider`. There is no separate router cache of domain data and no
 second QueryClient; the loader does not need QueryClient context for collection
 preloading. Collection hooks retain ownership of loading and error state.
@@ -41,7 +41,7 @@ selected date and user settings rather than route search parameters.
 - Static architecture test: `tests/architecture/frontendDataStandard.test.ts`
   - allows plain `useQuery` only in approved read-only hooks
   - forbids standalone `useQuery` calls using `["sync", ...]` query keys
-  - allows `queryKey: ["sync", ...]` only in `src/db/collections.ts`
+  - allows `queryKey: ["sync", ...]` only in `src/lib/db/collections.ts`
 - Existing collection-backed hook tests cover load/update/delete/reset flows.
 
 ## TanStack Form/Table adoption

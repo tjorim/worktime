@@ -15,7 +15,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// CHANGELOG.md as data, served by vite-plugin-changelog.ts (see src/data/changelog.ts).
+// CHANGELOG.md as data, served by vite-plugin-changelog.ts (see src/features/settings/changelog.ts).
 declare module "virtual:changelog" {
   export interface ChangelogEntry {
     /** `**Scope:**` prefix of the bullet, if any. */

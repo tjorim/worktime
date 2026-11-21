@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
-import { getHalfDay, getScrollLeftForColumn, indexEventsByDate } from "@/features/time-off/teamCalendarGrid";
+import {
+  getHalfDay,
+  getScrollLeftForColumn,
+  indexEventsByDate,
+} from "@/features/time-off/teamCalendarGrid";
 
 const base = {
   containerLeft: 100,

@@ -20,7 +20,11 @@ import type { SchoolHolidayInfo } from "@/types/schoolHolidays";
 import type { PaydayInfo } from "@/types/paydays";
 import type { WorkLocation, WorkLocationMap } from "@/types/workLocation";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { DayCell, type DayEvent } from "@/features/calendar/month/DayCell";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";

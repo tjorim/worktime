@@ -2,11 +2,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import {
-  SearchSelect,
-  MultiSearchSelect,
-  type SelectOption,
-} from "@/components/SearchSelect";
+import { SearchSelect, MultiSearchSelect, type SelectOption } from "@/components/SearchSelect";
 import { CountrySelect } from "@/components/CountrySelect";
 import { TeamSelector } from "@/components/TeamSelector";
 

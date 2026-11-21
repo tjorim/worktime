@@ -37,7 +37,11 @@ import {
 } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
 import type { CalendarEvent, HolidayMetadata, ShiftMetadata } from "./types";
 
 /**

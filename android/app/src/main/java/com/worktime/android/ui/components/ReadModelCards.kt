@@ -83,7 +83,7 @@ fun formatDate(value: String): String = runCatching {
 
 /**
  * Color-coded shift status, mirroring the web app's `ShiftBadge` component
- * (frontend/src/components/shared/ShiftBadge.tsx) so shift type is glanceable on Android too.
+ * (frontend/src/components/ShiftBadge.tsx) so shift type is glanceable on Android too.
  */
 @Composable
 fun ShiftBadge(shift: ShiftSummary, modifier: Modifier = Modifier) {

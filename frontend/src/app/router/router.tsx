@@ -14,7 +14,10 @@ import { SilentRenewCallbackPage } from "@/features/auth/SilentRenewCallbackPage
 // a second download.
 const SettingsPage = lazyRoute(() => import("@/features/settings/SettingsPage"), "SettingsPage");
 const PrivacyPage = lazyRoute(() => import("@/features/legal/PrivacyPage"), "PrivacyPage");
-const PebblePairPage = lazyRoute(() => import("@/features/pebble/PebblePairPage"), "PebblePairPage");
+const PebblePairPage = lazyRoute(
+  () => import("@/features/pebble/PebblePairPage"),
+  "PebblePairPage",
+);
 
 const rootRoute = createRootRoute({
   component: AppLayout,

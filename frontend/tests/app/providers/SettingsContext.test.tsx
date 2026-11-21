@@ -399,7 +399,7 @@ describe("SettingsContext unified user state", () => {
   describe("Device-local settings (not synced across devices)", () => {
     // theme and notifications (which drives a per-device push subscription) are
     // per-device state, not real cross-device preferences (see
-    // constants/deviceLocalSettings.ts) — updating them must not bump
+    // config/deviceLocalSettings.ts) — updating them must not bump
     // _updatedAt, the timestamp sync's last-write-wins reconciliation compares,
     // or a device-local change could make this device's stale settings look
     // "newer" than a real change synced from another device.

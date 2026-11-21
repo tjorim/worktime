@@ -1,6 +1,6 @@
 import * as m from "@/paraglide/messages.js";
 
-// src/utils/share.ts
+// src/features/settings/share.ts
 // Generic and context-aware sharing utility for Worktime
 
 export interface ShareOptions {

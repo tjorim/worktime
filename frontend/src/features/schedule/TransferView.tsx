@@ -40,7 +40,10 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import type { CalendarEvent } from "@/lib/events/types";
 import { resolveEventPaletteVars } from "@/lib/hday/presentation";
-import { useTransferCalculations, type TransferInfo } from "@/features/schedule/useTransferCalculations";
+import {
+  useTransferCalculations,
+  type TransferInfo,
+} from "@/features/schedule/useTransferCalculations";
 import {
   dayjs,
   formatDisplayDate,

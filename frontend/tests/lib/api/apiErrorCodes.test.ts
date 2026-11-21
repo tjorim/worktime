@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import * as codes from "@/lib/api/apiErrorCodes";
-import { ApiError, describeError, getErrorMessage, type ErrorCodeMessages } from "@/lib/api/apiError";
+import {
+  ApiError,
+  describeError,
+  getErrorMessage,
+  type ErrorCodeMessages,
+} from "@/lib/api/apiError";
 
 const backendSource = readFileSync(
   path.resolve(import.meta.dirname, "../../../../backend/app/core/errors.py"),

@@ -2,7 +2,11 @@ import { useCallback, useState } from "react";
 import type { Dayjs } from "dayjs";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import { isValidDate } from "@/lib/hday/validation";
 import { dayjs } from "@/lib/dates/dateTimeUtils";

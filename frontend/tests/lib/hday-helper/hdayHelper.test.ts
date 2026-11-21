@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isHdayHelperMixedContentBlocked, resolveHdayHelperBaseUrl } from "@/lib/hday-helper/hdayHelper";
+import {
+  isHdayHelperMixedContentBlocked,
+  resolveHdayHelperBaseUrl,
+} from "@/lib/hday-helper/hdayHelper";
 
 describe("resolveHdayHelperBaseUrl", () => {
   it("returns null when no helper URL is configured", () => {

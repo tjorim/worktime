@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { syncDatasetsMatch, type SyncPushPayload, type SyncPullResponse } from "@/lib/sync/syncClient";
+import {
+  syncDatasetsMatch,
+  type SyncPushPayload,
+  type SyncPullResponse,
+} from "@/lib/sync/syncClient";
 
 describe("syncDatasetsMatch", () => {
   const local: SyncPushPayload = {

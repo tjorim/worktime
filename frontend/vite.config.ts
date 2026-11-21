@@ -41,7 +41,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       // "prompt" (not "autoUpdate") so the app controls when the new SW activates,
-      // via the "new version available" toast (see src/components/PwaUpdateToast.tsx).
+      // via the "new version available" toast (see src/app/pwa/PwaUpdateToast.tsx).
       registerType: "prompt",
       // We call registerSW ourselves from PwaUpdateToast instead of the
       // plugin's auto-injected <script>, so it can drive the toast UI.

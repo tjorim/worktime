@@ -252,7 +252,7 @@ describe("Onboarding wizard closes once a signed-in user's data restores", () =>
     // This test renders the full App (unlike the lightweight harness used by
     // the other sync tests below), which drives OngoingSyncProvider far enough
     // to call setSyncCollectionAuth(userId) — a module-level singleton in
-    // db/collections.ts that RTL's cleanup() does not reset on unmount. Left
+    // lib/db/collections.ts that RTL's cleanup() does not reset on unmount. Left
     // pointing at this test's user, it makes later tests' collection reads
     // (e.g. seedLocalTask() in the "keep local" conflict test) behave as if
     // still scoped to a different, already-authenticated user.

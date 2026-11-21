@@ -13,7 +13,11 @@ import {
 } from "@/lib/db/collections";
 import { USER_STATE_OWNER_STORAGE_KEY } from "@/config/storageKeys";
 import { useOngoingSync } from "@/app/providers/useOngoingSync";
-import { storeSyncCursor, type SyncPushPayload, type SyncPullResponse } from "@/lib/sync/syncClient";
+import {
+  storeSyncCursor,
+  type SyncPushPayload,
+  type SyncPullResponse,
+} from "@/lib/sync/syncClient";
 
 const snapshot: SyncPullResponse = {
   labels: [],

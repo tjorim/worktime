@@ -196,7 +196,10 @@ describe("palette wiring", () => {
   });
 
   it("has an .event-* class for every class the helpers can return", () => {
-    const css = readFileSync(path.resolve(__dirname, "../../../src/styles/event-palette.css"), "utf8");
+    const css = readFileSync(
+      path.resolve(__dirname, "../../../src/styles/event-palette.css"),
+      "utf8",
+    );
     for (const { flags, eventType } of combos) {
       const className = getEventColorClass(flags, eventType);
       expect(css, className).toContain(`.${className} {`);

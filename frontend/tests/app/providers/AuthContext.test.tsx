@@ -14,7 +14,9 @@ import { appendToPendingSyncOutbox } from "@/lib/sync/syncClient";
 import { SYNC_PENDING_OUTBOX_KEY } from "@/config/storageKeys";
 
 const mockClearPushSubscription = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-vi.mock("@/lib/push/pushNotifications", () => ({ clearPushSubscription: mockClearPushSubscription }));
+vi.mock("@/lib/push/pushNotifications", () => ({
+  clearPushSubscription: mockClearPushSubscription,
+}));
 
 vi.mock("@/lib/api/apiClient", () => ({ apiFetch: vi.fn() }));
 

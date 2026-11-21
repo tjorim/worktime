@@ -1,6 +1,10 @@
 import type { EventFlag } from "@/lib/hday/types";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 
 export type EventFormState = {

@@ -6,7 +6,7 @@ export const SYNC_OUTBOX_KEY_PREFIX = "worktime_sync_outbox_";
 /**
  * Holds writes made before the current user is known (auth not yet
  * resolved). Not per-user, since there is no userId to key it by yet - see
- * appendToPendingSyncOutbox / drainPendingSyncOutbox in utils/syncClient.ts.
+ * appendToPendingSyncOutbox / drainPendingSyncOutbox in lib/sync/syncClient.ts.
  */
 export const SYNC_PENDING_OUTBOX_KEY = "worktime_sync_outbox_pending";
 export const SYNC_QUARANTINE_KEY_PREFIX = "worktime_sync_quarantine_";

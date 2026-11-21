@@ -41,7 +41,7 @@ private fun isFatalAuthStatus(code: Int): Boolean = code == HTTP_UNAUTHORIZED ||
  * `Authorization` header the endpoint requires, same problem documented for the frontend's
  * `createFetchSseTransport` -- and reconnects with exponential backoff on drop.
  *
- * Mirrors `frontend/src/hooks/useSyncSignal.ts`'s `createFetchSseTransport`: a 401/403 is
+ * Mirrors `frontend/src/app/providers/useSyncSignal.ts`'s `createFetchSseTransport`: a 401/403 is
  * treated as fatal for that token -- retrying immediately would just hammer the endpoint with a
  * token the server already rejected, so this stops the connect loop and instead calls
  * [onFatalAuthFailure] to force the app's session out of its authenticated state (matching how

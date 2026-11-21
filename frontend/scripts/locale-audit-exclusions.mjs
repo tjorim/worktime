@@ -1,7 +1,7 @@
 // Whole files that hold no interface copy: authored data and development fixtures. Keep this list short and
 // give each entry a reason; a trailing slash matches a directory.
 export const excludedFiles = {
-  "data/changelog.ts":
+  "features/settings/changelog.ts":
     "adapter over CHANGELOG.md, whose entries are release notes, not interface copy",
   "mocks/": "MSW development fixtures, loaded only when VITE_MSW is set",
 };
@@ -9,44 +9,44 @@ export const excludedFiles = {
 export const diagnosticCallees = [];
 // Exact source/value exclusions. Never approve a whole component or directory for visible copy.
 export const exclusions = {
-  "components/AboutModal.tsx": {
+  "app/layout/AboutModal.tsx": {
     "Apache 2.0": "licence name",
     "React + TypeScript": "technology names",
   },
-  "components/Header.tsx": {
+  "app/layout/Header.tsx": {
     Worktime: "fixed application brand",
   },
-  "components/MainTabs.tsx": {
+  "app/home/MainTabs.tsx": {
     Worktime: "fixed application brand",
   },
-  "utils/share.ts": {
+  "features/settings/share.ts": {
     Worktime: "fixed application brand",
   },
-  "components/TransferView.tsx": {
+  "features/schedule/TransferView.tsx": {
     "mb-1 hidden text-muted-foreground uppercase md:block": "CSS class list",
   },
-  "components/schedule/TodayView.tsx": {
+  "features/schedule/TodayView.tsx": {
     "hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2": "CSS class list",
   },
-  "components/settings/SettingsGeneralSection.tsx": {
+  "features/settings/SettingsGeneralSection.tsx": {
     "24h": "time format code",
     "12h": "time format code",
     EN: "language code",
     NL: "language code",
   },
-  "components/settings/SettingsHdayHelper.tsx": {
+  "features/settings/SettingsHdayHelper.tsx": {
     "http://127.0.0.1:8080": "URL input example",
   },
-  "components/settings/account/SettingsIntegrationClientsSection.tsx": {
+  "features/settings/account/SettingsIntegrationClientsSection.tsx": {
     "worktime:mcp": "OAuth scope identifier",
   },
   "config/oidc.ts": {
     "openid profile email": "OIDC scopes",
   },
-  "contexts/PwaInstallContext.tsx": {
+  "app/providers/PwaInstallContext.tsx": {
     "(display-mode: standalone)": "media query",
   },
-  "data/rosters.ts": {
+  "lib/schedule/rosters.ts": {
     "Weekday-only coverage.": "roster implementation note, never rendered",
     "Four-team support rotation: teams alternate Morning/Evening by week, with one team assigned to a Day support weekend each week. The support weekend rotates team-by-team across the 4-week cycle.":
       "roster implementation note, never rendered",
@@ -54,25 +54,25 @@ export const exclusions = {
       "roster implementation note, never rendered",
     "Continuous multi-team rotation.": "roster implementation note, never rendered",
   },
-  "db/collections.ts": {
+  "lib/db/collections.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/pushNotifications.ts": {
+  "lib/push/pushNotifications.ts": {
     Bearer: "HTTP authorization scheme",
   },
   "hooks/useApiClient.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "hooks/useSyncSignal.ts": {
+  "app/providers/useSyncSignal.ts": {
     Bearer: "HTTP authorization scheme",
   },
   "features/gantt/GanttTaskModal.tsx": {
     "gap-1": "CSS class fragment",
   },
-  "features/timeTracking/LabelModal.tsx": {
+  "components/LabelModal.tsx": {
     "#3B82F6": "colour input example",
   },
-  "features/timeTracking/TemplatesPanel.tsx": {
+  "features/settings/time-tracking/TemplatesPanel.tsx": {
     "label-1": "example import payload shown as a data format sample",
     "Project work": "example import payload shown as a data format sample",
     "label-2": "example import payload shown as a data format sample",
@@ -81,17 +81,17 @@ export const exclusions = {
     "Admin tasks": "example import payload shown as a data format sample",
     "label-4": "example import payload shown as a data format sample",
   },
-  "features/timeTracking/TimelineProgressBar.tsx": {
+  "features/time-tracking/TimelineProgressBar.tsx": {
     "truncate px-1 text-xs font-semibold": "CSS class list",
   },
-  "features/timeTracking/WeeklyDataView.tsx": {
+  "features/time-tracking/WeeklyDataView.tsx": {
     "mb-3 text-base font-medium text-muted-foreground uppercase": "CSS class list",
   },
-  "utils/dateTimeUtils.ts": {
+  "lib/dates/dateTimeUtils.ts": {
     "hh:mm A": "Day.js format",
     "12:00 AM": "12-hour clock midnight label",
   },
-  "utils/syncClient.ts": {
+  "lib/sync/syncClient.ts": {
     "refusing to build a keep-local replace payload from empty local data":
       "internal invariant diagnostic",
   },

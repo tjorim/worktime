@@ -20,7 +20,7 @@ try {
 
 if (actual !== expected) {
   process.stderr.write(
-    `❌ ${ROSTER_FIXTURE_RELATIVE_PATH} is out of date with frontend/src/data/rosters.ts and shiftCalculations.ts.\n` +
+    `❌ ${ROSTER_FIXTURE_RELATIVE_PATH} is out of date with frontend/src/lib/schedule/rosters.ts and shiftCalculations.ts.\n` +
       'Run "pnpm run fixtures:generate" and commit the result.\n',
   );
   process.exit(1);

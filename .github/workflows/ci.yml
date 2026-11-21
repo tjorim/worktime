@@ -61,8 +61,8 @@ jobs:
               - '.github/workflows/ci.yml'
             pebble:
               - 'pebble/**'
-              - 'frontend/src/pages/PebblePairPage.tsx'
-              - 'frontend/src/router.tsx'
+              - 'frontend/src/features/pebble/PebblePairPage.tsx'
+              - 'frontend/src/app/router/router.tsx'
               - 'backend/app/routers/access_tokens.py'
               - 'backend/app/services/access_token_service.py'
               - '.github/workflows/pebble.yml'

@@ -26,7 +26,11 @@ import type { Dayjs } from "dayjs";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { isTimeOffDateEntry, isTimeOffRangeEntry, isTimeOffWeeklyEntry } from "@/lib/time-off/types";
+import {
+  isTimeOffDateEntry,
+  isTimeOffRangeEntry,
+  isTimeOffWeeklyEntry,
+} from "@/lib/time-off/types";
 import { calculateShift } from "./shiftCalculations";
 import { dayjs, formatHdayDate } from "@/lib/dates/dateTimeUtils";
 import { logger } from "@/lib/logger";

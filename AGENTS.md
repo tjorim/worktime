@@ -21,17 +21,17 @@ quick start.
 ### Source of truth
 
 - `VERSION` (repo root) for the app version — see "Versioning" above
-- `frontend/src/data/rosters.ts` for roster and schedule definitions
-- `frontend/src/utils/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
+- `frontend/src/lib/schedule/rosters.ts` for roster and schedule definitions
+- `frontend/src/lib/schedule/shiftCalculations.ts` for shift logic (frontend). The backend keeps its own
   Python implementation — `backend/app/services/read_models_service.py` — that serves
   Android/Pebble/MCP read-only clients. Changes flow frontend → backend: after editing
   `rosters.ts`, update `_SCHEDULES` (and the resolution logic, if it changed) to match, then run
   `pnpm run fixtures:generate` in `frontend/` and commit the regenerated
   `backend/tests/fixtures/roster_golden.json`. `backend/tests/test_roster_golden_fixture.py` and
   frontend `pnpm typecheck` (`fixtures:check`) catch drift between the two (#1107)
-- `frontend/src/contexts/SettingsContext.tsx` for user settings and state migrations
+- `frontend/src/app/providers/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing
-- `CHANGELOG.md` for release notes (`frontend/src/data/changelog.ts` only adapts it for the app)
+- `CHANGELOG.md` for release notes (`frontend/src/features/settings/changelog.ts` only adapts it for the app)
 - `frontend/src/styles/event-palette.css` for event colors, in both themes.
   It is the only place they are defined: it defines `--wt-event-<type>-<variant>-bg/-fg` CSS variables, the
   `.event-*` classes at the bottom of that file apply them, and `getEventColor()` /
@@ -165,7 +165,7 @@ endpoints — account deletion and token management itself — that a leaked tok
   `frontend/src/features/<feature>/`, with matching tests under `frontend/tests/features/<feature>/`.
   Feature folders may import shared code, but must not import another feature directly; move code used
   by multiple features to `components/shared/`, `hooks/`, `lib/`, `types/`, or `utils/` as appropriate.
-- All storage keys live in `frontend/src/constants/storageKeys.ts`
+- All storage keys live in `frontend/src/config/storageKeys.ts`
 - Icons use named `lucide-react` imports and the decorative `components/shared/Icon.tsx` wrapper.
   Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
   The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
