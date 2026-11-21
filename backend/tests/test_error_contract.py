@@ -5,8 +5,10 @@ middleware or a router that changes the shape is caught. The wording of ``detail
 is.
 """
 
+import logging
 from collections.abc import AsyncGenerator, Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.engine import get_session
@@ -48,31 +50,58 @@ def test_an_invalid_bearer_token_is_a_coded_401() -> None:
     assert response.json()["code"] == "invalid_token"
 
 
-def test_framework_failures_are_json_with_a_detail() -> None:
-    # Unknown paths, wrong methods and a missing credential are answered by Starlette/FastAPI before any app handler:
-    # ``detail`` only, no ``code`` (recorded as a follow-up; adding one changes the body clients see).
+def test_framework_failures_keep_their_detail_and_get_a_code_from_the_status() -> None:
+    # Unknown paths, wrong methods and a missing credential are raised by Starlette/FastAPI, not by an app rule.
     client = TestClient(app)
-    for response, status in (
-        (client.get("/api/does-not-exist"), 404),
-        (client.delete("/api/health"), 405),
-        (client.get("/api/users/me"), 401),
+    for response, status, code in (
+        (client.get("/api/does-not-exist"), 404, "not_found"),
+        (client.delete("/api/health"), 405, "method_not_allowed"),
+        (client.get("/api/users/me"), 401, "unauthorized"),
     ):
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json"
-        assert set(response.json()) == {"detail"}
+        assert set(response.json()) == {"code", "detail"}
+        assert response.json()["code"] == code
         assert isinstance(response.json()["detail"], str)
 
 
-def test_validation_failures_list_the_field_errors(
+def test_framework_failures_keep_their_headers() -> None:
+    client = TestClient(app)
+
+    assert "DELETE" not in client.delete("/api/health").headers["Allow"]
+    assert client.get("/api/users/me").headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_validation_failures_keep_the_detail_list_and_add_a_code(
     db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
 ) -> None:
     response = db_client.post("/api/users/", json={"username": "x"}, headers=auth_headers(1, is_admin=True))
 
     assert response.status_code == 422
-    errors = response.json()["detail"]
-    assert errors
-    assert all({"type", "loc", "msg"} <= set(entry) for entry in errors)
-    assert ["body", "display_name"] in [entry["loc"] for entry in errors]
+    body = response.json()
+    assert set(body) == {"code", "detail"}
+    assert body["code"] == "validation_error"
+    assert body["detail"]
+    assert all(set(entry) == {"type", "loc", "msg"} for entry in body["detail"])
+    assert ["body", "display_name"] in [entry["loc"] for entry in body["detail"]]
+
+
+def test_validation_failures_do_not_echo_the_submitted_values(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    secret = "secret-token-value"
+    response = db_client.post(
+        "/api/users/",
+        json={"username": secret, "display_name": 12345, "is_admin": secret},
+        headers=auth_headers(1, is_admin=True),
+    )
+
+    assert response.status_code == 422
+    assert secret not in response.text
+    assert "12345" not in response.text
+    for entry in response.json()["detail"]:
+        assert "input" not in entry
+        assert "ctx" not in entry
 
 
 def test_failures_never_carry_a_stack_trace_or_a_secret(
@@ -94,22 +123,50 @@ def test_failures_never_carry_a_stack_trace_or_a_secret(
             assert marker not in response.text
 
 
-def test_an_unhandled_exception_answers_500_without_leaking_its_cause(
-    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]], caplog: pytest.LogCaptureFixture
 ) -> None:
-    # The unhandled-exception response is Starlette's plain text, not the JSON shape above, and carries no request id
-    # (recorded as a follow-up).
+    # Starlette's ServerErrorMiddleware sends this response after RequestIdMiddleware has unwound, so the handler
+    # registered for ``Exception`` has to put the id on it.
     async def failing() -> AsyncGenerator[None]:
         raise RuntimeError("secret-token postgresql://user:password@db/worktime")
         yield  # pragma: no cover
 
     app.dependency_overrides[get_session] = failing  # db_client restores its own override on teardown
+    with caplog.at_level(logging.ERROR, logger="app.core.errors"):
+        response = TestClient(app, raise_server_exceptions=False).get(
+            "/api/users/9999", headers={**auth_headers(1, is_admin=True), "X-Request-ID": "trace-me-1"}
+        )
+
+    assert response.status_code == 500
+    assert response.headers["content-type"] == "application/json"
+    assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
+    assert response.headers["X-Request-ID"] == "trace-me-1"
+    for secret in ("secret-token", "password", "postgresql"):
+        assert secret not in response.text
+    for marker in TRACE_MARKERS:
+        assert marker not in response.text
+    # The cause and the stack trace stay on the server, tied to the request id.
+    record = next(record for record in caplog.records if record.name == "app.core.errors")
+    assert "trace-me-1" in record.getMessage()
+    # It names the route template, never the raw path: a path can carry a credential (/ical/{token}.ics).
+    assert "/users/{user_id}" in record.getMessage()
+    assert "9999" not in record.getMessage()
+    assert isinstance(record.exc_info, tuple)
+    assert "secret-token" in str(record.exc_info[1])
+
+
+def test_an_unhandled_exception_gets_a_request_id_even_without_one_supplied(
+    db_client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    async def failing() -> AsyncGenerator[None]:
+        raise RuntimeError("boom")
+        yield  # pragma: no cover
+
+    app.dependency_overrides[get_session] = failing
     response = TestClient(app, raise_server_exceptions=False).get(
         "/api/users/9999", headers=auth_headers(1, is_admin=True)
     )
 
     assert response.status_code == 500
-    for secret in ("secret-token", "password", "postgresql"):
-        assert secret not in response.text
-    for marker in TRACE_MARKERS:
-        assert marker not in response.text
+    assert response.headers["X-Request-ID"]

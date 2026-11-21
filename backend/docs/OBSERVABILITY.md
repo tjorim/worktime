@@ -10,7 +10,7 @@ This document describes the observability guarantees that apply to every HTTP re
 |---|---|
 | **Generation** | If the incoming request carries no `X-Request-ID` header, `RequestIdMiddleware` generates a UUID4 and assigns it. |
 | **Propagation** | If the incoming request supplies `X-Request-ID`, that value is used unchanged. |
-| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. |
+| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. The 500 for an unhandled exception is sent by Starlette's outermost `ServerErrorMiddleware` after the middleware has unwound; `handle_unhandled_exception` (`app/core/errors.py`) attaches the id from `request.state` there. |
 | **Scope** | The ID is stored in `scope["state"]["request_id"]` (accessible via `request.state.request_id` in route handlers). |
 | **CORS** | `X-Request-ID` is listed in both `allow_headers` (clients may send it) and `expose_headers` (browsers may read it). |
 
