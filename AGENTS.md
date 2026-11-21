@@ -28,7 +28,7 @@ quick start.
   Android/Pebble/MCP read-only clients. Changes flow frontend → backend: after editing
   `rosters.ts`, update `_SCHEDULES` (and the resolution logic, if it changed) to match, then run
   `pnpm run fixtures:generate` in `frontend/` and commit the regenerated
-  `backend/tests/fixtures/roster_golden.json`. `backend/tests/test_roster_golden_fixture.py` and
+  `backend/tests/fixtures/roster_golden.json`. `backend/tests/services/test_roster_golden_fixture.py` and
   frontend `pnpm typecheck` (`fixtures:check`) catch drift between the two (#1107)
 - `frontend/src/app/providers/SettingsContext.tsx` for user settings and state migrations
 - `frontend/src/lib/hday/parser.ts` for frontend `.hday` parsing

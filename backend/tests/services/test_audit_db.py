@@ -1,6 +1,6 @@
 """Tests for the transactional mutation audit trail (issue #1054).
 
-Distinct from tests/test_audit.py, which covers the pre-existing (#984)
+Distinct from tests/services/test_audit.py, which covers the pre-existing (#984)
 rotated file logger — that one remains as secondary, best-effort operational
 telemetry. This file covers the new authoritative, transactional DB record.
 """

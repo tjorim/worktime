@@ -82,7 +82,7 @@ _OFF_SHIFT = _ShiftDefinition(name="Off", start=None, end=None, display_code="O"
 # Hand-copied from frontend/src/lib/schedule/rosters.ts (the source of truth per
 # AGENTS.md) because the frontend and backend build/deploy independently and
 # neither serves its roster config to the other at runtime (see #1107 for why
-# that tradeoff was made). tests/test_roster_golden_fixture.py cross-checks
+# that tradeoff was made). tests/services/test_roster_golden_fixture.py cross-checks
 # this dict, and the algorithms below it, against a fixture generated from
 # rosters.ts/shiftCalculations.ts — after editing a schedule here, also edit
 # rosters.ts and run "pnpm run fixtures:generate" in frontend/.

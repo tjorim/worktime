@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-BACKEND = Path(__file__).resolve().parent.parent
+BACKEND = Path(__file__).resolve().parent.parent.parent
 
 
 def _alembic(database_url: str, *args: str) -> None:

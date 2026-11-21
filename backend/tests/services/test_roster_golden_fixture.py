@@ -26,7 +26,7 @@ import pytest
 from app.schemas.read_models import ScheduleType
 from app.services.read_models_service import _SCHEDULES, _shift_code_for  # noqa: PLC2701
 
-_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "roster_golden.json"
+_FIXTURE_PATH = Path(__file__).parent.parent / "fixtures" / "roster_golden.json"
 _FIXTURE: dict[str, Any] = json.loads(_FIXTURE_PATH.read_text(encoding="utf-8"))
 
 

@@ -263,7 +263,7 @@ Useful commands:
 
 ```bash
 uv run pytest
-uv run pytest tests/test_health.py
+uv run pytest tests/routers/test_health.py
 uv run ruff check app
 uv run ty check app
 uv run alembic upgrade head

@@ -71,6 +71,18 @@ def reset_cache() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
+def reset_oidc_discovery_cache(monkeypatch) -> None:
+    """Start every test without a discovered JWKS URI.
+
+    The readiness check resolves it through a mocked HTTP client in some tests; without this reset the mock's
+    value would leak into whichever test runs next, making the suite depend on file order.
+    """
+    from app.core import oidc
+
+    monkeypatch.setattr(oidc, "_jwks_uri_cache", None)
+
+
+@pytest.fixture(autouse=True)
 def reset_rate_limiter() -> Generator[None]:
     """Clear the rate limiter's in-memory storage before each test.
 

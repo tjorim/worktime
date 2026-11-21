@@ -21,7 +21,7 @@ from app.mcp_server import WorktimeMcpBackend, create_mcp_http_app, create_mcp_s
 from app.models import AuditEntry
 from app.schemas import UserCreate
 from app.services import db_service, integration_client_service
-from tests.test_mcp_server import _make_factory, _token_for_user
+from tests.mcp.test_mcp_server import _make_factory, _token_for_user
 
 PRIVATE = "PRIVATE-NOTE-9f3a"
 ISSUER = "https://auth.example/realms/worktime"

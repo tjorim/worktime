@@ -33,7 +33,7 @@ from app.schemas import (
     SchoolHolidayRead,
     VapidPublicKeyResponse,
 )
-from tests.test_holidays import SAMPLE_PUBLIC_HOLIDAYS, SAMPLE_SCHOOL_HOLIDAYS
+from tests.routers.test_holidays import SAMPLE_PUBLIC_HOLIDAYS, SAMPLE_SCHOOL_HOLIDAYS
 
 # Operations that legitimately have no JSON model, with the reason. A new entry needs a
 # reason that is not "I did not write a model"; the tests below fail on stale entries.
