@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 from pydantic import TypeAdapter
 
 from app import main
-from app.config import settings
+from app.core.config import settings
 from app.main import app
 from app.schemas import (
     HealthSummary,

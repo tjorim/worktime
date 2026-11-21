@@ -9,8 +9,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.config import settings
-from app.database import sqlite
+from app.core.config import settings
+from app.db import sqlite
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ OIDC provider (e.g. authentik, Keycloak, ZITADEL).
 
 Pre-provisioned users created via this endpoint are NOT automatically linked to
 an OIDC login.  On first login the backend provisions a new local user record
-from the token claims (see ``app.config.oidc_config``), regardless of any
+from the token claims (see ``app.core.oidc``), regardless of any
 pre-existing rows with a matching username.  Use this endpoint only when a local
 record must exist before the user's first sign-in and the admin will manually
 associate the ``oidc_subject`` out-of-band.
@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
+from app.db.engine import get_session
 from app.routers.auth import AuthenticatedPrincipal, get_authenticated_principal
 from app.schemas import UserCreate, UserRead, UserRegister
 from app.services.db_service import ConflictError, create_user

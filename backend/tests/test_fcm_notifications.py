@@ -22,7 +22,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.config.settings import settings
+from app.core.config import settings
 from app.models import FcmDeviceToken
 from app.schemas import FcmTokenCreate, TaskUpdate, UserCreate
 from app.services.db_service import create_task, create_user, delete_task, update_task

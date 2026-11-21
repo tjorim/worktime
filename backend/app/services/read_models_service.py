@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.datetime import as_utc
 from app.models import TimeOffEntry
 from app.read_models import (
     CurrentStatusReadModel,
@@ -37,7 +38,6 @@ from app.services.db_service import (
     get_user_preferences,
     list_time_off_entries,
 )
-from app.utils.datetime import as_utc
 
 
 @dataclass(frozen=True)

@@ -1,4 +1,4 @@
-"""app.database.sqlite: the two ways SQLite differs from PostgreSQL for this schema."""
+"""app.db.sqlite: the two ways SQLite differs from PostgreSQL for this schema."""
 
 from __future__ import annotations
 

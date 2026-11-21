@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor, write_audit_entry
+from app.core.datetime import as_utc
 from app.core.errors import ErrorCode
 from app.models import (
     Base,
@@ -42,7 +43,6 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
-from app.utils.datetime import as_utc
 from app.utils.sse_manager import notify_sync_changed
 
 

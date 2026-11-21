@@ -1,6 +1,6 @@
 """Tests for CORS configuration module."""
 
-from app.config.cors import get_cors_origins
+from app.core.cors import get_cors_origins
 
 
 def test_cors_wildcard_development():

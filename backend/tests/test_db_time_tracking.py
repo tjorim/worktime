@@ -619,7 +619,7 @@ def test_list_labels_pagination(
     assert seen_ids == set(created_ids)
 
     # Exceeding the server-side cap is rejected rather than silently clamped.
-    from app.utils.pagination import MAX_PAGE_LIMIT
+    from app.core.pagination import MAX_PAGE_LIMIT
 
     too_large = db_client.get(f"/api/time-tracking/labels?limit={MAX_PAGE_LIMIT + 1}", headers=headers)
     assert too_large.status_code == 422

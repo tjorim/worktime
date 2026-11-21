@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import oidc_config
+from app.core import oidc as oidc_config
 from app.main import app
 from app.models import GanttTask, Label, User
 from app.routers.auth import get_bearer_principal

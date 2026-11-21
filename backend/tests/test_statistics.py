@@ -4,11 +4,7 @@ import statistics
 
 import pytest
 
-from app.utils.statistics import (
-    calculate_avg,
-    calculate_percentile,
-    calculate_stats,
-)
+from app.core.statistics import calculate_avg, calculate_percentile, calculate_stats
 
 
 class TestCalculateAvg:

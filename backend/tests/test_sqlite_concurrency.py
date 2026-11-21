@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 
-from app.database import engine as database_engine
+from app.db import engine as database_engine
 
 
 async def test_file_sqlite_concurrent_writes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

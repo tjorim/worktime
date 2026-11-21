@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.engine.url import make_url
 
-from app.config import settings
+from app.core.config import settings
 from app.models import Base  # noqa: F401 — registers all tables with Base.metadata
 
 config = context.config

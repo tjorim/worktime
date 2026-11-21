@@ -25,7 +25,7 @@ import jwt
 from jwt.exceptions import ExpiredSignatureError, PyJWTError
 from jwt.types import Options
 
-from app.config import settings
+from app.core.config import settings
 from app.services.db_service import ConflictError, create_user
 
 logger = logging.getLogger(__name__)

@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from app.database import engine as database_engine
-from app.database.init import init_db
+from app.db import engine as database_engine
+from app.db.init import init_db
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +50,7 @@ class TestDatabaseInit:
         """init_db should run alembic upgrade to head."""
         monkeypatch.setenv("AUTO_MIGRATE", "true")
         upgrade_mock = Mock()
-        monkeypatch.setattr("app.database.init.command.upgrade", upgrade_mock)
+        monkeypatch.setattr("app.db.init.command.upgrade", upgrade_mock)
 
         init_db()
 
@@ -115,7 +115,7 @@ class TestLifespanInitialization:
     def test_lifespan_awaits_background_task_cancellation(self, monkeypatch):
         """Shutdown lets each cancelled background task finish its cleanup."""
         from app import main
-        from app.config import oidc_config
+        from app.core import oidc as oidc_config
         from app.services import planned_task_reminder_scheduler
 
         fake_settings = Mock()

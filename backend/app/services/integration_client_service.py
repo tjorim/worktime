@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.db import AuditActor, write_audit_entry
-from app.config import settings
+from app.core.config import settings
 from app.models import IntegrationClient, User
 from app.services.db_service import NotFoundError
 

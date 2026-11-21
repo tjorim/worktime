@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.cache.store import get_cache
-from app.config import settings
+from app.core.config import settings
 from app.models import CachedHoliday
 from app.routers.holidays import (
     _build_holiday_date_set,

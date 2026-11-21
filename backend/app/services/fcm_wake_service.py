@@ -18,7 +18,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config.settings import settings
+from app.core.config import settings
 from app.services.fcm_device_token_service import delete_token_by_id, list_tokens_for_user
 from app.services.fcm_service import FcmSendResult, send_wake_signal
 

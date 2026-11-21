@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 
 from app.cache.models import HolidayCacheEntry
-from app.config.settings import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

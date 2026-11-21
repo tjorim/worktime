@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from app.config.settings import Settings
+from app.core.config import Settings
 
 
 def test_default_settings(monkeypatch: pytest.MonkeyPatch):

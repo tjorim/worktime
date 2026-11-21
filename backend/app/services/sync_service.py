@@ -46,6 +46,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from app.core.datetime import as_utc
 from app.core.errors import ErrorCode
 from app.models import (
     GanttTask,
@@ -89,7 +90,6 @@ from app.services.db_service import (
     validate_gantt_dependencies,
     validate_gantt_dependency_graph,
 )
-from app.utils.datetime import as_utc
 
 
 def _now() -> datetime:

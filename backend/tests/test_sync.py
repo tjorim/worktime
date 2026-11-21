@@ -2153,7 +2153,7 @@ class TestSyncEventsConnectionPool:
         from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
         from sqlalchemy.pool import QueuePool
 
-        import app.database.engine as db_engine
+        import app.db.engine as db_engine
         from app.routers.auth import get_principal_shortlived
 
         pool_size, max_overflow = 1, 1  # total capacity: 2 pooled connections
@@ -2164,7 +2164,7 @@ class TestSyncEventsConnectionPool:
             pool_timeout=2,
         )
         small_factory = async_sessionmaker(small_engine, expire_on_commit=False)
-        # app.database.engine exposes no setter/override for the module-level
+        # app.db.engine exposes no setter/override for the module-level
         # engine and session factory, so swapping them in for this test means
         # patching the private globals directly.
         monkeypatch.setattr(db_engine, "_engine", small_engine)

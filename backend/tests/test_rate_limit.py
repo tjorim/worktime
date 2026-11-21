@@ -11,8 +11,8 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
+from app.core.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware, RequestRateLimiter
 from app.middleware.rate_limit import get_client_ip, handle_rate_limit_exceeded, rate_limit
-from app.request_limits import RateLimitExceeded, RateLimitHeadersMiddleware, RequestRateLimiter
 
 
 def _build_app(*, limit: str = "2/minute", enabled: bool = True) -> FastAPI:

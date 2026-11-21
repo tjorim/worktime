@@ -5,7 +5,7 @@ registered Android device at the same time -- the primary wake-ping for Android
 fires much earlier, from app.services.fcm_wake_service at task create/update time
 (see #1205); this one just covers a device that wasn't registered yet then.
 
-Mirrors the app.config.oidc_config._periodic_jwks_refresh_loop pattern: an
+Mirrors the app.core.oidc._periodic_jwks_refresh_loop pattern: an
 asyncio task, started at app startup and cancelled at shutdown, that sleeps
 and re-checks on a fixed interval. Failures in one iteration are logged and
 swallowed so a transient error (a push provider outage, a bad row) never
@@ -27,8 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 if TYPE_CHECKING:
     from sqlalchemy.engine import CursorResult
 
-from app.config.settings import settings
-from app.database.engine import get_session_factory
+from app.core.config import settings
+from app.db.engine import get_session_factory
 from app.models import TimeTrackingTask
 from app.services.fcm_device_token_service import delete_token_by_id, list_tokens_for_user
 from app.services.fcm_service import FcmSendResult, send_wake_signal

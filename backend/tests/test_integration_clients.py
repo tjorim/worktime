@@ -37,7 +37,7 @@ async def test_create_integration_client_returns_raw_key_once(db_session: AsyncS
 async def test_previous_hash_secret_is_upgraded_on_use(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.config import settings
+    from app.core.config import settings
     from app.services import integration_client_service as service
 
     user = await db_service.create_user(db_session, UserCreate(username="secret-owner", display_name="Secret Owner"))

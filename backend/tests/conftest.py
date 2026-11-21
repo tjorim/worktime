@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.cache.store import get_cache
-from app.database import sqlite
-from app.database.engine import get_session
+from app.db import sqlite
+from app.db.engine import get_session
 from app.main import app
 from app.models import Base
 from app.routers.auth import AuthenticatedPrincipal, AuthType, get_bearer_principal, get_principal_shortlived

@@ -26,7 +26,7 @@ from urllib.parse import urlparse, urlunparse
 
 import asyncpg
 
-from app.config.settings import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ _NOTIFY_CHANNEL = "worktime_sync_changed"
 # Backoff for re-establishing a Postgres LISTEN/NOTIFY connection after it
 # terminates unexpectedly (Postgres restart, failover, idle-connection reaper,
 # network blip). Mirrors the "supervised background task, log and swallow
-# failures" shape of _periodic_jwks_refresh_loop in app/config/oidc_config.py.
+# failures" shape of _periodic_jwks_refresh_loop in app/core/oidc.py.
 _RECONNECT_INITIAL_DELAY_SECONDS = 1.0
 _RECONNECT_MAX_DELAY_SECONDS = 60.0
 

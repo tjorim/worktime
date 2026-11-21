@@ -5,8 +5,8 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.timing import time_operation
 from app.main import app
-from app.utils.timing import time_operation
 
 
 @pytest.fixture

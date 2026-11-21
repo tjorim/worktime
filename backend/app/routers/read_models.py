@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, api_error
-from app.database.engine import get_session
+from app.db.engine import get_session
 from app.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,
