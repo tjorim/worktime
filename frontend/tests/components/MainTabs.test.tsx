@@ -27,7 +27,7 @@ vi.mock("@/features/schedule/ScheduleTabView", async () => {
   };
 });
 
-vi.mock("@/components/CalendarView", () => ({
+vi.mock("@/features/calendar/month/CalendarView", () => ({
   CalendarView: () => <div data-testid="calendar-view">CalendarView</div>,
 }));
 

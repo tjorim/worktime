@@ -1,4 +1,4 @@
-import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -17,8 +17,8 @@ import {
   DATA_TABLE_DEFAULT_PAGE_SIZE,
   useDataTable,
 } from "@/hooks/useDataTable";
-import { getGanttDeleteConfirmMessage } from "@/utils/ganttDeleteConfirm";
-import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/utils/ganttLoggedTime";
+import { getGanttDeleteConfirmMessage } from "@/features/gantt/ganttDeleteConfirm";
+import { formatLoggedDuration, getLoggedMinutesByTaskId } from "@/features/gantt/ganttLoggedTime";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import {
   buildLabelColorMap,

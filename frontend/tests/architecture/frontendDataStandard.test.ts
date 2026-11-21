@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 
 const SRC_DIR = resolve(process.cwd(), "src");
 const ALLOWED_PLAIN_USE_QUERY = new Set([
-  "hooks/useLongWeekend.ts",
+  "features/calendar/month/useLongWeekend.ts",
   "hooks/useOpenHolidays.ts",
-  "hooks/usePaydates.ts",
+  "features/calendar/month/usePaydates.ts",
 ]);
 const SYNC_QUERY_KEY_ALLOWED_FILES = new Set(["lib/db/collections.ts"]);
 

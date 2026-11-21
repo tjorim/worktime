@@ -5,7 +5,7 @@ import "@testing-library/jest-dom";
 import { http, HttpResponse } from "msw/http";
 import { delay } from "msw/utils/delay";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TeamScheduleView } from "@/components/TeamScheduleView";
+import { TeamScheduleView } from "@/features/time-off/TeamScheduleView";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { server } from "@/mocks/server";
 import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";

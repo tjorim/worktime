@@ -28,14 +28,14 @@ import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/lib/logger";
 import { ApiError } from "@/lib/api/apiError";
-import { classifyTeamLoadError, rememberTeamId, type TeamLoadError } from "@/utils/teamFetchError";
+import { classifyTeamLoadError, rememberTeamId, type TeamLoadError } from "@/features/time-off/teamFetchError";
 import { resolveHdayHelperBaseUrl } from "@/lib/hday-helper/hdayHelper";
 import {
   getHalfDay,
   getScrollLeftForColumn,
   indexEventsByDate,
   type HalfDay,
-} from "@/utils/teamCalendarGrid";
+} from "@/features/time-off/teamCalendarGrid";
 
 interface TeamMember {
   username: string;

@@ -1,4 +1,4 @@
-import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -20,7 +20,7 @@ import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
-import { getLoggedMinutes, formatLoggedDuration } from "@/utils/ganttLoggedTime";
+import { getLoggedMinutes, formatLoggedDuration } from "@/features/gantt/ganttLoggedTime";
 import * as m from "@/paraglide/messages.js";
 
 export type GanttTaskFormInput = Omit<RawGanttTask, "id">;

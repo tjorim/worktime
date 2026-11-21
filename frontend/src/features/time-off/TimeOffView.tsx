@@ -27,7 +27,7 @@ import {
   getEntryTimeFlagFromDisplayFlags,
   getEntryTypeFromDisplayFlags,
 } from "@/lib/time-off/codecs";
-import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/lib/timeOff/importPreview";
+import { MAX_HDAY_IMPORT_BYTES, previewTimeOffImport } from "@/features/time-off/importPreview";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { useLastUsed } from "@/app/providers/LastUsedContext";
@@ -38,10 +38,10 @@ import { useEventForm } from "@/hooks/useEventForm";
 import {
   createHdayHelperChangeTransport,
   useHdayHelperChangeSignal,
-} from "@/hooks/useHdayHelperChangeSignal";
-import { useTimeOffKeyboardShortcuts } from "@/hooks/useTimeOffKeyboardShortcuts";
-import { EventModal } from "./EventModal";
-import { ConfirmationDialog } from "./ConfirmationDialog";
+} from "@/features/time-off/useHdayHelperChangeSignal";
+import { useTimeOffKeyboardShortcuts } from "@/features/time-off/useTimeOffKeyboardShortcuts";
+import { EventModal } from "@/components/EventModal";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { TeamScheduleView } from "./TeamScheduleView";
 import {
   buildEventFormState,
@@ -49,8 +49,8 @@ import {
   serializeEventFormState,
   serializeEventFormStateFromEntry,
 } from "@/lib/events/eventFormState";
-import { TimeOffStatsView } from "./timeOff/TimeOffStatsView";
-import { TimeOffTableView } from "./timeOff/TimeOffTableView";
+import { TimeOffStatsView } from "./TimeOffStatsView";
+import { TimeOffTableView } from "./TimeOffTableView";
 import {
   getTypeFlagOptions,
   getTimeLocationFlagOptions,

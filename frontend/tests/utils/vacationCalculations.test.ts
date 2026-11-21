@@ -5,7 +5,7 @@ import {
   formatVacationValue,
   getAvailableYears,
   getHalfDayLabel,
-} from "@/utils/vacationCalculations";
+} from "@/features/time-off/vacationCalculations";
 
 const dateEntry = (
   date: string,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import userEvent from "@testing-library/user-event";
-import { TimeOffStatsView } from "@/components/timeOff/TimeOffStatsView";
+import { TimeOffStatsView } from "@/features/time-off/TimeOffStatsView";
 import { buildTimeOffEntryForRange } from "@/lib/time-off/codecs";
 
 vi.mock("@/hooks/useStatisticsWorkingDays", () => ({

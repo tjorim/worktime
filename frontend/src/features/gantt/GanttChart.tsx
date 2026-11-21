@@ -1,4 +1,4 @@
-import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
@@ -6,7 +6,7 @@ import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask } from "@/types/gantt";
 import { EmptyState } from "@/components/EmptyState";
 import type { GanttViewMode } from "@/app/providers/SettingsContext";
-import { formatLoggedDuration } from "@/utils/ganttLoggedTime";
+import { formatLoggedDuration } from "@/features/gantt/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 

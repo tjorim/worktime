@@ -39,8 +39,8 @@ import {
   isTimeOffRangeEntry,
   isTimeOffWeeklyEntry,
 } from "@/lib/time-off/types";
-import { TimeOffToolbar } from "@/components/timeOff/TimeOffToolbar";
-import { TimeOffRawView } from "@/components/timeOff/TimeOffRawView";
+import { TimeOffToolbar } from "@/features/time-off/TimeOffToolbar";
+import { TimeOffRawView } from "@/features/time-off/TimeOffRawView";
 import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
 import type { TimeOffViewMode } from "@/lib/time-off/timeoffConstants";

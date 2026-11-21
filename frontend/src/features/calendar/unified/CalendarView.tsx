@@ -10,7 +10,7 @@ import {
   createViewMonthGrid,
   createViewWeek,
 } from "@schedule-x/calendar";
-import { localDateTime, createDragAndDropPlugin } from "@/features/calendar/dragAndDropAdapter";
+import { localDateTime, createDragAndDropPlugin } from "@/features/calendar/unified/dragAndDropAdapter";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
 import { Alert } from "@/components/ui/alert";
@@ -22,16 +22,16 @@ import { TaskEntryForm } from "@/components/TaskEntryForm";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { buildCalendarConfig } from "@/features/calendar/mapToScheduleXEvents";
-import { useCalendarRangeData, type CalendarRange } from "@/features/calendar/useCalendarRangeData";
+import { buildCalendarConfig } from "@/features/calendar/unified/mapToScheduleXEvents";
+import { useCalendarRangeData, type CalendarRange } from "@/features/calendar/unified/useCalendarRangeData";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
-import "@/features/calendar/calendar.css";
+import "@/features/calendar/unified/calendar.css";
 import * as m from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { withCalendarEventContent } from "@/features/calendar/calendarEventContent";
+import { withCalendarEventContent } from "@/features/calendar/unified/calendarEventContent";
 
 const EMPTY_EDIT_FORM: TaskEditForm = {
   text: "",

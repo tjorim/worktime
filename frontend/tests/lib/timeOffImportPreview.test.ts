@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { previewTimeOffImport } from "@/lib/timeOff/importPreview";
+import { previewTimeOffImport } from "@/features/time-off/importPreview";
 import { hdayToTimeOffEntries } from "@/lib/time-off/codecs";
 
 describe("time off import preview", () => {

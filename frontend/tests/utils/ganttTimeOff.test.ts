@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-import { getGanttTimeOffDates } from "@/utils/ganttTimeOff";
+import { getGanttTimeOffDates } from "@/features/gantt/ganttTimeOff";
 
 describe("getGanttTimeOffDates", () => {
   it("expands date, range, and weekly entries within the requested year", () => {

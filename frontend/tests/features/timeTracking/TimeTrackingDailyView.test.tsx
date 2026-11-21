@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { TimeTrackingDailyView } from "@/features/timeTracking/TimeTrackingDailyView";
+import { TimeTrackingDailyView } from "@/features/time-tracking/TimeTrackingDailyView";
 import { defaultSettings } from "@/app/providers/SettingsContext";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import { dayjs } from "@/lib/dates/dateTimeUtils";

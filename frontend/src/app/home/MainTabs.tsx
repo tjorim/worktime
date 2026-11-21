@@ -28,22 +28,22 @@ const ScheduleTabView = lazy(() =>
   })),
 );
 const CalendarView = lazy(() =>
-  import("@/components/CalendarView").then((module) => ({
+  import("@/features/calendar/month/CalendarView").then((module) => ({
     default: module.CalendarView,
   })),
 );
 const UnifiedCalendarView = lazy(() =>
-  import("@/features/calendar/CalendarView").then((module) => ({
+  import("@/features/calendar/unified/CalendarView").then((module) => ({
     default: module.CalendarView,
   })),
 );
 const TimeOffView = lazy(() =>
-  import("@/components/TimeOffView").then((module) => ({
+  import("@/features/time-off/TimeOffView").then((module) => ({
     default: module.TimeOffView,
   })),
 );
 const TimeTrackingView = lazy(() =>
-  import("@/features/timeTracking/TimeTrackingView").then((module) => ({
+  import("@/features/time-tracking/TimeTrackingView").then((module) => ({
     default: module.TimeTrackingView,
   })),
 );

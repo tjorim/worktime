@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aggregateLocationCounts } from "@/utils/workLocationUtils";
+import { aggregateLocationCounts } from "@/features/calendar/month/workLocationUtils";
 import { toCountryCode } from "@/types/workLocation";
 import type { WorkLocation, WorkLocationInfo, WorkLocationMap } from "@/types/workLocation";
 

@@ -6,7 +6,7 @@ import {
   actualTaskDurationHours,
   isValidTaskInterval,
 } from "@/lib/time-tracking/timeUtils";
-import { buildRecentWeeks } from "@/features/timeTracking/hooks/useRecentWeeks";
+import { buildRecentWeeks } from "@/features/time-tracking/hooks/useRecentWeeks";
 
 describe("overnight task intervals", () => {
   it("enforces elapsed duration on a DST fall-back night", () => {

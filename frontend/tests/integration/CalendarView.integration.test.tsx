@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { CalendarView } from "@/components/CalendarView";
+import { CalendarView } from "@/features/calendar/month/CalendarView";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
@@ -14,15 +14,15 @@ import type { PaydayInfo } from "@/types/paydays";
 
 // Mock the hooks that fetch external holiday and payday data
 vi.mock("@/hooks/usePublicHolidays");
-vi.mock("@/hooks/useSchoolHolidays");
-vi.mock("@/hooks/usePaydates");
-vi.mock("@/hooks/useLongWeekend");
+vi.mock("@/features/calendar/month/useSchoolHolidays");
+vi.mock("@/features/calendar/month/usePaydates");
+vi.mock("@/features/calendar/month/useLongWeekend");
 
 // Import after mocking to get the mocked versions
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
-import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
-import { usePaydates } from "@/hooks/usePaydates";
-import { useLongWeekend } from "@/hooks/useLongWeekend";
+import { useSchoolHolidays } from "@/features/calendar/month/useSchoolHolidays";
+import { usePaydates } from "@/features/calendar/month/usePaydates";
+import { useLongWeekend } from "@/features/calendar/month/useLongWeekend";
 
 // Cast to mocked functions for type safety
 const mockedUsePublicHolidays = vi.mocked(usePublicHolidays);

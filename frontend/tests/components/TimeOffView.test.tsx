@@ -3,7 +3,7 @@ import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
-import { TimeOffView } from "@/components/TimeOffView";
+import { TimeOffView } from "@/features/time-off/TimeOffView";
 import { HdayHelperProvider, useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";

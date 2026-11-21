@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
-import { createDragAndDropPlugin, localDateTime } from "@/features/calendar/dragAndDropAdapter";
-import { taskToEvent } from "@/features/calendar/mapToScheduleXEvents";
+import { createDragAndDropPlugin, localDateTime } from "@/features/calendar/unified/dragAndDropAdapter";
+import { taskToEvent } from "@/features/calendar/unified/mapToScheduleXEvents";
 
 afterEach(() => vi.restoreAllMocks());
 

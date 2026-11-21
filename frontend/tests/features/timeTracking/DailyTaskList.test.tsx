@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import { DailyTaskList } from "@/features/timeTracking/DailyTaskList";
+import { DailyTaskList } from "@/features/time-tracking/DailyTaskList";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import type { Label } from "@/lib/time-tracking/constants";
 import type { GanttTask } from "@/types/gantt";

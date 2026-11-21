@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Temporal } from "temporal-polyfill";
-import { withCalendarEventContent } from "@/features/calendar/calendarEventContent";
+import { withCalendarEventContent } from "@/features/calendar/unified/calendarEventContent";
 
 const event = {
   id: "morning",

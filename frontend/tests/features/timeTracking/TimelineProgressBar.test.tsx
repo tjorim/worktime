@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { TimelineProgressBar } from "@/features/timeTracking/TimelineProgressBar";
+import { TimelineProgressBar } from "@/features/time-tracking/TimelineProgressBar";
 import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import type { Label } from "@/lib/time-tracking/constants";

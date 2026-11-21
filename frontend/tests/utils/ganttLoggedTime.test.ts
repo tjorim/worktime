@@ -3,7 +3,7 @@ import {
   formatLoggedDuration,
   getLoggedMinutes,
   getLoggedMinutesByTaskId,
-} from "@/utils/ganttLoggedTime";
+} from "@/features/gantt/ganttLoggedTime";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 describe("getLoggedMinutes", () => {

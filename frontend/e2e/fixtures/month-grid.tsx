@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import "@/styles/tailwind.css";
-import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { MonthCalendar } from "@/features/calendar/month/MonthCalendar";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { setLocale } from "@/paraglide/runtime.js";
 import type { TimeOffEntry } from "@/lib/time-off/types";

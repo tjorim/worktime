@@ -24,10 +24,10 @@ import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { usePublicHolidays } from "@/hooks/usePublicHolidays";
-import { useSchoolHolidays } from "@/hooks/useSchoolHolidays";
+import { useSchoolHolidays } from "@/features/calendar/month/useSchoolHolidays";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
-import { usePaydates } from "@/hooks/usePaydates";
-import { useLongWeekend } from "@/hooks/useLongWeekend";
+import { usePaydates } from "@/features/calendar/month/usePaydates";
+import { useLongWeekend } from "@/features/calendar/month/useLongWeekend";
 import { calculateShift, getShift } from "@/lib/schedule/shiftCalculations";
 import { SCHEDULE_OPTIONS, SHIFT_CODES } from "@/lib/schedule/rosters";
 import {
@@ -44,10 +44,10 @@ import {
   serializeEventFormStateFromEntry,
 } from "@/lib/events/eventFormState";
 import { useEventForm } from "@/hooks/useEventForm";
-import { MonthCalendar } from "@/components/calendar/MonthCalendar";
-import { CalendarLegend } from "@/components/calendar/CalendarLegend";
-import { LongWeekendModal } from "@/components/calendar/LongWeekendModal";
-import { LocationYearSummary } from "@/components/calendar/LocationYearSummary";
+import { MonthCalendar } from "@/features/calendar/month/MonthCalendar";
+import { CalendarLegend } from "@/features/calendar/month/CalendarLegend";
+import { LongWeekendModal } from "@/features/calendar/month/LongWeekendModal";
+import { LocationYearSummary } from "@/features/calendar/month/LocationYearSummary";
 import { OtherLocationModal } from "@/components/OtherLocationModal";
 import * as m from "@/paraglide/messages.js";
 import { EventModal } from "@/components/EventModal";

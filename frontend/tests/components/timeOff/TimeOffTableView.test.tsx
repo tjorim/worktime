@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/app/providers/ToastContext";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
-import { TimeOffTableView } from "@/components/timeOff/TimeOffTableView";
+import { TimeOffTableView } from "@/features/time-off/TimeOffTableView";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 
 const entries: TimeOffEntry[] = [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api/apiError";
 import * as m from "@/paraglide/messages.js";
-import { classifyTeamLoadError, MAX_RECENT_TEAM_IDS, rememberTeamId } from "@/utils/teamFetchError";
+import { classifyTeamLoadError, MAX_RECENT_TEAM_IDS, rememberTeamId } from "@/features/time-off/teamFetchError";
 
 describe("classifyTeamLoadError", () => {
   it.each([

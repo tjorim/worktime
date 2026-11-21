@@ -6,7 +6,7 @@ import {
   statisticsWorkingDays,
   type WorkingDayOptions,
 } from "@/lib/schedule/statisticsWorkingDays";
-import { calculateVacationStats } from "@/utils/vacationCalculations";
+import { calculateVacationStats } from "@/features/time-off/vacationCalculations";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
 
 const options: WorkingDayOptions = { team: 1, schedule: "9-5", holidays: new Map() };

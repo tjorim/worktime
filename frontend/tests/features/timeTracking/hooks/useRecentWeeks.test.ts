@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import { buildRecentWeeks } from "@/features/timeTracking/hooks/useRecentWeeks";
+import { buildRecentWeeks } from "@/features/time-tracking/hooks/useRecentWeeks";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 
 const task = (

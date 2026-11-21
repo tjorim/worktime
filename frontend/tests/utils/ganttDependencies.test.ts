@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ganttDependencyError } from "@/utils/ganttDependencies";
+import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 
 describe("Gantt dependencies", () => {
   const tasks = [{ id: "a", dependencies: "b" }, { id: "b", dependencies: "c" }, { id: "c" }];

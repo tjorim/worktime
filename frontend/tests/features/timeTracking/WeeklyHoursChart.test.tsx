@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { WeeklyHoursChart } from "@/features/timeTracking/WeeklyHoursChart";
+import { WeeklyHoursChart } from "@/features/time-tracking/WeeklyHoursChart";
 
 const chartProps: ComponentProps<(typeof import("@tanstack/charts/react/core"))["Chart"]>[] = [];
 

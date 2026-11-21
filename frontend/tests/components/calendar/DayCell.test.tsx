@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DayCell, type DayEvent } from "@/components/calendar/DayCell";
+import { DayCell, type DayEvent } from "@/features/calendar/month/DayCell";
 import { createTimeOffEntry } from "@/lib/time-off/codecs";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { Shift } from "@/lib/schedule/shiftCalculations";

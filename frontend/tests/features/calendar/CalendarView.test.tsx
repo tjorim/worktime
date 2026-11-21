@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
-import { CalendarView } from "@/features/calendar/CalendarView";
+import { CalendarView } from "@/features/calendar/unified/CalendarView";
 import { TestProviders } from "@tests/utils/testProviders";
 
 function setUserState(overrides: { myTeam: number | null; scheduleType: string | null }) {

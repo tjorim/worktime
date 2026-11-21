@@ -15,7 +15,7 @@ import {
   shiftToEvent,
   taskToEvent,
   timeOffToEvent,
-} from "@/features/calendar/mapToScheduleXEvents";
+} from "@/features/calendar/unified/mapToScheduleXEvents";
 
 export interface CalendarRange {
   start: string;

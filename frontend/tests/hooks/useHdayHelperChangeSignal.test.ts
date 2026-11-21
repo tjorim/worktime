@@ -4,7 +4,7 @@ import {
   createHdayHelperChangeTransport,
   useHdayHelperChangeSignal,
   type HdayChangeTransport,
-} from "@/hooks/useHdayHelperChangeSignal";
+} from "@/features/time-off/useHdayHelperChangeSignal";
 
 /**
  * Create a mock transport that captures the onChanged callback so tests can

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import { MonthCalendar } from "@/features/calendar/month/MonthCalendar";
 import { createTimeOffEntry } from "@/lib/time-off/codecs";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { TimeOffEntry } from "@/lib/time-off/types";

@@ -4,7 +4,7 @@ import { DEFAULT_COUNTRY } from "@/config/holidayDefaults";
 import * as m from "@/paraglide/messages.js";
 import type { PaydayInfo } from "@/types/paydays";
 import { ApiError } from "@/lib/api/apiError";
-import { usePublicApiClient } from "./usePublicApiClient";
+import { usePublicApiClient } from "@/hooks/usePublicApiClient";
 
 async function fetchPaydates(
   year: number,

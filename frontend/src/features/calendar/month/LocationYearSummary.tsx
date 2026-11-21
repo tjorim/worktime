@@ -31,7 +31,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { useToast } from "@/app/providers/ToastContext";
-import { aggregateLocationCounts } from "@/utils/workLocationUtils";
+import { aggregateLocationCounts } from "@/features/calendar/month/workLocationUtils";
 import type { WorkLocationMap } from "@/types/workLocation";
 import { WORK_LOCATION_ICONS } from "@/config/workLocation";
 import * as m from "@/paraglide/messages.js";

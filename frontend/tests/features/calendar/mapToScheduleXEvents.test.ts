@@ -6,7 +6,7 @@ import {
   shiftToEvent,
   taskToEvent,
   timeOffToEvent,
-} from "@/features/calendar/mapToScheduleXEvents";
+} from "@/features/calendar/unified/mapToScheduleXEvents";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { Shift } from "@/lib/schedule/shiftCalculations";
 

@@ -12,7 +12,7 @@ import {
   calculateVacationStats,
   formatVacationValue,
   getAvailableYears,
-} from "@/utils/vacationCalculations";
+} from "@/features/time-off/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
 
 import { HolidayStatusNotice } from "@/components/HolidayStatusNotice";
