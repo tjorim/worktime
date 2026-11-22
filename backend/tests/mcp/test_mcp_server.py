@@ -14,7 +14,7 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from starlette.types import Receive, Scope, Send
 
-from app.mcp_server import (
+from app.mcp.server import (
     _ADDITIVE_WRITE_TOOLS,
     _IDEMPOTENT_WRITE_TOOLS,
     MCP_TOOL_CAPABILITIES,
@@ -55,9 +55,9 @@ def _make_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monkeypatch) -> None:
     monkeypatch.setenv("MCP_BASE_URL", "https://api.example/mcp")
     monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", "https://auth.example/realms/worktime")
-    monkeypatch.setattr("app.mcp_server.settings.OIDC_AUDIENCE", "worktime")
+    monkeypatch.setattr("app.mcp.server.settings.OIDC_AUDIENCE", "worktime")
 
-    with patch("app.mcp_server.KeycloakAuthProvider") as provider:
+    with patch("app.mcp.server.KeycloakAuthProvider") as provider:
         auth = _build_auth_provider()
 
     # Always wrapped in MultiAuth: the DB-backed managed-integration-client
@@ -165,7 +165,7 @@ async def test_search_tools_supports_unicode_tokens() -> None:
 
 
 def test_search_serializer_preserves_schema_and_capabilities() -> None:
-    from app.mcp_server import _search_serializer
+    from app.mcp.server import _search_serializer
 
     tool = MagicMock(name="tool")
     tool.name = "get_time_tracking_summary"
@@ -310,7 +310,7 @@ async def test_mcp_label_preferences_and_audit_reads(test_db: AsyncEngine, monke
     factory = _make_factory(test_db)
     async with factory() as session:
         user = await db_service.create_user(session, UserCreate(username="mcp-gaps", display_name="MCP Gaps"))
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
     backend = WorktimeMcpBackend(factory)
 
     label = await backend.create_label("Focus", "#112233")
@@ -329,7 +329,7 @@ async def test_mcp_integration_client_lifecycle(test_db: AsyncEngine, monkeypatc
         user = await db_service.create_user(
             session, UserCreate(username="mcp-integrations", display_name="MCP Integrations")
         )
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
     backend = WorktimeMcpBackend(factory)
 
     created = await backend.create_integration_client("Automation")
@@ -365,7 +365,7 @@ async def test_whoami_and_time_tracking_summary_happy_path(
             ),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     whoami_payload = await backend.whoami()
     # Explicit range: the fixed 2026-05-01 task date would fall outside the
@@ -426,7 +426,7 @@ async def test_get_time_tracking_summary_default_window(
             ),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     summary_payload = await backend.get_time_tracking_summary()
 
@@ -452,7 +452,7 @@ async def test_list_labels_returns_active_labels_for_authenticated_user(
         session.add(deleted)
         await session.commit()
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.list_labels()
 
@@ -470,7 +470,7 @@ async def test_delete_label_removes_label(
         user = await db_service.create_user(session, UserCreate(username="del-label-user", display_name="Del"))
         label = await db_service.create_label(session, user.id, LabelCreate(name="ToDelete", color="#aabbcc"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.delete_label(label_id=label.id)
 
@@ -495,7 +495,7 @@ async def test_delete_label_raises_when_label_in_use(
             session, user.id, TaskCreate(text="task", label_id=label.id, start_time=datetime.now(UTC))
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ValueError, match="in use"):
         await backend.delete_label(label_id=label.id)
@@ -508,7 +508,7 @@ async def test_resolve_context_requires_authenticated_token(
     session_factory = _make_factory(test_db)
     backend = WorktimeMcpBackend(session_factory)
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: None)
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: None)
 
     async with session_factory() as session:
         with pytest.raises(McpAuthError, match="Authentication required"):
@@ -521,7 +521,7 @@ async def test_resolve_context_missing_user_raises_not_found(
 ) -> None:
     session_factory = _make_factory(test_db)
     backend = WorktimeMcpBackend(session_factory)
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(9999))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(9999))
 
     async with session_factory() as session:
         with pytest.raises(db_service.NotFoundError, match="user not found"):
@@ -544,7 +544,7 @@ async def test_keycloak_service_account_requires_user_protocol_mapper(
             "azp": "worktime-mcp",
         },
     )
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: token)
 
     async with session_factory() as session:
         with pytest.raises(McpAuthError, match="worktime_user_id protocol mapper"):
@@ -573,7 +573,7 @@ async def test_keycloak_service_account_uses_mapped_user(
             "worktime_user_id": user.id,
         },
     )
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: token)
 
     async with session_factory() as session:
         context = await backend.resolve_context(session)
@@ -604,7 +604,7 @@ async def test_start_and_stop_time_entry(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="start-stop", display_name="Start Stop"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ToolError, match="label_id"):
         await backend.start_time_entry(text="Missing label", label_id="")
@@ -645,7 +645,7 @@ async def test_start_time_entry_blocks_second_running_task(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="conflict-user", display_name="Conflict"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.start_time_entry(
         label_id=await mcp_label_id(backend),
@@ -678,7 +678,7 @@ async def test_stop_time_entry_no_running_task(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="no-running", display_name="No Running"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ValueError, match="no running task"):
         await backend.stop_time_entry()
@@ -701,7 +701,7 @@ async def test_create_time_tracking_task(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="create-task", display_name="Create Task"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ToolError, match="label_id"):
         await backend.create_time_tracking_task(
@@ -750,7 +750,7 @@ async def test_update_time_tracking_task(
             ),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     updated = await backend.update_time_tracking_task(
         task_id=task.id,
@@ -789,7 +789,7 @@ async def test_update_time_tracking_task_unauthorized(
             ),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(ValueError):
         await backend.update_time_tracking_task(
@@ -817,7 +817,7 @@ async def test_create_update_delete_time_tracking_task(
             session, UserCreate(username="lifecycle-task", display_name="Lifecycle Task")
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_tracking_task(
         label_id=await mcp_label_id(backend),
@@ -873,7 +873,7 @@ async def test_delete_time_tracking_task_unauthorized(
             ),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(ValueError):
         await backend.delete_time_tracking_task(task_id=task.id)
@@ -896,7 +896,7 @@ async def test_set_work_location(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="loc-user", display_name="Loc User"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.set_work_location(
         value_date=date(2026, 5, 1),
@@ -932,7 +932,7 @@ async def test_delete_work_location(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="del-loc-user", display_name="Del Loc User"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
         value_date=date(2026, 5, 1),
@@ -969,7 +969,7 @@ async def test_set_work_location_invalid_country(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="inv-loc-user", display_name="Inv Loc"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ToolError, match="Invalid arguments: country_code"):
         await backend.set_work_location(
@@ -995,7 +995,7 @@ async def test_create_update_delete_time_off_event(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="timeoff-user", display_name="Time Off"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_time_off_event(
         entry_kind="date",
@@ -1037,7 +1037,7 @@ async def test_create_time_off_event_idempotent_with_entry_id(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="idempotent-user", display_name="Idempotent"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     first = await backend.create_time_off_event(
         entry_kind="date",
@@ -1078,7 +1078,7 @@ async def test_delete_time_off_event_unauthorized(
             TimeOffEntryCreate(entry_kind="date", entry_type="vacation", date=date(2026, 7, 1)),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(ValueError):
         await backend.delete_time_off_event(entry_id=entry.entry_id)
@@ -1101,7 +1101,7 @@ async def test_create_update_delete_gantt_task(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="gantt-user", display_name="Gantt User"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     created = await backend.create_gantt_task(
         name="Sprint 1",
@@ -1145,7 +1145,7 @@ async def test_create_gantt_task_invalid_date_range(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="gantt-invalid", display_name="Gantt Invalid"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     with pytest.raises(ToolError, match="Invalid arguments"):
         await backend.create_gantt_task(
@@ -1180,7 +1180,7 @@ async def test_delete_gantt_task_unauthorized(
             GanttTaskCreate(name="Owner task", start_date=date(2026, 6, 1), end_date=date(2026, 6, 14)),
         )
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(attacker.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(attacker.id))
 
     with pytest.raises(ValueError):
         await backend.delete_gantt_task(task_id=gantt.id)
@@ -1206,7 +1206,7 @@ async def test_write_tools_produce_audit_log_entries(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="audit-user", display_name="Audit User"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     await backend.set_work_location(
         value_date=date(2026, 5, 1),
@@ -1242,7 +1242,7 @@ async def test_write_tools_produce_transactional_db_audit_entries(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="db-audit-user", display_name="DB Audit User"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.set_work_location(value_date=date(2026, 5, 1), country_code="DE")
 
@@ -1286,7 +1286,7 @@ async def test_whoami_includes_integration_client_identity_when_present(
             "worktime_integration_client_rate_limit_per_minute": 1000,
         },
     )
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: token)
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: token)
 
     payload = await backend.whoami()
 
@@ -1308,7 +1308,7 @@ async def test_whoami_omits_integration_client_for_regular_users(
     async with session_factory() as session:
         user = await db_service.create_user(session, UserCreate(username="plain-whoami-user", display_name="Plain"))
 
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
 
     payload = await backend.whoami()
 
@@ -1404,7 +1404,7 @@ async def test_db_integration_client_verifier_still_verifies_when_rate_limited(t
 async def test_integration_client_rate_limit_middleware_returns_429_not_401(test_db: AsyncEngine) -> None:
     """A request from an otherwise-valid integration-client key that has
     exceeded its rate limit gets 429 with Retry-After, never 401 (issue #1106)."""
-    from app.mcp_server import IntegrationClientRateLimitMiddleware
+    from app.mcp.server import IntegrationClientRateLimitMiddleware
 
     session_factory = _make_factory(test_db)
     async with session_factory() as session:
@@ -1427,7 +1427,7 @@ async def test_integration_client_rate_limit_middleware_returns_429_not_401(test
         scopes=["worktime:mcp"],
         claims={"integration_client_id": client.id},
     )
-    monkeypatch_target = "app.mcp_server.get_access_token"
+    monkeypatch_target = "app.mcp.server.get_access_token"
     with patch(monkeypatch_target, lambda: token):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
@@ -1453,7 +1453,7 @@ async def test_integration_client_rate_limit_middleware_returns_429_not_401(test
 async def test_integration_client_rate_limit_middleware_passes_through_under_limit(test_db: AsyncEngine) -> None:
     """A request from an integration client still under its rate limit reaches
     the downstream app untouched."""
-    from app.mcp_server import IntegrationClientRateLimitMiddleware
+    from app.mcp.server import IntegrationClientRateLimitMiddleware
 
     session_factory = _make_factory(test_db)
     async with session_factory() as session:
@@ -1474,7 +1474,7 @@ async def test_integration_client_rate_limit_middleware_passes_through_under_lim
         scopes=["worktime:mcp"],
         claims={"integration_client_id": client.id},
     )
-    with patch("app.mcp_server.get_access_token", lambda: token):
+    with patch("app.mcp.server.get_access_token", lambda: token):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
         async def receive() -> Scope:
@@ -1493,7 +1493,7 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
 ) -> None:
     """Regular OIDC users have no integration_client_id claim, so the
     middleware never touches the rate-limit table for them."""
-    from app.mcp_server import IntegrationClientRateLimitMiddleware
+    from app.mcp.server import IntegrationClientRateLimitMiddleware
 
     session_factory = _make_factory(test_db)
     downstream_called = False
@@ -1502,7 +1502,7 @@ async def test_integration_client_rate_limit_middleware_ignores_non_integration_
         nonlocal downstream_called
         downstream_called = True
 
-    with patch("app.mcp_server.get_access_token", lambda: _token_for_user(1)):
+    with patch("app.mcp.server.get_access_token", lambda: _token_for_user(1)):
         middleware = IntegrationClientRateLimitMiddleware(downstream_app, session_factory)
 
         async def receive() -> Scope:
@@ -1539,7 +1539,7 @@ async def test_overnight_summary_uses_elapsed_hours_and_start_date(test_db, monk
                 stop_time=datetime.fromisoformat(stop),
             ),
         )
-    monkeypatch.setattr("app.mcp_server.get_access_token", lambda: _token_for_user(user.id))
+    monkeypatch.setattr("app.mcp.server.get_access_token", lambda: _token_for_user(user.id))
     summary = await backend.get_time_tracking_summary(
         start_at=datetime.fromisoformat(start),
         end_at=datetime.fromisoformat(stop),

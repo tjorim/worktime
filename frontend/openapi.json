@@ -4360,7 +4360,7 @@
           "Info"
         ],
         "summary": "Mcp Capabilities",
-        "description": "Authoritative MCP capability manifest (issue #1054).\n\nSourced directly from ``app.mcp_server.MCP_TOOL_CAPABILITIES`` — the same\ndict ``create_mcp_server()`` iterates to register tools — so this\nresponse cannot drift from what's actually registered on the running\nserver. ``tools`` is empty when the MCP server isn't mounted\n(``MCP_BASE_URL`` unset).",
+        "description": "Authoritative MCP capability manifest (issue #1054).\n\nSourced directly from ``app.mcp.server.MCP_TOOL_CAPABILITIES`` — the same\ndict ``create_mcp_server()`` iterates to register tools — so this\nresponse cannot drift from what's actually registered on the running\nserver. ``tools`` is empty when the MCP server isn't mounted\n(``MCP_BASE_URL`` unset).",
         "operationId": "mcp_capabilities_api_mcp_capabilities_get",
         "responses": {
           "200": {

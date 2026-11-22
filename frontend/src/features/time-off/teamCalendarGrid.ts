@@ -1,5 +1,6 @@
 import type { Dayjs } from "dayjs";
-import type { HdayEvent } from "@/lib/hday/types";
+import type { EventFlag } from "@/lib/hday/types";
+import type { TeamTimeOffEntry } from "@/features/time-off/teamHdayResponse";
 
 /**
  * Horizontal scroll offset that brings a grid column into view.
@@ -35,26 +36,24 @@ const isoKey = (date: Dayjs) => date.format("YYYY-MM-DD");
  * range instead of re-filtering (and re-parsing dates) for every cell, which
  * also makes the neighboring-day lookups used to group ranges cheap.
  *
- * Range events use `YYYY/MM/DD`, which converts to ISO keys that compare
- * correctly as strings. Weekly events match on ISO weekday (1 = Monday).
+ * Range events use ISO date keys. Weekly events match on ISO weekday (1 = Monday).
  * Result arrays keep the member's event order and hold the original event
  * objects, so identity comparison tells whether two days share an event.
  */
-export function indexEventsByDate(events: HdayEvent[], dates: Dayjs[]): Map<string, HdayEvent[]> {
-  const ranges = events.flatMap((event) =>
-    event.type === "range" && event.start && event.end
-      ? [{ event, start: event.start.replace(/\//g, "-"), end: event.end.replace(/\//g, "-") }]
-      : [],
-  );
-  const weekly = events.filter((event) => event.type === "weekly" && event.weekday);
+export function indexEventsByDate(
+  events: TeamTimeOffEntry[],
+  dates: Dayjs[],
+): Map<string, TeamTimeOffEntry[]> {
+  const ranges = events.filter((event) => event.entryKind === "range");
+  const weekly = events.filter((event) => event.entryKind === "weekly");
   const order = new Map(events.map((event, index) => [event, index]));
 
-  const byDate = new Map<string, HdayEvent[]>();
+  const byDate = new Map<string, TeamTimeOffEntry[]>();
   for (const date of dates) {
     const key = isoKey(date);
     const weekday = date.isoWeekday();
     const matches = [
-      ...ranges.filter((range) => range.start <= key && key <= range.end).map((r) => r.event),
+      ...ranges.filter((range) => range.start <= key && key <= range.end),
       ...weekly.filter((event) => event.weekday === weekday),
     ];
     if (matches.length > 0) {
@@ -68,7 +67,7 @@ export function indexEventsByDate(events: HdayEvent[], dates: Dayjs[]): Map<stri
 export type HalfDay = "am" | "pm";
 
 /** Which half of the day an event covers, or null for a full day. */
-export function getHalfDay(event: HdayEvent): HalfDay | null {
+export function getHalfDay(event: { flags?: EventFlag[] }): HalfDay | null {
   if (event.flags?.includes("half_am")) return "am";
   if (event.flags?.includes("half_pm")) return "pm";
   return null;

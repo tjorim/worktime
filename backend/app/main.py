@@ -30,10 +30,10 @@ from .core.errors import (
     handle_label_validation_error,
     handle_unhandled_exception,
 )
+from .core.observability import observe_request_timing
 from .middleware.rate_limit import handle_rate_limit_exceeded, limiter, rate_limit
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.request_timing import RequestTimingMiddleware
-from .middleware.timing import TimingMiddleware
 from .routers.auth import router as auth_router
 from .routers.health import router as health_router
 from .routers.holidays import router as holidays_router
@@ -47,16 +47,16 @@ logger = logging.getLogger(__name__)
 
 _worktime_mcp_base_url = os.environ.get("MCP_BASE_URL", "")
 if _worktime_mcp_base_url:
-    from .mcp_server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
-    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
-    from .mcp_server import create_mcp_http_app as _create_mcp_http_app
-    from .mcp_server import tool_manifest_entry as _tool_manifest_entry
+    from .mcp.server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
+    from .mcp.server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
+    from .mcp.server import create_mcp_http_app as _create_mcp_http_app
+    from .mcp.server import tool_manifest_entry as _tool_manifest_entry
 
     _mcp, _mcp_app = _create_mcp_http_app(path="/", stateless_http=True)
 else:
-    from .mcp_server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
-    from .mcp_server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
-    from .mcp_server import tool_manifest_entry as _tool_manifest_entry
+    from .mcp.server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
+    from .mcp.server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
+    from .mcp.server import tool_manifest_entry as _tool_manifest_entry
 
     _mcp = None
     _mcp_app = None
@@ -211,14 +211,12 @@ if settings.RATE_LIMIT_ENABLED:
 else:
     logger.info("Rate limiting disabled (RATE_LIMIT_ENABLED=false)")
 
-# TimingMiddleware records metrics and sets X-Total-Ms.
-app.add_middleware(TimingMiddleware)
 # RequestIdMiddleware sets/echoes X-Request-ID and emits structured access logs
 # after every response, with user_id included for authenticated requests.
 app.add_middleware(RequestIdMiddleware)
 # RequestTimingMiddleware sets Server-Timing and logs slow requests by route
 # template (apps#246); it wraps everything except TrustedHostMiddleware.
-app.add_middleware(RequestTimingMiddleware)
+app.add_middleware(RequestTimingMiddleware, observe_response=observe_request_timing)
 
 # TrustedHostMiddleware is outermost: it rejects requests with an unrecognized
 # Host header before any other middleware runs. TRUSTED_HOSTS="*" (development
@@ -234,22 +232,22 @@ app.include_router(holidays_router, prefix="/api")
 
 if settings.DATABASE_ENABLED:
     from .routers.access_tokens import router as access_tokens_router
-    from .routers.account_router import router as account_router
+    from .routers.account import router as account_router
     from .routers.audit import router as audit_router
     from .routers.client_diagnostics import router as client_diagnostics_router
-    from .routers.db_gantt import router as db_gantt_router
-    from .routers.db_preferences import router as db_preferences_router
-    from .routers.db_sync import router as db_sync_router
-    from .routers.db_time_off import router as db_time_off_router
-    from .routers.db_time_tracking import router as db_time_tracking_router
-    from .routers.db_users import router as db_users_router
-    from .routers.db_work_locations import router as db_work_locations_router
+    from .routers.gantt import router as gantt_router
     from .routers.ical import router as ical_router
     from .routers.integration_clients import router as integration_clients_router
     from .routers.pebble import router as pebble_router
+    from .routers.preferences import router as preferences_router
     from .routers.push import router as push_router
     from .routers.read_models import router as read_models_router
     from .routers.registration import router as registration_router
+    from .routers.sync import router as sync_router
+    from .routers.time_off import router as time_off_router
+    from .routers.time_tracking import router as time_tracking_router
+    from .routers.users import router as users_router
+    from .routers.work_locations import router as work_locations_router
 
     app.include_router(account_router, prefix="/api")
     app.include_router(access_tokens_router, prefix="/api")
@@ -258,15 +256,15 @@ if settings.DATABASE_ENABLED:
     app.include_router(audit_router, prefix="/api")
     app.include_router(client_diagnostics_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
-    app.include_router(db_users_router, prefix="/api")
-    app.include_router(db_time_tracking_router, prefix="/api")
-    app.include_router(db_work_locations_router, prefix="/api")
-    app.include_router(db_gantt_router, prefix="/api")
-    app.include_router(db_sync_router, prefix="/api")
-    app.include_router(db_preferences_router, prefix="/api")
+    app.include_router(users_router, prefix="/api")
+    app.include_router(time_tracking_router, prefix="/api")
+    app.include_router(work_locations_router, prefix="/api")
+    app.include_router(gantt_router, prefix="/api")
+    app.include_router(sync_router, prefix="/api")
+    app.include_router(preferences_router, prefix="/api")
     app.include_router(read_models_router, prefix="/api")
     app.include_router(pebble_router, prefix="/api")
-    app.include_router(db_time_off_router, prefix="/api")
+    app.include_router(time_off_router, prefix="/api")
     app.include_router(push_router, prefix="/api")
     logger.info("✓ Database API endpoints enabled")
 else:
@@ -282,7 +280,7 @@ if _mcp_app is not None:
 async def mcp_capabilities() -> dict[str, Any]:
     """Authoritative MCP capability manifest (issue #1054).
 
-    Sourced directly from ``app.mcp_server.MCP_TOOL_CAPABILITIES`` — the same
+    Sourced directly from ``app.mcp.server.MCP_TOOL_CAPABILITIES`` — the same
     dict ``create_mcp_server()`` iterates to register tools — so this
     response cannot drift from what's actually registered on the running
     server. ``tools`` is empty when the MCP server isn't mounted

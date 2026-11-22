@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
-import { CalendarView } from "@/features/calendar/unified/CalendarView";
+import { UnifiedCalendarView } from "@/features/calendar/unified/UnifiedCalendarView";
 import { TestProviders } from "@tests/utils/testProviders";
 
 function setUserState(overrides: { myTeam: number | null; scheduleType: string | null }) {
@@ -30,12 +30,12 @@ function setUserState(overrides: { myTeam: number | null; scheduleType: string |
   );
 }
 
-describe("CalendarView (unified calendar) roster warning", () => {
+describe("UnifiedCalendarView (unified calendar) roster warning", () => {
   it("persists dismissal and lets the user restore calendar help", () => {
     setUserState({ myTeam: 1, scheduleType: "5-shift" });
     render(
       <TestProviders>
-        <CalendarView />
+        <UnifiedCalendarView />
       </TestProviders>,
     );
 
@@ -57,7 +57,7 @@ describe("CalendarView (unified calendar) roster warning", () => {
 
     render(
       <TestProviders>
-        <CalendarView />
+        <UnifiedCalendarView />
       </TestProviders>,
     );
 
@@ -69,7 +69,7 @@ describe("CalendarView (unified calendar) roster warning", () => {
 
     render(
       <TestProviders>
-        <CalendarView />
+        <UnifiedCalendarView />
       </TestProviders>,
     );
 
@@ -81,7 +81,7 @@ describe("CalendarView (unified calendar) roster warning", () => {
 
     render(
       <TestProviders>
-        <CalendarView />
+        <UnifiedCalendarView />
       </TestProviders>,
     );
 
@@ -93,7 +93,7 @@ describe("CalendarView (unified calendar) roster warning", () => {
 
     render(
       <TestProviders>
-        <CalendarView />
+        <UnifiedCalendarView />
       </TestProviders>,
     );
 

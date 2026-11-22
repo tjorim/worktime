@@ -480,7 +480,7 @@ describe("TimeOffView Integration Tests", () => {
   describe("Display and Grouping", () => {
     it("displays all imported events in table view without date filtering", async () => {
       // Table view shows all events without date-range filtering.
-      // Date-range filtering is handled by CalendarView when using getEventsInRange.
+      // Date-range filtering is handled by the event store's getTimeOffInRange.
       const user = userEvent.setup();
       renderWithProviders();
 

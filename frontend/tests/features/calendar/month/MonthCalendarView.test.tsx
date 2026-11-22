@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { CalendarView } from "@/features/calendar/month/CalendarView";
+import { MonthCalendarView } from "@/features/calendar/month/MonthCalendarView";
 import { TestProviders } from "@tests/utils/testProviders";
 
-describe("CalendarView", () => {
+describe("MonthCalendarView", () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -12,7 +12,7 @@ describe("CalendarView", () => {
     it("should show empty-state guidance when myTeam is null and no schedule", () => {
       render(
         <TestProviders>
-          <CalendarView myTeam={null} />
+          <MonthCalendarView myTeam={null} />
         </TestProviders>,
       );
 
@@ -24,7 +24,7 @@ describe("CalendarView", () => {
     it("should render calendar title", () => {
       render(
         <TestProviders>
-          <CalendarView myTeam={null} />
+          <MonthCalendarView myTeam={null} />
         </TestProviders>,
       );
 
@@ -34,7 +34,7 @@ describe("CalendarView", () => {
     it("should show schedule selection message when no team selected", () => {
       render(
         <TestProviders>
-          <CalendarView myTeam={null} />
+          <MonthCalendarView myTeam={null} />
         </TestProviders>,
       );
 
@@ -73,7 +73,7 @@ describe("CalendarView", () => {
 
       const { container } = render(
         <TestProviders>
-          <CalendarView myTeam={1} />
+          <MonthCalendarView myTeam={1} />
         </TestProviders>,
       );
 
@@ -84,7 +84,7 @@ describe("CalendarView", () => {
     it("should render calendar card structure", () => {
       render(
         <TestProviders>
-          <CalendarView myTeam={null} />
+          <MonthCalendarView myTeam={null} />
         </TestProviders>,
       );
 
@@ -122,7 +122,7 @@ describe("CalendarView", () => {
 
       render(
         <TestProviders>
-          <CalendarView myTeam={1} />
+          <MonthCalendarView myTeam={1} />
         </TestProviders>,
       );
 

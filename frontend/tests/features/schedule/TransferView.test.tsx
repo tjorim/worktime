@@ -8,7 +8,7 @@ import { EventStoreProvider, useEventStore } from "@/app/providers/EventStoreCon
 import { useTransferCalculations } from "@/features/schedule/useTransferCalculations";
 import type { TransferType } from "@/features/schedule/useTransferCalculations";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import type { CalendarEvent } from "@/lib/events/types";
+import type { TimeOffOccurrence } from "@/lib/time-off/occurrences";
 
 // Mock useSettings to provide scheduleType
 vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
@@ -42,7 +42,7 @@ vi.mock("@/app/providers/EventStoreContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/app/providers/EventStoreContext")>();
   return {
     ...actual,
-    useEventStore: vi.fn(() => ({ getEventsInRange: () => [] })),
+    useEventStore: vi.fn(() => ({ getTimeOffInRange: () => [] })),
   };
 });
 
@@ -142,11 +142,11 @@ const defaultHookReturn = {
 };
 
 // Default useEventStore return value — satisfies EventStoreContextType so
-// per-test overrides only need to spread and replace getEventsInRange.
+// per-test overrides only need to spread and replace getTimeOffInRange.
 const defaultEventStoreReturn = {
   rawText: "",
   entries: [],
-  getEventsInRange: () => [],
+  getTimeOffInRange: () => [],
   addEntries: vi.fn(),
   replaceEntries: vi.fn(),
   updateEntry: vi.fn(),
@@ -859,17 +859,16 @@ describe("TransferView", () => {
   });
 
   describe("Time-off indicators", () => {
-    const timeOffEvent: CalendarEvent = {
-      id: "time-off-1",
+    const timeOffEvent: TimeOffOccurrence = {
       start: "2025-01-15",
       end: "2025-01-15",
-      type: "holiday",
-      meta: {
-        type: "holiday",
-        color: "var(--wt-event-holiday-full-bg)",
-        textColor: "var(--wt-event-holiday-full-fg)",
-        flags: [],
-        typeLabel: "Vacation",
+      entry: {
+        id: "time-off-1",
+        entryKind: "date",
+        date: "2025-01-15",
+        entryType: "vacation",
+        entryFlag: "full_day",
+        note: null,
       },
     };
 
@@ -889,12 +888,12 @@ describe("TransferView", () => {
       });
       mockUseEventStore.mockReturnValue({
         ...defaultEventStoreReturn,
-        getEventsInRange: () => [timeOffEvent],
+        getTimeOffInRange: () => [timeOffEvent],
       });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+      expect(screen.getByText("You're on leave (Holiday)")).toBeInTheDocument();
     });
 
     it("colours the time-off indicator through palette custom properties, not inline colours", () => {
@@ -913,12 +912,12 @@ describe("TransferView", () => {
       });
       mockUseEventStore.mockReturnValue({
         ...defaultEventStoreReturn,
-        getEventsInRange: () => [timeOffEvent],
+        getTimeOffInRange: () => [timeOffEvent],
       });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const indicator = screen.getByTitle("You're on leave (Vacation)");
+      const indicator = screen.getByTitle("You're on leave (Holiday)");
       expect(indicator.style.getPropertyValue("--event-bg")).toBe(
         "var(--wt-event-holiday-full-bg)",
       );
@@ -938,12 +937,12 @@ describe("TransferView", () => {
       });
       mockUseEventStore.mockReturnValue({
         ...defaultEventStoreReturn,
-        getEventsInRange: () => [timeOffEvent],
+        getTimeOffInRange: () => [timeOffEvent],
       });
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
+      expect(screen.getByText("You're on leave (Holiday)")).toBeInTheDocument();
     });
   });
 

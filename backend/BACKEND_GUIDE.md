@@ -329,5 +329,5 @@ The most important files are:
 - [config.py](app/core/config.py)
 - [oidc.py](app/core/oidc.py)
 - [health.py](app/routers/health.py)
-- the `app/routers/db_*.py` modules
+- the database-backed domain modules in `app/routers/`
 - the `tests/` directory

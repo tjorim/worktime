@@ -63,19 +63,22 @@ function isValidCompletedRange(start: string, stop: string): boolean {
   return isValidRange(start, stop);
 }
 
-interface CalendarViewProps {
+interface UnifiedCalendarViewProps {
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
 }
 
 /** Unified Schedule-X view for shifts, time-off entries, and time-tracking tasks. */
-export function CalendarView(props: CalendarViewProps) {
+export function UnifiedCalendarView(props: UnifiedCalendarViewProps) {
   // The Schedule-X React hook reads configuration only once on mount.
   const { settings } = useSettings();
-  return <ConfiguredCalendarView key={`${getLocale()}:${settings.timeFormat}`} {...props} />;
+  return <ConfiguredUnifiedCalendarView key={`${getLocale()}:${settings.timeFormat}`} {...props} />;
 }
 
-function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarViewProps) {
+function ConfiguredUnifiedCalendarView({
+  onChangeSchedule,
+  onChangeTeam,
+}: UnifiedCalendarViewProps) {
   const [range, setRange] = useState<CalendarRange>(currentMonthRange);
   const rangeEvents = useCalendarRangeData(range);
   const { scheduleType, myTeam, settings } = useSettings();

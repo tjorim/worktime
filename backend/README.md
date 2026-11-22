@@ -88,14 +88,14 @@ root [AGENTS.md](../AGENTS.md).
 ```text
 backend/
 ├── app/            # FastAPI application package (see ../docs/ARCHITECTURE.md)
-│   ├── main.py, mcp_server.py, openapi_export.py, version.py
+│   ├── main.py, openapi_export.py, version.py
 │   ├── routers/    # HTTP layer, one module per domain
 │   ├── services/   # business logic (audit/, cache/, sse.py ...)
 │   ├── models/     # SQLAlchemy models, one module per domain
 │   ├── schemas/    # Pydantic request/response models, one module per domain
 │   ├── core/       # settings, OIDC, errors, observability, request limits, pagination, timing
 │   ├── db/         # engine/session, SQLite compatibility, auto-migrate
-│   ├── mcp/        # MCP tools, assembled by mcp_server.py
+│   ├── mcp/        # MCP tools and server assembly
 │   └── middleware/ # rate limit, request id, timing
 ├── migrations/     # Alembic migration scripts
 ├── tests/          # Backend test suite, mirrors app/ (routers/, services/, core/, db/ ...)

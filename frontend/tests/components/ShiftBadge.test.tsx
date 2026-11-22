@@ -32,7 +32,7 @@ describe("ShiftBadge", () => {
   });
 
   it("falls back to the muted off style when isWorking is overridden to false", () => {
-    // e.g. CalendarView.getShiftForDate overrides isWorking for a day with
+    // e.g. MonthCalendarView.getShiftForDate overrides isWorking for a day with
     // a time-off entry or public holiday, without changing the underlying
     // roster shift code/className - the badge should still reflect that
     // this day isn't actually worked rather than showing it as a normal

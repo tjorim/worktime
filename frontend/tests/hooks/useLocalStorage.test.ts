@@ -104,7 +104,7 @@ describe("useLocalStorage", () => {
 
   it("syncs same-tab instances watching the same key", () => {
     // Two independent hook instances using the same key, simulating e.g.
-    // CalendarView and TimeTrackingWeeklyView both calling
+    // MonthCalendarView and TimeTrackingWeeklyView both calling
     // useWorkLocationStorage(2026) which internally calls useLocalStorage with
     // the same "worktime_work_locations_2026" key.
     const hookA = renderHook(() => useLocalStorage("test_same_tab_sync", "initial"));

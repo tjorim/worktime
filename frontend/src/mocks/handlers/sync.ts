@@ -78,7 +78,7 @@ export const syncHandlers = [
     return HttpResponse.json<SyncPushResponse>(syncStore.pushResponse);
   }),
 
-  // GET /api/sync/pull — matches the real backend (backend/app/routers/db_sync.py's
+  // GET /api/sync/pull — matches the real backend (backend/app/routers/sync.py's
   // @router.get("/pull")) and the frontend client's pullSyncData(), which sends no
   // method (defaulting to GET). This handler previously mocked it as POST, so any
   // test exercising the real fetch path (not the injected-fetch harness) would 404

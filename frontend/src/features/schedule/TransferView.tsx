@@ -38,8 +38,14 @@ import {
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useEventStore } from "@/app/providers/EventStoreContext";
-import type { CalendarEvent } from "@/lib/events/types";
-import { resolveEventPaletteVars } from "@/lib/hday/presentation";
+import type { TimeOffOccurrence } from "@/lib/time-off/occurrences";
+import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
+import {
+  getEventColor,
+  getEventTextColor,
+  getEventTypeLabel,
+  resolveEventPaletteVars,
+} from "@/lib/hday/presentation";
 import {
   useTransferCalculations,
   type TransferInfo,
@@ -76,19 +82,25 @@ interface TransferViewProps {
 }
 
 /** Find the current user's own time-off event covering the given date, if any. */
-function findTimeOffOnDate(events: CalendarEvent[], date: Dayjs): CalendarEvent | undefined {
+function findTimeOffOnDate(
+  events: TimeOffOccurrence[],
+  date: Dayjs,
+): TimeOffOccurrence | undefined {
   const dateStr = date.format("YYYY-MM-DD");
-  return events.find(
-    (event) => event.type === "holiday" && event.start <= dateStr && dateStr <= event.end,
-  );
+  return events.find((event) => event.start <= dateStr && dateStr <= event.end);
 }
 
 /** Small pill flagging that the user has time off recorded on this date. */
-function TimeOffIndicator({ event }: { event: CalendarEvent | undefined }) {
-  if (!event || event.type !== "holiday") return null;
-  const { color, textColor, typeLabel } = event.meta;
-  const { background, foreground } = resolveEventPaletteVars(color, textColor);
-  const label = m.transfer_you_on_leave({ label: typeLabel });
+function TimeOffIndicator({ event }: { event: TimeOffOccurrence | undefined }) {
+  if (!event) return null;
+  const flags = getEntryFlagsForDisplay(event.entry);
+  const kind = event.entry.entryKind;
+  const paletteKind = kind === "weekly" ? kind : undefined;
+  const { background, foreground } = resolveEventPaletteVars(
+    getEventColor(flags, paletteKind),
+    getEventTextColor(flags, paletteKind),
+  );
+  const label = m.transfer_you_on_leave({ label: getEventTypeLabel(flags) });
 
   return (
     <Badge
@@ -149,7 +161,7 @@ interface TransferItemsListProps {
   transfers: TransferInfo[];
   scheduleType: ScheduleOption;
   myTeam: number;
-  timeOffEvents: CalendarEvent[];
+  timeOffEvents: TimeOffOccurrence[];
 }
 
 function TransferItemsList({
@@ -254,7 +266,7 @@ interface OverlapItemsListProps {
   myLabel: string;
   otherLabel: string;
   timeFormat: "12h" | "24h";
-  timeOffEvents: CalendarEvent[];
+  timeOffEvents: TimeOffOccurrence[];
 }
 
 function OverlapItemsList({
@@ -350,7 +362,7 @@ export function TransferView({
 
   const { scheduleType, settings } = useSettings();
   const { timeFormat } = settings;
-  const { getEventsInRange } = useEventStore();
+  const { getTimeOffInRange } = useEventStore();
   const locale = getLocale();
   const isDateRangeInvalid = useMemo(
     () =>
@@ -501,8 +513,8 @@ export function TransferView({
   }, [transfers, overlaps]);
 
   const timeOffEvents = useMemo(
-    () => (timeOffRange ? getEventsInRange(timeOffRange.start, timeOffRange.end) : []),
-    [getEventsInRange, timeOffRange],
+    () => (timeOffRange ? getTimeOffInRange(timeOffRange.start, timeOffRange.end) : []),
+    [getTimeOffInRange, timeOffRange],
   );
 
   // {m.timeoff_clear_selection_btn()} dates when custom range is disabled, as

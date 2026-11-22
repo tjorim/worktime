@@ -8,7 +8,7 @@ This repository uses a single frontend server-state pattern:
 
 ## Collection-backed domains (sync-managed)
 
-These domains must be read/written through collections in `src/lib/db/collections.ts`:
+These domains must be read/written through their individual collection modules, exported by `src/lib/db/collections.ts`:
 
 - Time tracking: `tasks`, `templates`, `labels`
 - Event store / synced events: `timeOffCollection` (consumed via `EventStoreContext`)
@@ -20,7 +20,7 @@ These domains must be read/written through collections in `src/lib/db/collection
 
 The following remain non-collection by design:
 
-- **Preferences/settings sync metadata**: synchronized via `/api/preferences` helpers in `syncClient.ts` and `SettingsContext`, not QueryCollection-backed.
+- **Preferences/settings sync metadata**: synchronized via `/api/preferences` helpers in `../sync/syncPreferences.ts` and `SettingsContext`, not QueryCollection-backed.
 - **Read-only external/computed lookups**: `useOpenHolidays` (and wrappers like `useLongWeekend` and `usePaydates`) may use plain `useQuery`.
 
 ## Route preloading
@@ -41,7 +41,7 @@ selected date and user settings rather than route search parameters.
 - Static architecture test: `tests/architecture/frontendDataStandard.test.ts`
   - allows plain `useQuery` only in approved read-only hooks
   - forbids standalone `useQuery` calls using `["sync", ...]` query keys
-  - allows `queryKey: ["sync", ...]` only in `src/lib/db/collections.ts`
+  - allows `queryKey: ["sync", ...]` only in the domain collection modules and their registry in `src/lib/db/`
 - Existing collection-backed hook tests cover load/update/delete/reset flows.
 
 ## TanStack Form/Table adoption

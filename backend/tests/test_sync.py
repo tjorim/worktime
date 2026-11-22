@@ -2022,7 +2022,7 @@ class TestSyncEventsEndpoint:
         """events_endpoint returns a StreamingResponse with the correct SSE headers."""
         from fastapi import Request
 
-        from app.routers.db_sync import events_endpoint
+        from app.routers.sync import events_endpoint
 
         mock_request = MagicMock(spec=Request)
 
@@ -2050,7 +2050,7 @@ class TestSyncEventsEndpoint:
         import pytest
         from fastapi import HTTPException, Request
 
-        from app.routers.db_sync import events_endpoint
+        from app.routers.sync import events_endpoint
         from app.services.sse import _MAX_QUEUES_PER_USER
 
         mock_request = MagicMock(spec=Request)
@@ -2077,7 +2077,7 @@ class TestSyncEventsEndpoint:
         label_id = str(uuid4())
 
         with patch(
-            "app.routers.db_sync.sync_event_manager.broadcast_sync_changed",
+            "app.routers.sync.sync_event_manager.broadcast_sync_changed",
             new_callable=AsyncMock,
             side_effect=RuntimeError("broadcast failed"),
         ):
@@ -2107,7 +2107,7 @@ class TestSyncEventsEndpoint:
 
         label_id = str(uuid4())
 
-        with patch("app.routers.db_sync.sync_event_manager.broadcast_sync_changed", new_callable=AsyncMock) as mock_bc:
+        with patch("app.routers.sync.sync_event_manager.broadcast_sync_changed", new_callable=AsyncMock) as mock_bc:
             mock_bc.return_value = 0
             resp = db_client.post(
                 "/api/sync/push",

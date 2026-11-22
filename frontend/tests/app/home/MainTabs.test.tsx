@@ -27,8 +27,8 @@ vi.mock("@/features/schedule/ScheduleTabView", async () => {
   };
 });
 
-vi.mock("@/features/calendar/month/CalendarView", () => ({
-  CalendarView: () => <div data-testid="calendar-view">CalendarView</div>,
+vi.mock("@/features/calendar/month/MonthCalendarView", () => ({
+  MonthCalendarView: () => <div data-testid="calendar-view">CalendarView</div>,
 }));
 
 const defaultProps = {
