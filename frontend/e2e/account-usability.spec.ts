@@ -50,7 +50,7 @@ for (const theme of ["light", "dark"] as const) {
         await seed(page, theme);
         const capture = async (section: string) => {
           const path = testInfo.outputPath(`${section}-${label}.png`);
-          await page.screenshot({ path, fullPage: true });
+          await page.screenshot({ path, fullPage: true, animations: "disabled" });
           await testInfo.attach(`${section}-${label}`, { path, contentType: "image/png" });
         };
         const openSection = async (section: string, name: string) => {
