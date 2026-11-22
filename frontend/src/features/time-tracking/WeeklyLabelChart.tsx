@@ -17,6 +17,7 @@ interface LabelHoursRow {
   day: string;
   label: string;
   hours: number;
+  fill: string;
 }
 
 interface WeeklyLabelChartProps {
@@ -29,7 +30,7 @@ interface WeeklyLabelChartProps {
   showHeading?: boolean;
 }
 
-/** Daily hours stacked by category, with a legend that shows, hides and highlights categories. */
+/** Daily hours stacked by label, with a legend that shows, hides and highlights labels. */
 export function WeeklyLabelChart({
   weekDays,
   dailyTotals,
@@ -37,22 +38,33 @@ export function WeeklyLabelChart({
   targetDaily,
   showHeading = true,
 }: WeeklyLabelChartProps) {
-  // Hidden (not visible) categories are stored so a category that appears later defaults to shown.
+  // Hidden (not visible) labels are stored so a label that appears later defaults to shown.
   const [hiddenLabels, setHiddenLabels] = useState<readonly string[]>([]);
 
   const definition = useMemo(() => {
     const domain = labelPercentages.map((item) => item.label);
+    const series = labelPercentages.map(({ label, color }) => ({
+      label,
+      fill: resolveLabelColors(color).background,
+    }));
     const visible: readonly string[] = domain.filter((label) => !hiddenLabels.includes(label));
     const days = weekDays.map((day) => day.label.substring(0, 3));
     // The x domain follows the rows, so an empty day gets a zero-hour row to keep all seven days.
     const rows: LabelHoursRow[] = weekDays.flatMap((day) => {
-      const dayRows = domain.flatMap((label) => {
+      const dayRows = series.flatMap(({ label, fill }) => {
         const hours = dailyTotals[day.iso]?.[label] ?? 0;
-        return hours > 0 ? [{ day: day.label.substring(0, 3), label, hours }] : [];
+        return hours > 0 ? [{ day: day.label.substring(0, 3), label, hours, fill }] : [];
       });
       return dayRows.length > 0
         ? dayRows
-        : [{ day: day.label.substring(0, 3), label: domain[0] ?? "", hours: 0 }];
+        : [
+            {
+              day: day.label.substring(0, 3),
+              label: domain[0] ?? "",
+              hours: 0,
+              fill: "transparent",
+            },
+          ];
     });
 
     return defineChart({
@@ -69,10 +81,12 @@ export function WeeklyLabelChart({
         barY(rows, {
           x: "day",
           y: "hours",
+          z: "label",
           color: "label",
+          fill: (row) => row.fill,
           layout: stack({ order: domain }),
           radius: 2,
-          // Hovering or focusing a legend item dims the other categories.
+          // Hovering or focusing a legend item dims the other labels.
           states: [
             {
               when: { focus: "unmatched", source: "legend" },
@@ -88,7 +102,7 @@ export function WeeklyLabelChart({
       },
       color: {
         domain,
-        range: labelPercentages.map((item) => resolveLabelColors(item.color).background),
+        range: series.map(({ fill }) => fill),
         legend: interactiveColorLegend({
           visible: controlledSignal(visible, (next) =>
             setHiddenLabels(domain.filter((label) => !next.includes(label))),

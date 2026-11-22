@@ -1,4 +1,4 @@
-import { CloudCheckIcon, UsersIcon } from "lucide-react";
+import { UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
@@ -45,7 +45,7 @@ function AppContent() {
   useLayoutEffect(() => {
     document.documentElement.dataset.highContrast = String(appearance.highContrast);
   }, [appearance]);
-  const { showSuccess, showInfo, showError } = useToast();
+  const { showSuccess, showError } = useToast();
   const { isAuthenticated, userId } = useAuth();
   const {
     myTeam,
@@ -84,28 +84,9 @@ function AppContent() {
     dismiss: dismissSync,
   } = useFirstSyncFlow(isAuthenticated, userId, fetchFnOrNull);
 
-  // Show a toast for each phase of the first-sync flow.
   useEffect(() => {
-    switch (syncPhase) {
-      case "checking":
-        showInfo(m.first_sync_checking());
-        break;
-      case "pushing":
-        showInfo(m.first_sync_pushing());
-        break;
-      case "pulling":
-        showInfo(m.first_sync_pulling());
-        break;
-      case "done":
-        showSuccess(m.first_sync_done(), CloudCheckIcon);
-        break;
-      case "error":
-        showError(m.first_sync_error());
-        break;
-      default:
-        break;
-    }
-  }, [syncPhase, showInfo, showSuccess, showError]);
+    if (syncPhase === "error") showError(m.first_sync_error());
+  }, [syncPhase, showError]);
 
   const { hasActiveSubscription: hasActivePushSubscription } = usePushSubscription();
   const { tasks } = useTimeTrackingStorage();

@@ -37,7 +37,9 @@ for (const lang of ["en", "nl"]) {
         await expect(tabs).toBeVisible();
         for (const tab of await tabs.getByRole("tab").all()) {
           const label = tab.locator("span");
-          await expect(label).toHaveCSS("white-space", "nowrap");
+          expect(await label.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+            (await label.boundingBox())!.width + 1,
+          );
           await expect(tab).toBeInViewport();
         }
         await expect(

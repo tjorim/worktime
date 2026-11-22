@@ -386,13 +386,13 @@ describe("DayCell", () => {
   });
 
   describe("Visual Indicators", () => {
-    it("should show course indicator emoji for course events", () => {
+    it("should show labelled course indicator for course events", () => {
       const events: DayEvent[] = [createEntryEvent({ note: "Training", entryType: "course" })];
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      // Check for course emoji (📘)
-      expect(screen.getByText("📘")).toBeInTheDocument();
+      expect(screen.getByTitle("Course/Training").querySelector("svg")).toBeInTheDocument();
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Course\/Training/);
     });
 
     it("should show public holiday indicator", () => {
@@ -403,8 +403,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} publicHoliday={publicHoliday} />);
 
-      // Check for holiday emoji (🎉)
-      expect(screen.getByText("🎉")).toBeInTheDocument();
+      expect(screen.getByTitle("New Year's Day").querySelector("svg")).toBeInTheDocument();
 
       // Check the accessible description includes holiday name
       expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/New Year/i);
@@ -418,8 +417,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} schoolHoliday={schoolHoliday} />);
 
-      // Check for school holiday emoji (🏫)
-      expect(screen.getByText("🏫")).toBeInTheDocument();
+      expect(screen.getByTitle("Winter Break").querySelector("svg")).toBeInTheDocument();
 
       // Check the accessible description includes school holiday
       expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(
@@ -435,8 +433,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} paydayInfo={paydayInfo} />);
 
-      // Check for payday emoji (💶)
-      expect(screen.getByText("💶")).toBeInTheDocument();
+      expect(screen.getByTitle("Payday").querySelector("svg")).toBeInTheDocument();
 
       // Check the accessible description includes payday
       expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/Payday/i);
@@ -462,9 +459,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      // Should only show one course emoji despite two course events
-      const courseEmojis = screen.getAllByText("📘");
-      expect(courseEmojis).toHaveLength(1);
+      expect(screen.getAllByTitle("Course/Training")).toHaveLength(1);
     });
   });
 
@@ -512,7 +507,7 @@ describe("DayCell", () => {
         { wrapper: TestProviders },
       );
 
-      expect(screen.getByText("🏫")).toBeInTheDocument();
+      expect(screen.getByTitle("Wintervakantie")).toBeInTheDocument();
       const indicator = screen.getByTitle("Working from home");
       expect(indicator).toBeInTheDocument();
       expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(

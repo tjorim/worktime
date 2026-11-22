@@ -20,17 +20,6 @@
   }
 }
 
-/* Floating "+" button above the bottom safe area; hidden while a dialog is open. */
-@utility mobile-quick-actions {
-  position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: calc(5rem + env(safe-area-inset-bottom));
-  z-index: 1020;
-  body:has([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) & {
-    display: none !important;
-  }
-}
-
 /* Fit picker lists to both long option sets and short dialog viewports. */
 @utility combobox-list-viewport {
   max-height: min(calc(var(--spacing) * 60), var(--available-height));

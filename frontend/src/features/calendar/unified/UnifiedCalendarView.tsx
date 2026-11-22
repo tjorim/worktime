@@ -1,5 +1,5 @@
 import { isValidRange, isValidTaskInterval, taskStopTime } from "@/lib/time-tracking/timeUtils";
-import { InfoIcon, TriangleAlertIcon } from "lucide-react";
+import { InfoIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import "temporal-polyfill/global";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,7 +16,7 @@ import {
 } from "@/features/calendar/unified/dragAndDropAdapter";
 import { ScheduleXCalendar, useCalendarApp } from "@schedule-x/react";
 import { Temporal } from "temporal-polyfill";
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertAction } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScheduleDetailModal } from "@/components/ScheduleDetailModal";
@@ -353,9 +353,11 @@ function ConfiguredUnifiedCalendarView({
       {showHelp ? (
         <Alert variant="info" className="py-2">
           {m.unified_calendar_help()}
-          <Button variant="ghost" size="sm" onClick={dismissHelp} aria-label={m.close()}>
-            {m.close()}
-          </Button>
+          <AlertAction>
+            <Button variant="ghost" size="icon-sm" onClick={dismissHelp} aria-label={m.close()}>
+              <Icon icon={XIcon} />
+            </Button>
+          </AlertAction>
         </Alert>
       ) : (
         <div className="flex justify-end mb-2">

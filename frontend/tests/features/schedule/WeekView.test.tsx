@@ -121,7 +121,8 @@ describe("WeekView", () => {
   describe("Basic rendering", () => {
     it("renders schedule overview header", () => {
       renderWithProviders(<WeekView {...defaultProps} />);
-      expect(screen.getByText("All Teams")).toBeInTheDocument();
+      expect(screen.queryByText("All Teams")).not.toBeInTheDocument();
+      expect(screen.getByText(/Week 20/)).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {

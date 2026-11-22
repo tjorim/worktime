@@ -1,4 +1,10 @@
-import { CalendarIcon, CalendarPlusIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  InfoIcon,
+  CalendarPlusIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -151,13 +157,8 @@ export function CurrentStatus({
     );
   }
 
-  const dateLabel = (
-    <>
-      <Icon icon={CalendarIcon} className="mr-1" />
-      {m.date_code_label()} {formatYYWWD(currentShiftDay)} • {localizedDateLabel} •{" "}
-      {formatTimeByPreference(liveTime, settings.timeFormat)}
-    </>
-  );
+  const shiftDayCode = formatYYWWD(currentShiftDay);
+  const dateCodeLabel = m.week_view_date_code({ code: shiftDayCode });
 
   return (
     <div className="mb-6">
@@ -167,18 +168,17 @@ export function CurrentStatus({
           <div className="flex flex-wrap gap-2 justify-between items-center mb-4">
             <div className="flex flex-wrap items-center gap-4">
               <CardTitle className="mb-0">{m.schedule_current_status()}</CardTitle>
-              <div className="text-muted-foreground">
-                <Suspense fallback={<small>{dateLabel}</small>}>
-                  <DateCodeHelp
-                    todayCode={formatYYWWD(today)}
-                    shiftDayCode={formatYYWWD(currentShiftDay)}
-                  >
-                    <button
-                      type="button"
-                      className="text-sm underline decoration-dotted rounded focus-visible:ring-3 focus-visible:ring-ring"
-                    >
-                      {dateLabel}
-                    </button>
+              <div className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+                <span>
+                  <Icon icon={CalendarIcon} className="me-1" />
+                  {localizedDateLabel} • {formatTimeByPreference(liveTime, settings.timeFormat)}
+                </span>
+                <Suspense fallback={<span>{dateCodeLabel}</span>}>
+                  <DateCodeHelp todayCode={formatYYWWD(today)} shiftDayCode={shiftDayCode}>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                      {dateCodeLabel}
+                      <Icon icon={InfoIcon} />
+                    </Button>
                   </DateCodeHelp>
                 </Suspense>
               </div>

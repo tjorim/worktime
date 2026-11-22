@@ -525,7 +525,7 @@ export function MonthCalendar({
         </div>
       </div>
 
-      <p id={keyboardHintId} className="mb-2 text-xs text-muted-foreground pointer-coarse:hidden">
+      <p id={keyboardHintId} className="sr-only">
         {m.calendar_keyboard_hint()}
       </p>
       <div

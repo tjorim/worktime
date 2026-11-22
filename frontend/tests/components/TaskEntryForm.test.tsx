@@ -58,14 +58,14 @@ describe("TaskEntryForm timer controls", () => {
 });
 
 describe("TaskEntryForm disabled-action reasons", () => {
-  it("prints why Add Task is disabled and associates it with the focusable wrapper", () => {
+  it("prints why Add Task is disabled and associates it with the button", () => {
     render(<TaskEntryForm {...baseProps} addDisabledReason="Enter a task name first." />);
 
-    const reason = screen.getByText("Add Task: Enter a task name first.");
+    const reason = screen.getByText("Enter a task name first.");
     expect(reason).toBeVisible();
     const button = screen.getByRole("button", { name: "Add Task" });
     expect(button).toBeDisabled();
-    expect(button.parentElement).toHaveAttribute("aria-describedby", reason.id);
+    expect(button).toHaveAccessibleDescription(reason.textContent);
   });
 
   it("prints why Start Now is disabled when the timer cannot start", () => {
@@ -77,8 +77,19 @@ describe("TaskEntryForm disabled-action reasons", () => {
       />,
     );
 
-    expect(screen.getByText("Start Now: Select a label first.")).toBeVisible();
-    expect(screen.getByText("Add Task: Enter a task name first.")).toBeVisible();
+    expect(screen.getByText("Select a label first.")).toBeVisible();
+    expect(screen.getByText("Enter a task name first.")).toBeVisible();
+  });
+
+  it("associates the task and overnight hints with their fields", () => {
+    render(<TaskEntryForm {...baseProps} />);
+
+    expect(screen.getByLabelText("Task", { exact: true })).toHaveAccessibleDescription(
+      /Required for completed tasks.*Untitled task/,
+    );
+    expect(screen.getByLabelText("Stop", { exact: true })).toHaveAccessibleDescription(
+      /An earlier stop time means the next day/,
+    );
   });
 
   it("shows no reason once the actions are enabled", () => {

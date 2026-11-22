@@ -136,7 +136,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      expect(screen.getByRole("heading", { name: "Hours by Category" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Daily Hours by Label" })).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Recent Weeks" })).toBeInTheDocument();
       expect(
         screen.getByRole("img", { name: /^Total hours worked in each of the last 8 weeks/ }),
@@ -149,7 +149,9 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("does not show the charts when the week is empty", () => {
       renderPanel({ tasks: [] });
 
-      expect(screen.queryByRole("heading", { name: "Hours by Category" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Daily Hours by Label" }),
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole("heading", { name: "Recent Weeks" })).not.toBeInTheDocument();
     });
 
@@ -268,7 +270,7 @@ describe("TimeTrackingWeeklyView Component", () => {
       expect(totalHoursElements.length).toBeGreaterThan(0);
       expect(screen.getByText(/Avg\. Daily Hours/i)).toBeInTheDocument();
       expect(screen.getByText(/Days Tracked/i)).toBeInTheDocument();
-      expect(screen.getByText(/Top Category/i)).toBeInTheDocument();
+      expect(screen.getByText(/Top Label/i)).toBeInTheDocument();
     });
 
     it("shows daily breakdown chart", () => {
@@ -287,7 +289,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks });
 
-      expect(screen.getByText(/Category Breakdown/i)).toBeInTheDocument();
+      expect(screen.getByText(/Label Breakdown/i)).toBeInTheDocument();
     });
   });
 
@@ -373,13 +375,13 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("keeps the detail collapsed so each total is shown once by default", () => {
       renderCollapsedPanel({ tasks: mondayTask(), weeklyTargetHours: 40 });
 
-      expect(screen.getByRole("heading", { name: "Category Breakdown" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Label Breakdown" })).toBeInTheDocument();
       expect(screen.getByText("Hours at a Glance")).toBeInTheDocument();
       for (const name of [
         "Recent Weeks",
         "Daily Breakdown",
         "Detailed Breakdown",
-        "Hours by Category",
+        "Daily Hours by Label",
       ]) {
         expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
       }

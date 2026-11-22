@@ -190,39 +190,54 @@ export function MainTabs({
     <>
       <div>
         <Tabs value={activeKey} onValueChange={(value) => setActiveTab(value as TabKey)}>
-          <TabsList className="w-full h-auto justify-start overflow-x-auto" aria-label="Worktime">
-            {availableTabs.map((key) => {
-              const labels = {
-                calendar: m.tab_calendar(),
-                "unified-calendar": m.tab_unified_calendar(),
-                schedule: m.tab_schedule(),
-                timeoff: m.tab_time_off(),
-                timetracking: m.tab_time_tracking(),
-                gantt: m.tab_gantt(),
-              };
-              const icons = {
-                calendar: CalendarIcon,
-                "unified-calendar": LayersIcon,
-                schedule: ListIcon,
-                timeoff: PlaneIcon,
-                timetracking: TimerIcon,
-                gantt: ChartGanttIcon,
-              };
-              return (
-                <TabsTrigger
-                  key={key}
-                  value={key}
-                  className="min-h-11 min-w-0 flex-col sm:flex-row flex-1 sm:flex-none whitespace-nowrap px-1 sm:px-3"
-                  aria-label={labels[key]}
-                >
-                  <Icon icon={icons[key]} />
-                  <span className="block max-w-full truncate text-xs sm:text-sm">
-                    {labels[key]}
-                  </span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div className="flex min-w-0 items-center gap-2">
+            <TabsList
+              className="grid min-w-0 flex-1 grid-cols-3 h-auto justify-start sm:flex sm:flex-wrap"
+              aria-label="Worktime"
+            >
+              {availableTabs.map((key) => {
+                const labels = {
+                  calendar: m.tab_calendar(),
+                  "unified-calendar": m.tab_unified_calendar(),
+                  schedule: m.tab_schedule(),
+                  timeoff: m.tab_time_off(),
+                  timetracking: m.tab_time_tracking(),
+                  gantt: m.tab_gantt(),
+                };
+                const icons = {
+                  calendar: CalendarIcon,
+                  "unified-calendar": LayersIcon,
+                  schedule: ListIcon,
+                  timeoff: PlaneIcon,
+                  timetracking: TimerIcon,
+                  gantt: ChartGanttIcon,
+                };
+                return (
+                  <TabsTrigger
+                    key={key}
+                    value={key}
+                    className="min-h-11 min-w-0 flex-col sm:flex-row sm:flex-none whitespace-normal sm:whitespace-nowrap px-1 sm:px-3"
+                    aria-label={labels[key]}
+                  >
+                    <Icon icon={icons[key]} />
+                    <span className="block text-center text-xs sm:text-sm">{labels[key]}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+            <MobileQuickActions
+              canAddTimeOff={timeOffEnabled}
+              canTrackTime={timeTrackingEnabled}
+              onAddTimeOff={() => {
+                setTimeOffAddRequest((request) => request + 1);
+                setActiveTab("timeoff");
+              }}
+              onTrackTime={() => {
+                setActiveTab("timetracking");
+              }}
+              onOpenCalendar={() => setActiveTab("calendar")}
+            />
+          </div>
           <TabsContent value="calendar" keepMounted>
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
@@ -300,19 +315,6 @@ export function MainTabs({
           )}
         </Tabs>
       </div>
-
-      <MobileQuickActions
-        canAddTimeOff={timeOffEnabled}
-        canTrackTime={timeTrackingEnabled}
-        onAddTimeOff={() => {
-          setTimeOffAddRequest((request) => request + 1);
-          setActiveTab("timeoff");
-        }}
-        onTrackTime={() => {
-          setActiveTab("timetracking");
-        }}
-        onOpenCalendar={() => setActiveTab("calendar")}
-      />
 
       {/* Schedule Detail Modal */}
       {selectedScheduleForDetail && (

@@ -617,7 +617,7 @@ describe("CurrentStatus Component", () => {
   describe("Date Display", () => {
     it("opens date-code help from a named button without hovering", async () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
-      const trigger = await screen.findByRole("button", { name: /^Date code:/ });
+      const trigger = await screen.findByRole("button", { name: /Date code:/ });
       await userEvent.click(trigger);
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(screen.getByText("Date Format: YYWW.D")).toBeInTheDocument();

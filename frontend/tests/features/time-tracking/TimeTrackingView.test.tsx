@@ -105,12 +105,12 @@ describe("TimeTrackingView", () => {
     it("prints the next missing requirement under the form", () => {
       renderWithSettings();
 
-      expect(screen.getByText("Add Task: Enter a task name first.")).toBeVisible();
+      expect(screen.getByText("Enter a task name first.")).toBeVisible();
 
       fireEvent.change(screen.getByLabelText("Task"), { target: { value: "Write report" } });
 
-      expect(screen.getByText("Add Task: Enter both start and stop times.")).toBeVisible();
-      expect(screen.queryByText("Add Task: Enter a task name first.")).not.toBeInTheDocument();
+      expect(screen.getByText("Enter both start and stop times.")).toBeVisible();
+      expect(screen.queryByText("Enter a task name first.")).not.toBeInTheDocument();
     });
 
     it("explains a missing label instead of leaving Add Task disabled without a reason", () => {
@@ -119,7 +119,7 @@ describe("TimeTrackingView", () => {
 
       fireEvent.change(screen.getByLabelText("Task"), { target: { value: "Write report" } });
 
-      expect(screen.getByText("Add Task: Select a label first.")).toBeVisible();
+      expect(screen.getByText("Select a label first.")).toBeVisible();
     });
   });
 

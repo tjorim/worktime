@@ -9,7 +9,7 @@ for (const theme of ["light", "dark"]) {
       await page.clock.install({ time: new Date("2026-01-05T10:15:40") });
       await page.goto(`/e2e/fixtures/overnight-tasks.html?theme=${theme}`);
       await expect(page.getByLabel("Task", { exact: true })).toHaveAccessibleDescription(
-        "Optional for Start Now, which names it “Untitled task”. Required for completed tasks.",
+        "Required for completed tasks. Start Now uses “Untitled task” if left blank.",
       );
       await page.mouse.move(0, 0);
       await page.screenshot({

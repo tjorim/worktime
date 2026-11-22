@@ -80,7 +80,7 @@ for (const theme of ["light", "dark"] as const) {
       test("the weekly summary folds its detail away and opens it on demand", async ({ page }) => {
         await open(page, "/", theme);
         await expect(page.getByRole("heading", { name: "Hours at a Glance" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Category Breakdown" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Label Breakdown" })).toBeVisible();
         await expect(page.locator("table")).toHaveCount(0);
         await page.screenshot({ path: shot(`${tag}-weekly-collapsed`), fullPage: true });
 
@@ -88,7 +88,7 @@ for (const theme of ["light", "dark"] as const) {
           "Recent Weeks",
           "Daily Breakdown",
           "Detailed Breakdown",
-          "Hours by Category",
+          "Daily Hours by Label",
         ]) {
           await page.getByRole("button", { name }).click();
         }
