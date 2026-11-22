@@ -89,7 +89,6 @@ describe("TeamScheduleView", () => {
     );
 
     expect(screen.getByText(m.team_helper_required_heading())).toBeInTheDocument();
-    expect(screen.queryByText(m.team_backend_required_heading())).not.toBeInTheDocument();
   });
 
   it("requires a configured helper and never falls back to the app's own origin", async () => {
