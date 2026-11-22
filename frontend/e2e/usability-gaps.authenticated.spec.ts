@@ -3,10 +3,10 @@ import { expect, test, type Page } from "@playwright/test";
 /**
  * #1696: reassigning a label before deleting it, a notice on unavailable settings
  * sections, a folded Weekly Summary and an Undo for the team reset on a schedule switch.
- * Screenshots land in docs/screenshots/1696 for the PR.
+ * Screenshots land in test-results/review-screenshots/1696 for the PR.
  */
 const NOW = new Date(2026, 8, 30, 15, 0, 0);
-const shot = (name: string) => `../docs/screenshots/1696/${name}.png`;
+const shot = (name: string) => `test-results/review-screenshots/1696/${name}.png`;
 
 async function open(page: Page, url: string, theme: "light" | "dark") {
   await page.emulateMedia({ colorScheme: theme });

@@ -12,13 +12,15 @@ for (const theme of ["light", "dark"]) {
         "Optional for Start Now, which names it “Untitled task”. Required for completed tasks.",
       );
       await page.mouse.move(0, 0);
-      await page.screenshot({ path: `../docs/screenshots/1699/${theme}-${width}-timer-idle.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1699/${theme}-${width}-timer-idle.png`,
+      });
 
       await page.getByRole("button", { name: /Start Now/ }).click();
       await expect(page.getByRole("button", { name: /Stop Timer · 00:00:0[0-2]/ })).toBeVisible();
       await page.mouse.move(0, 0);
       await page.screenshot({
-        path: `../docs/screenshots/1699/${theme}-${width}-timer-running.png`,
+        path: `test-results/review-screenshots/1699/${theme}-${width}-timer-running.png`,
       });
 
       await page.clock.fastForward(15_000);
@@ -26,7 +28,9 @@ for (const theme of ["light", "dark"]) {
       const dialog = page.getByRole("alertdialog");
       await expect(dialog).toContainText("Tasks are saved in whole minutes");
       await page.mouse.move(0, 0);
-      await page.screenshot({ path: `../docs/screenshots/1699/${theme}-${width}-timer-short.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1699/${theme}-${width}-timer-short.png`,
+      });
       await dialog.getByRole("button", { name: "Cancel" }).click();
       await expect(page.getByRole("button", { name: /Stop Timer/ })).toBeVisible();
     });

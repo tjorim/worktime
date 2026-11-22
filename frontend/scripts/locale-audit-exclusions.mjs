@@ -54,7 +54,7 @@ export const exclusions = {
       "roster implementation note, never rendered",
     "Continuous multi-team rotation.": "roster implementation note, never rendered",
   },
-  "lib/db/collections.ts": {
+  "lib/db/collectionTransport.ts": {
     Bearer: "HTTP authorization scheme",
   },
   "lib/push/pushNotifications.ts": {
@@ -91,7 +91,7 @@ export const exclusions = {
     "hh:mm A": "Day.js format",
     "12:00 AM": "12-hour clock midnight label",
   },
-  "lib/sync/syncClient.ts": {
+  "lib/sync/localSyncPayload.ts": {
     "refusing to build a keep-local replace payload from empty local data":
       "internal invariant diagnostic",
   },

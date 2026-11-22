@@ -1,4 +1,4 @@
-import { contrastRatio } from "@tests/utils/eventPalette";
+import { contrastRatio, loadEventPalette } from "@tests/utils/eventPalette";
 import { describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
 import {
@@ -93,13 +93,51 @@ describe("mapToScheduleXEvents", () => {
 
     expect(event).toMatchObject({
       id: "time-off:leave-1",
-      title: "Beach day",
-      calendarId: "time-off",
+      title: "Holiday – Beach day",
+      calendarId: "event-holiday-full",
+      entryTypeLabel: "Holiday",
       entryId: "leave-1",
       _options: { disableDND: true, disableResize: true },
     });
     expect(event.start.toString()).toBe("2026-06-01");
-    expect(event.end.toString()).toBe("2026-06-02");
+    expect(event.end.toString()).toBe("2026-06-01");
+  });
+
+  it("keeps the inclusive last date of a time-off range", () => {
+    const event = timeOffToEvent({
+      id: "leave-2",
+      entryKind: "range",
+      entryType: "ill",
+      entryFlag: "full_day",
+      note: null,
+      start: "2026-11-23",
+      end: "2026-11-27",
+    });
+
+    expect(event.start.toString()).toBe("2026-11-23");
+    expect(event.end.toString()).toBe("2026-11-27");
+    expect(event).toMatchObject({
+      title: "Sick leave",
+      entryTypeLabel: "Sick leave",
+      calendarId: "event-ill-full",
+    });
+  });
+
+  it("gives weekly days off the recurring palette and shows the half-day flag", () => {
+    const event = timeOffToEvent(
+      {
+        id: "weekly-1:2026-11-18",
+        entryKind: "date",
+        entryType: "vacation",
+        entryFlag: "half_am",
+        note: null,
+        date: "2026-11-18",
+      },
+      "weekly",
+    );
+
+    expect(event).toMatchObject({ title: "◐ Holiday", calendarId: "event-recurring-half" });
+    expect(event.end.toString()).toBe("2026-11-18");
   });
 
   it("maps a completed task", () => {
@@ -143,7 +181,8 @@ describe("mapToScheduleXEvents", () => {
       { id: "pale", name: "Pale", color: "#abcdef" },
       { id: "dark", name: "Dark", color: "#123456" },
     ]);
-    for (const calendar of Object.values(config)) {
+    for (const [id, calendar] of Object.entries(config)) {
+      if (id.startsWith("event-")) continue;
       for (const colors of [calendar.lightColors!, calendar.darkColors!]) {
         expect(
           contrastRatio(
@@ -155,11 +194,27 @@ describe("mapToScheduleXEvents", () => {
     }
   });
 
+  it("registers the shared event palette CSS variables for both Schedule-X themes", () => {
+    const config = buildCalendarConfig([]);
+    const palette = loadEventPalette();
+    for (const [theme, entries] of Object.entries(palette)) {
+      for (const key of Object.keys(entries).filter((key) => key !== "unknown")) {
+        const calendar = config[`event-${key}`];
+        const colors = {
+          main: `var(--wt-event-${key}-bg)`,
+          container: `var(--wt-event-${key}-bg)`,
+          onContainer: `var(--wt-event-${key}-fg)`,
+        };
+        expect(calendar?.colorName).toBe(`event-${key}`);
+        expect(theme === "light" ? calendar?.lightColors : calendar?.darkColors).toEqual(colors);
+      }
+    }
+  });
+
   it("reuses configured time-tracking label colors", () => {
     expect(
       buildCalendarConfig([{ id: "label-1", name: "Development", color: "#abcdef" }]),
     ).toMatchObject({
-      "time-off": { lightColors: { main: "#198754" } },
       "label-1": { lightColors: { main: "#abcdef" } },
     });
   });

@@ -10,7 +10,9 @@ for (const theme of ["light", "dark"]) {
       await rawLabels.fill('{"labels":[]}');
       await page.getByRole("button", { name: "Apply Labels JSON", exact: true }).click();
       await expect(page.getByRole("dialog")).toContainText("Remove 1, add 0, change 0");
-      await page.screenshot({ path: `../docs/screenshots/1697/${theme}-${width}-replacement.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1697/${theme}-${width}-replacement.png`,
+      });
       await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
       await rawLabels.fill(original);
       await page.getByText("Raw labels JSON (import/export)", { exact: true }).click();
@@ -24,24 +26,30 @@ for (const theme of ["light", "dark"]) {
       await expect(trigger).toBeFocused();
       await trigger.press("Enter");
       await page.screenshot({
-        path: `../docs/screenshots/1719/${theme}-${width}-confirmation.png`,
+        path: `test-results/review-screenshots/1719/${theme}-${width}-confirmation.png`,
       });
       await page
         .getByRole("alertdialog")
         .getByRole("button", { name: "Delete", exact: true })
         .press("Enter");
       await expect(page.getByRole("button", { name: "Add Label", exact: true })).toBeFocused();
-      await page.screenshot({ path: `../docs/screenshots/1719/${theme}-${width}-deleted.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1719/${theme}-${width}-deleted.png`,
+      });
       await page.getByText("Raw labels JSON (import/export)", { exact: true }).click();
       await page.getByRole("textbox", { name: "Labels JSON", exact: true }).fill("invalid draft");
       await page.getByRole("button", { name: "Apply Labels JSON", exact: true }).click();
-      await page.screenshot({ path: `../docs/screenshots/1697/${theme}-${width}-invalid.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1697/${theme}-${width}-invalid.png`,
+      });
       await page.getByRole("button", { name: "Simulate refresh" }).click();
       await expect(page.getByRole("textbox", { name: "Labels JSON", exact: true })).toHaveValue(
         "invalid draft",
       );
       await expect(page.getByText(/The saved data changed/)).toBeVisible();
-      await page.screenshot({ path: `../docs/screenshots/1718/${theme}-${width}-draft.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1718/${theme}-${width}-draft.png`,
+      });
     });
   }
 }
@@ -81,7 +89,7 @@ for (const theme of ["light", "dark"]) {
       await expect(editor).toHaveValue(draft);
       await expect(page.getByText(/The saved data changed/)).toBeVisible();
       await page.screenshot({
-        path: `../docs/screenshots/1697/${theme}-${width}-partial.png`,
+        path: `test-results/review-screenshots/1697/${theme}-${width}-partial.png`,
         fullPage: true,
       });
     });

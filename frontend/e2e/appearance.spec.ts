@@ -25,20 +25,20 @@ for (const theme of ["light", "dark"] as const) {
     await expectNoAccessibilityViolations(page, `high contrast ${theme}`);
     await page.reload();
     await expect(toggle).toBeChecked();
-    mkdirSync("../docs/screenshots/270", { recursive: true });
+    mkdirSync("test-results/review-screenshots/270", { recursive: true });
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await expect
         .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
         .toBe(true);
       await page.screenshot({
-        path: `../docs/screenshots/270/${theme}-contrast-${width}.png`,
+        path: `test-results/review-screenshots/270/${theme}-contrast-${width}.png`,
         fullPage: true,
       });
       await toggle.click();
       await expect(page.locator("html")).toHaveAttribute("data-high-contrast", "false");
       await page.screenshot({
-        path: `../docs/screenshots/270/${theme}-normal-${width}.png`,
+        path: `test-results/review-screenshots/270/${theme}-normal-${width}.png`,
         fullPage: true,
       });
       await toggle.click();
