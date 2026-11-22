@@ -43,6 +43,7 @@
     "test:e2e": "playwright test",
     "generate-icons": "tsx scripts/generate-icons.ts",
     "check-message-parity": "node scripts/check-message-parity.mjs",
+    "check-message-usage": "node scripts/check-message-usage.mjs",
     "locale:audit": "node scripts/locale-audit.mjs",
     "fixtures:generate": "pnpm paraglide:compile && TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/generate-roster-fixture.ts",
     "fixtures:check": "pnpm paraglide:compile && TSX_TSCONFIG_PATH=./tsconfig.app.json tsx scripts/check-roster-fixture.ts",

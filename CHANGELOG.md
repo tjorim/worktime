@@ -28,6 +28,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Remove unused web translations and vacation allowance references, and check message usage in CI.
 - Index the current documentation, archive finished migrations and old plans, and save browser review screenshots to ignored test output (#1993).
 - Readiness answers `{"status": "ready"}` (200) or `{"status": "not_ready"}` (503) like the other three apps, instead of `ok`/`degraded`; the `auth` and `database` detail keys and the status codes are unchanged. One `ApiHTTPException` handler is gone because the framework HTTP handler already serves it.
 - Give every API error one body shape (additive): an unhandled exception answers `{"detail": "Internal server error", "code": "internal_error"}` with `X-Request-ID` instead of Starlette's plain text, framework errors (unknown route, wrong method, a missing credential) keep their `detail` and gain a `code` (`not_found`, `method_not_allowed`, `unauthorized`, `forbidden`, `bad_request`, else `http_<status>`), and 422 validation errors keep the `detail` list but drop the submitted `input` and `ctx` and gain `code: "validation_error"`. Documented in `docs/api-errors.md`; the generated API types are unchanged.

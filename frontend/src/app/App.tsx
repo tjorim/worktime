@@ -243,9 +243,7 @@ function AppContent() {
   }, [settings.theme]);
 
   const handleTeamSelect = (team: number) => {
-    // Save team selection (onboarding will be completed after vacation step)
     setMyTeam(team);
-    // Don't close modal yet - wizard continues to vacation allowance step
   };
 
   const handleScheduleSelect = (schedule: ScheduleOption) => {
@@ -269,8 +267,6 @@ function AppContent() {
   };
 
   const handleTeamModalHide = (payload?: WizardCompletionPayload) => {
-    // Complete onboarding when wizard closes (after vacation step)
-    // Use atomic update to ensure vacation allowance persists correctly
     if (teamModalMode === "onboarding" && !hasCompletedOnboarding) {
       // Ensure a schedule has been selected before completing onboarding
       if (!scheduleType) {
