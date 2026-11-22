@@ -509,7 +509,7 @@ export function TeamScheduleView() {
               {error.kind === "unreachable" && (
                 <Link
                   to="/settings"
-                  search={{ section: "scheduleTeam" }}
+                  search={{ section: "connections" }}
                   className="mt-1 inline-block text-sm font-medium text-inherit underline underline-offset-3"
                 >
                   {m.team_error_open_settings()}

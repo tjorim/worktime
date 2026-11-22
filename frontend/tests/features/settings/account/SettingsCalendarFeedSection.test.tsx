@@ -14,23 +14,20 @@ function renderSection(fetchFn: (input: string, init?: RequestInit) => Promise<R
 }
 
 describe("SettingsCalendarFeedSection", () => {
-  it("clears the parent's load warning when generating after a failed load", async () => {
-    const onLoadError = vi.fn();
+  it("clears the load warning when generating after a failed load", async () => {
     const fetchFn = vi
       .fn()
       .mockResolvedValueOnce(
         new Response(/* fixture-contract: error (body is not consumed) */ "{}", { status: 500 }),
       )
       .mockResolvedValueOnce(jsonResponse<IcalFeedCreated>({ url_path: "/api/ical/new.ics" }));
-    render(
-      <ToastProvider>
-        <SettingsCalendarFeedSection fetchFn={fetchFn} onLoadError={onLoadError} />
-      </ToastProvider>,
+    renderSection(fetchFn);
+    const warning = await screen.findByText(
+      "Could not update the calendar subscription right now.",
     );
-    await waitFor(() => expect(onLoadError).toHaveBeenLastCalledWith(true));
     fireEvent.click(screen.getByRole("button", { name: /generate/i }));
     expect(await screen.findByDisplayValue(/new.ics$/)).toBeInTheDocument();
-    expect(onLoadError).toHaveBeenLastCalledWith(false);
+    expect(warning).not.toBeInTheDocument();
   });
 
   it("shows an existing subscription without rotating its secret", async () => {

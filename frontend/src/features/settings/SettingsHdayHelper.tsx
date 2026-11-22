@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { SettingsHeading, SettingsHint } from "@/features/settings/SettingsParts";
+import { SettingsSection, SettingsHint } from "@/features/settings/SettingsParts";
 import { useHdayHelper, type HdayHelperStatus } from "@/app/providers/HdayHelperContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { isHdayHelperMixedContentBlocked } from "@/lib/hday-helper/hdayHelper";
@@ -90,80 +90,80 @@ export function SettingsHdayHelper() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <SettingsHeading icon={FileTextIcon} aside={statusBadge(helperConnectionStatus)}>
-          {m.hday_helper_heading()}
-        </SettingsHeading>
-        <SettingsHint className="-mt-1">{m.hday_helper_desc()}</SettingsHint>
-      </div>
+    <SettingsSection icon={FileTextIcon} title={m.hday_helper_heading()}>
+      <div className="flex flex-col gap-3">
+        <SettingsHint>
+          {m.hday_helper_desc()} {statusBadge(helperConnectionStatus)}
+        </SettingsHint>
+        <Field>
+          <FieldLabel htmlFor="hday-helper-url">{m.hday_helper_url_label()}</FieldLabel>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="hday-helper-url"
+              type="url"
+              placeholder="http://127.0.0.1:8080"
+              value={urlDraft}
+              onChange={(event) => {
+                setUrlDraft(event.target.value);
+                setTestSucceeded(null);
+                setUrlIsInvalid(false);
+              }}
+              aria-invalid={urlIsInvalid}
+              aria-describedby={urlIsInvalid ? "hday-helper-url-error" : "hday-helper-url-help"}
+            />
+            <Button
+              variant="outline"
+              onClick={handleSave}
+              disabled={normalizedUrl === (options.hdayHelperUrl ?? "")}
+            >
+              {m.hday_helper_save_url()}
+            </Button>
+            <Button variant="secondary" onClick={handleTest} disabled={isTesting || !normalizedUrl}>
+              {isTesting && <Spinner size="sm" aria-hidden="true" />}
+              {m.hday_helper_test()}
+            </Button>
+          </div>
+          {urlIsInvalid && (
+            <FieldError id="hday-helper-url-error">{m.hday_helper_url_invalid()}</FieldError>
+          )}
+          <FieldDescription id="hday-helper-url-help" className="mb-0">
+            {m.hday_helper_url_help()}
+          </FieldDescription>
+        </Field>
 
-      <Field>
-        <FieldLabel htmlFor="hday-helper-url">{m.hday_helper_url_label()}</FieldLabel>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            id="hday-helper-url"
-            type="url"
-            placeholder="http://127.0.0.1:8080"
-            value={urlDraft}
-            onChange={(event) => {
-              setUrlDraft(event.target.value);
-              setTestSucceeded(null);
-              setUrlIsInvalid(false);
-            }}
-            aria-invalid={urlIsInvalid}
-            aria-describedby={urlIsInvalid ? "hday-helper-url-error" : "hday-helper-url-help"}
-          />
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            disabled={normalizedUrl === (options.hdayHelperUrl ?? "")}
-          >
-            {m.hday_helper_save_url()}
-          </Button>
-          <Button variant="secondary" onClick={handleTest} disabled={isTesting || !normalizedUrl}>
-            {isTesting && <Spinner size="sm" aria-hidden="true" />}
-            {m.hday_helper_test()}
-          </Button>
-        </div>
-        {urlIsInvalid && (
-          <FieldError id="hday-helper-url-error">{m.hday_helper_url_invalid()}</FieldError>
+        <Field>
+          <FieldLabel htmlFor="hday-username">{m.hday_username_label()}</FieldLabel>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="hday-username"
+              type="text"
+              placeholder={m.hday_username_placeholder()}
+              value={usernameDraft}
+              onChange={(event) => setUsernameDraft(event.target.value)}
+              aria-describedby="hday-username-help"
+            />
+            <Button
+              variant="outline"
+              onClick={handleSaveUsername}
+              disabled={normalizedUsername === (settings.hdayUsername ?? "")}
+            >
+              {m.hday_username_save()}
+            </Button>
+          </div>
+          <FieldDescription id="hday-username-help" className="mb-0">
+            {m.hday_username_help()}
+          </FieldDescription>
+        </Field>
+
+        {mixedContentRisk && (
+          <Alert variant="warning">{m.hday_helper_mixed_content_warning()}</Alert>
         )}
-        <FieldDescription id="hday-helper-url-help" className="mb-0">
-          {m.hday_helper_url_help()}
-        </FieldDescription>
-      </Field>
-
-      <Field>
-        <FieldLabel htmlFor="hday-username">{m.hday_username_label()}</FieldLabel>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            id="hday-username"
-            type="text"
-            placeholder={m.hday_username_placeholder()}
-            value={usernameDraft}
-            onChange={(event) => setUsernameDraft(event.target.value)}
-            aria-describedby="hday-username-help"
-          />
-          <Button
-            variant="outline"
-            onClick={handleSaveUsername}
-            disabled={normalizedUsername === (settings.hdayUsername ?? "")}
-          >
-            {m.hday_username_save()}
-          </Button>
-        </div>
-        <FieldDescription id="hday-username-help" className="mb-0">
-          {m.hday_username_help()}
-        </FieldDescription>
-      </Field>
-
-      {mixedContentRisk && <Alert variant="warning">{m.hday_helper_mixed_content_warning()}</Alert>}
-      {testSucceeded !== null && (
-        <Alert variant={testSucceeded ? "success" : "destructive"}>
-          {testSucceeded ? m.hday_helper_connected() : m.hday_helper_failed()}
-        </Alert>
-      )}
-    </div>
+        {testSucceeded !== null && (
+          <Alert variant={testSucceeded ? "success" : "destructive"}>
+            {testSucceeded ? m.hday_helper_connected() : m.hday_helper_failed()}
+          </Alert>
+        )}
+      </div>
+    </SettingsSection>
   );
 }

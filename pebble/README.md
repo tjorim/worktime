@@ -19,7 +19,7 @@ official phone-side `@moddable/pebbleproxy` package. So:
   app's settings in the Pebble mobile app. It rotates a dedicated Pebble
   credential and returns it to `pkjs` through `pebblejs://close#<data>`.
 
-Authentication uses a **personal access token** (`Settings > Account > API tokens` in the Worktime web app),
+Authentication uses a **personal access token** (`Settings > Connections > API tokens` in the Worktime web app),
 not the OIDC session the web app uses — Pebble's constrained JS runtime has no good way to run an OAuth
 Authorization Code + PKCE flow. The generated companion credential carries only
 `pebble:read` and `pebble:write`; it cannot access the ordinary web/Android API,

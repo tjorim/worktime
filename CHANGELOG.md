@@ -20,6 +20,10 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 - **Android:** Read release notes offline from “What’s new” in Settings.
 
+### Changed
+
+- Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
+
 ### Fixed
 
 - The Gantt timeline opens just before the earliest unfinished task, restores the saved zoom and explains weekend, public holiday and time-off shading. Bar labels update when tasks are renamed.

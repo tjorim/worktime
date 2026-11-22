@@ -166,7 +166,7 @@ describe("TeamScheduleView", () => {
       expect(await screen.findByText(m.team_error_unreachable())).toBeInTheDocument();
       expect(screen.getByRole("link", { name: m.team_error_open_settings() })).toHaveAttribute(
         "href",
-        "/settings?section=scheduleTeam",
+        "/settings?section=connections",
       );
     });
 

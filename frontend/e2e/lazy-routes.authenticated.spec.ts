@@ -39,7 +39,7 @@ test.describe("lazy settings route", () => {
 
   test("a direct link keeps the requested section", async ({ page }) => {
     await page.goto("/settings?section=data");
-    await expect(sectionHeading(page, "Data & backup")).toBeVisible();
+    await expect(sectionHeading(page, "Data")).toBeVisible();
     await expect(page).toHaveURL(/section=data/);
   });
 

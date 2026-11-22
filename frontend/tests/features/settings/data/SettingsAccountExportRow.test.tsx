@@ -3,10 +3,10 @@ import { jsonResponse, uncheckedJson } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SettingsAccountExportSection } from "@/features/settings/account/SettingsAccountExportSection";
+import { SettingsAccountExportRow } from "@/features/settings/data/SettingsAccountExportRow";
 import * as m from "@/paraglide/messages.js";
 
-describe("SettingsAccountExportSection", () => {
+describe("SettingsAccountExportRow", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     // jsdom does not implement these; remove what the test installed.
@@ -35,7 +35,7 @@ describe("SettingsAccountExportSection", () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const user = userEvent.setup();
 
-    render(<SettingsAccountExportSection accountId={42} fetchFn={fetchFn} />);
+    render(<SettingsAccountExportRow isAuthenticated accountId={42} fetchFn={fetchFn} />);
     await user.click(screen.getByRole("button", { name: m.account_export_btn() }));
 
     await waitFor(() => expect(click).toHaveBeenCalledOnce());
@@ -52,7 +52,7 @@ describe("SettingsAccountExportSection", () => {
     );
     const user = userEvent.setup();
 
-    render(<SettingsAccountExportSection accountId={42} fetchFn={fetchFn} />);
+    render(<SettingsAccountExportRow isAuthenticated accountId={42} fetchFn={fetchFn} />);
     await user.click(screen.getByRole("button", { name: m.account_export_btn() }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(m.account_export_failed());
@@ -60,7 +60,7 @@ describe("SettingsAccountExportSection", () => {
   });
 
   it("explains why the button is disabled until the account has loaded", () => {
-    render(<SettingsAccountExportSection accountId={null} fetchFn={vi.fn()} />);
+    render(<SettingsAccountExportRow isAuthenticated accountId={null} fetchFn={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: m.account_export_btn() });
     expect(button).toBeDisabled();

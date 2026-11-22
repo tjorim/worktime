@@ -8,18 +8,19 @@ telemetry. This file covers the new authoritative, transactional DB record.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas import LabelCreate, UserCreate
+from app.schemas import LabelCreate, TimeOffEntryCreate, TimeOffEntryUpdate, UserCreate, WorkLocationCreate
 from app.services import db_service
 from app.services.audit.db import (
     MAX_AUDIT_LIMIT,
     AuditActor,
     AuditAuthorizationError,
+    get_legacy_time_off_audit_details,
     list_audit_entries,
     write_audit_entry,
 )
@@ -196,3 +197,55 @@ async def test_audit_rest_endpoint_allows_admin_team_wide_read(
     scoped = db_client.get(f"/api/audit?user_id={user_id}", headers=admin_headers)
     assert scoped.status_code == 200
     assert all(item["actor_user_id"] == user_id for item in scoped.json()["items"])
+
+
+async def test_time_off_audit_keeps_snapshots_and_resolves_legacy_rows(db_session: AsyncSession) -> None:
+    user = await db_service.create_user(db_session, UserCreate(username="audit-time-off", display_name="Time Off"))
+    actor = AuditActor(user_id=user.id, label=user.username, auth_source="oidc")
+    entry, _ = await db_service.create_or_update_time_off_entry(
+        db_session,
+        user.id,
+        TimeOffEntryCreate(entry_kind="date", date=date(2026, 11, 2)),
+        actor=actor,
+    )
+    await write_audit_entry(
+        db_session,
+        actor=actor,
+        action="update_time_off_entry",
+        resource_type="time_off_entry",
+        resource_id=entry.entry_id,
+    )
+    await db_session.commit()
+    await db_service.update_time_off_entry(
+        db_session,
+        user.id,
+        entry.entry_id,
+        TimeOffEntryUpdate(entry_kind="weekly", weekday=3, entry_type="course"),
+        actor=actor,
+    )
+    await db_service.delete_time_off_entry(db_session, user.id, entry.entry_id, actor=actor)
+
+    entries = await list_audit_entries(db_session, requesting_user_id=user.id, is_admin=False)
+    deleted, updated, legacy, created = entries
+    assert deleted.action == "delete_time_off_entry"
+    assert updated.details == deleted.details == {"entry_type": "course", "weekday": 3}
+    assert created.details == {"entry_type": "vacation", "date": "2026-11-02"}
+    assert legacy.details == {}
+    assert await get_legacy_time_off_audit_details(db_session, entries) == {
+        (user.id, entry.entry_id): {"entry_type": "course", "weekday": 3}
+    }
+
+
+async def test_work_location_audit_distinguishes_create_and_update(db_session: AsyncSession) -> None:
+    user = await db_service.create_user(db_session, UserCreate(username="audit-location", display_name="Location"))
+    actor = AuditActor(user_id=user.id, label=user.username, auth_source="oidc")
+    value_date = date(2026, 11, 2)
+    await db_service.create_or_update_work_location(
+        db_session, user.id, WorkLocationCreate(date=value_date, country_code="BE"), actor=actor
+    )
+    await db_service.create_or_update_work_location(
+        db_session, user.id, WorkLocationCreate(date=value_date, country_code="NL"), actor=actor
+    )
+    entries = await list_audit_entries(db_session, requesting_user_id=user.id, is_admin=False)
+    assert [entry.action for entry in entries] == ["update_work_location", "create_work_location"]
+    assert [entry.resource_id for entry in entries] == ["2026-11-02", "2026-11-02"]

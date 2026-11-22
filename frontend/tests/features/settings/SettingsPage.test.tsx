@@ -1,8 +1,6 @@
 import type {
   AccountProfile,
-  IcalFeedStatus,
   AccessTokenListResponse,
-  IntegrationClientListResponse,
   UserRead,
   CreatedApiToken,
   UserListResponse,
@@ -359,47 +357,40 @@ describe("SettingsPage Account Section", () => {
     expect(mockSignoutRedirect).toHaveBeenCalled();
   });
 
-  it("groups account load failures into one notification and retries the profile inline", async () => {
+  it("retries a failed profile inline and loads connections only in their section", async () => {
     mockAuthenticatedUser("Alice");
     let unavailable = true;
+    let tokenRequests = 0;
     server.use(
-      ...["*/api/me", "*/api/access-tokens", "*/api/ical", "*/api/integration-clients"].map(
-        (path) =>
-          http.get(path, () =>
-            unavailable
-              ? new HttpResponse(null, { status: 503 })
-              : path === "*/api/me"
-                ? jsonResponse<AccountProfile>({
-                    id: 1,
-                    display_name: "Recovered",
-                    username: "alice",
-                    is_admin: false,
-                    capabilities: { backup_enabled: false },
-                  })
-                : path === "*/api/ical"
-                  ? jsonResponse<IcalFeedStatus>({
-                      configured: false,
-                      token_preview: null,
-                      created_at: null,
-                      last_used_at: null,
-                    })
-                  : path === "*/api/access-tokens"
-                    ? jsonResponse<AccessTokenListResponse>({ items: [], total: 0 })
-                    : jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 }),
-          ),
+      http.get("*/api/me", () =>
+        unavailable
+          ? new HttpResponse(null, { status: 503 })
+          : jsonResponse<AccountProfile>({
+              id: 1,
+              display_name: "Recovered",
+              username: "alice",
+              is_admin: false,
+              capabilities: { backup_enabled: false },
+            }),
       ),
+      http.get("*/api/access-tokens", () => {
+        tokenRequests++;
+        return new HttpResponse(null, { status: 503 });
+      }),
     );
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-    const banner = await screen.findByText(/Some account sections could not be loaded/);
-    expect(banner).toHaveAttribute("role", "alert");
-    await screen.findByText("Could not load your API tokens right now.");
-    expect(screen.getAllByText(/Some account sections could not be loaded/)).toHaveLength(1);
-    expect(
-      screen.getByText("Could not load your API tokens right now.").closest('[role="note"]'),
-    ).not.toBeNull();
+    const { unmount } = renderWithProviders(
+      <SettingsContent onHide={vi.fn()} activeSection="account" />,
+    );
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(tokenRequests).toBe(0);
     unavailable = false;
-    await userEvent.setup().click(screen.getAllByRole("button", { name: "Retry" })[0]!);
+    await userEvent.setup().click(retry);
     expect(await screen.findByDisplayValue("Recovered")).toBeInTheDocument();
+
+    unmount();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="connections" />);
+    expect(await screen.findByText("Could not load your API tokens right now.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: m.hday_helper_heading() })).toBeVisible();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {

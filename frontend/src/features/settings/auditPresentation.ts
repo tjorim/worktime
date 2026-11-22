@@ -1,3 +1,6 @@
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import { getEventTypeLabel } from "@/lib/hday/presentation";
+import { isValidEntryType } from "@/lib/time-off/types";
 import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail";
 import * as m from "@/paraglide/messages.js";
 
@@ -40,4 +43,45 @@ export function getAuditActorLabel(
   if (/^user:\d+$/.test(entry.actor_label))
     return m.audit_actor_user({ id: String(entry.actor_user_id ?? entry.actor_label.slice(5)) });
   return entry.actor_label || m.audit_actor_system();
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+const weekdays = [
+  m.weekday_mon,
+  m.weekday_tue,
+  m.weekday_wed,
+  m.weekday_thu,
+  m.weekday_fri,
+  m.weekday_sat,
+  m.weekday_sun,
+];
+
+function formatAuditDate(value: unknown) {
+  return typeof value === "string" && ISO_DATE.test(value) ? formatDisplayDate(value) : null;
+}
+
+export function isTimeOffAuditEntry(entry: AuditEntry) {
+  return entry.resource_type === "time_off_entry" || entry.resource_type === "time_off_event";
+}
+
+export function getAuditResourceName(entry: AuditEntry): string {
+  const resource = getAuditResourceLabel(entry.resource_type);
+  if (isTimeOffAuditEntry(entry)) {
+    const { entry_type, date, start_date, end_date, weekday } = entry.details;
+    const type = isValidEntryType(entry_type)
+      ? getEventTypeLabel([entry_type === "vacation" ? "holiday" : entry_type])
+      : resource;
+    const start = formatAuditDate(start_date);
+    const end = formatAuditDate(end_date);
+    const weekly = typeof weekday === "number" ? weekdays[weekday - 1]?.() : undefined;
+    const when = start && end ? `${start} – ${end}` : (formatAuditDate(date) ?? weekly);
+    return when ? `${type} (${when})` : type;
+  }
+  const name =
+    entry.resource_display_name ||
+    (entry.resource_type === "work_location"
+      ? formatAuditDate(entry.resource_id)
+      : entry.resource_id);
+  return name ? `${resource} ${name}` : resource;
 }
