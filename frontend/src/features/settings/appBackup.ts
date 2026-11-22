@@ -10,7 +10,16 @@
  */
 
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import { ANONYMOUS_USER_STATE_OWNER, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
+import {
+  readDevicePreferences,
+  splitLegacyPreferences,
+  writePreferenceStorage,
+} from "@/lib/storage/devicePreferenceStorage";
+import {
+  ANONYMOUS_USER_STATE_OWNER,
+  DEVICE_PREFERENCES_STORAGE_KEY,
+  USER_STATE_STORAGE_KEY,
+} from "@/config/storageKeys";
 import {
   ganttTasksCollection,
   getSyncCollectionUserId,
@@ -199,9 +208,25 @@ function getWorkLocationEntries(): Record<string, unknown> {
   return result;
 }
 
+/** Keep the original backup format readable by older versions of the app. */
+function readDeviceBackupState() {
+  const { theme, notifications, lastUsed } = readDevicePreferences();
+  return {
+    settings: {
+      ...(typeof theme === "string" && { theme }),
+      ...(typeof notifications === "boolean" && { notifications: notifications ? "on" : "off" }),
+    },
+    lastUsed: isRecord(lastUsed) ? lastUsed : undefined,
+  };
+}
+
 /** Inspect local storage and collections and return which backup sections have data. */
 export function checkBackupDataPresence(): BackupDataPresence {
-  const hasUserState = localStorage.getItem(USER_STATE_STORAGE_KEY) !== null;
+  const device = readDeviceBackupState();
+  const hasUserState =
+    localStorage.getItem(USER_STATE_STORAGE_KEY) !== null ||
+    Object.keys(device.settings).length > 0 ||
+    device.lastUsed !== undefined;
   const timeOffEntries = (timeOffCollection.toArray as TimeOffEntry[]).map(toPlainTimeOffEntry);
   const hasTimeOff = timeOffEntries.length > 0;
 
@@ -254,9 +279,20 @@ export function buildBackupPayload(options?: BackupOptions): AppBackupPayload {
 
   if (include.userState) {
     const userState = safeParseJson(USER_STATE_STORAGE_KEY);
-    if (typeof userState === "object" && userState !== null && !Array.isArray(userState)) {
-      const { _accountOwner: _owner, ...preferences } = userState as Record<string, unknown>;
-      payload.userState = preferences;
+    const device = readDeviceBackupState();
+    if (isRecord(userState) || Object.keys(device.settings).length > 0 || device.lastUsed) {
+      const { _accountOwner: _owner, ...account } = isRecord(userState) ? userState : {};
+      const settings = {
+        ...(isRecord(account.settings) ? account.settings : {}),
+        ...device.settings,
+      };
+      payload.userState = {
+        ...account,
+        ...(Object.keys(settings).length > 0 && { settings }),
+        ...(device.lastUsed && {
+          lastUsed: { ...(isRecord(account.lastUsed) && account.lastUsed), ...device.lastUsed },
+        }),
+      };
     } else if (userState !== undefined) payload.userState = userState;
   }
 
@@ -637,13 +673,20 @@ export async function restoreAppBackup(
         string,
         unknown
       >;
+      const { account, device } = splitLegacyPreferences(preferences);
+      if (Object.keys(device).length > 0) {
+        writePreferenceStorage(DEVICE_PREFERENCES_STORAGE_KEY, {
+          ...readDevicePreferences(),
+          ...device,
+        });
+      }
       // A backup carries preferences, not the source account's ownership.
       const destinationOwner =
         getSyncCollectionUserId() ?? getPreferenceOwner() ?? ANONYMOUS_USER_STATE_OWNER;
       localStorage.setItem(
         USER_STATE_STORAGE_KEY,
         JSON.stringify({
-          ...preferences,
+          ...account,
           _accountOwner: destinationOwner,
           // Restoring a backup is the newest preference intent on this device.
           _updatedAt: new Date().toISOString(),

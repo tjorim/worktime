@@ -8,7 +8,7 @@
 import type { UserPreferencesReadData } from './userPreferencesReadData';
 
 /**
- * Response schema for the authenticated user's preferences blob.
+ * The authenticated user's preferences, including legacy documents.
  */
 export type UserPreferencesRead = {
   user_id: number;

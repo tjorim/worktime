@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.schemas.preferences import AccountPreferences
 from tests.conftest import utc_timestamp_offset as _ts
 
 # ---------------------------------------------------------------------------
@@ -255,3 +257,81 @@ class TestPutPreferences:
         resp_b = db_client.get("/api/preferences", headers=headers_b)
         assert resp_b.status_code == 200
         assert resp_b.json()["data"] == {"theme": "light"}
+
+
+class TestVersionedPreferences:
+    def test_round_trip_and_legacy_client_write(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+    ) -> None:
+        user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "prefs-versioned")
+        headers = auth_headers(user_id)
+        current = {
+            "schemaVersion": 1,
+            "scheduleType": "5-shift",
+            "myTeam": 3,
+            "settings": {"enableTimeOff": True, "homeCountry": "NL"},
+        }
+        response = db_client.put(
+            "/api/preferences", headers=headers, json={"data": current, "client_updated_at": _ts(-10)}
+        )
+        assert response.status_code == 200
+        saved = response.json()
+        assert saved["data"]["schemaVersion"] == 1
+        assert saved["data"]["scheduleType"] == "5-shift"
+        assert saved["data"]["settings"]["enableTimeOff"] is True
+        assert saved["data"]["_updatedAt"] == saved["client_updated_at"]
+        assert db_client.get("/api/preferences", headers=headers).json() == saved
+        context = db_client.get("/api/read-models/dashboard", headers=headers).json()["work_context"]
+        assert context["schedule_type"] == "5-shift"
+        assert context["team_number"] == 3
+        assert context["feature_flags"]["time_off_enabled"] is True
+
+        legacy = {"scheduleType": "2-shift", "myTeam": 2, "settings": {"enableTimeOff": False}}
+        response = db_client.put("/api/preferences", headers=headers, json={"data": legacy, "client_updated_at": _ts()})
+        assert response.status_code == 200
+        assert response.json()["data"] == legacy
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {"schemaVersion": 2},
+            {"schemaVersion": True},
+            {"schemaVersion": 1, "myTeam": "2"},
+            {"schemaVersion": 1, "scheduleType": "unknown"},
+            {"schemaVersion": 1, "settings": {"enableTimeOff": "false"}},
+            {"schemaVersion": 1, "settings": {"homeCountry": "ZZ"}},
+            {"schemaVersion": 1, "settings": {"theme": "dark"}},
+            {"schemaVersion": 1, "lastUsed": {}},
+        ],
+    )
+    def test_rejects_invalid_versioned_documents(
+        self,
+        db_client: TestClient,
+        auth_headers: Callable[..., dict[str, str]],
+        create_user_factory: Callable[..., int],
+        data: dict[str, object],
+    ) -> None:
+        user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "prefs-invalid")
+        headers = auth_headers(user_id)
+        response = db_client.put("/api/preferences", headers=headers, json={"data": data, "client_updated_at": _ts()})
+        assert response.status_code == 422
+        assert db_client.get("/api/preferences", headers=headers).json() is None
+
+
+def test_legacy_reader_retains_valid_fields_when_other_fields_are_invalid() -> None:
+    prefs = AccountPreferences.from_stored(
+        {
+            "scheduleType": "5-shift",
+            "myTeam": "invalid",
+            "lastUsed": {"activeTab": "schedule"},
+            "settings": {"enableTimeOff": True, "officeCountry": "NL", "homeCountry": "unknown", "theme": "dark"},
+        }
+    )
+    assert prefs.scheduleType == "5-shift"
+    assert prefs.myTeam is None
+    assert prefs.settings.enableTimeOff is True
+    assert prefs.settings.officeCountry == "NL"
+    assert prefs.settings.homeCountry is None

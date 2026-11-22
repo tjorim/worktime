@@ -16,6 +16,7 @@ import {
   USER_STATE_UNCLAIMED_HISTORY_STORAGE_KEY,
   getAccountPreferencesKey,
   USER_STATE_OWNER_STORAGE_KEY,
+  DEVICE_PREFERENCES_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
   USER_STATE_SWITCH_STORAGE_KEY,
   getSyncCursorKey,
@@ -225,8 +226,8 @@ describe("useFirstSyncFlow", () => {
       expect(JSON.stringify(pushes)).not.toContain("2-shift");
       expect(JSON.stringify(pushes)).not.toContain("alice");
       expect(localStorage.getItem(USER_STATE_STORAGE_KEY)).not.toContain("alice");
-      expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toMatchObject({
-        settings: { theme: "dark" },
+      expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
+        theme: "dark",
       });
       expect(localStorage.getItem(getSyncOutboxKey("user-a"))).toBe(pendingA);
       expect(localStorage.getItem(getSyncOutboxKey("user-b"))).toBeNull();

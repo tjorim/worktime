@@ -9,6 +9,8 @@ import {
   defaultSettings,
 } from "@/app/providers/SettingsContext";
 
+import { DEVICE_PREFERENCES_STORAGE_KEY, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
+
 vi.mock("frappe-gantt", () => ({
   default: class MockFrappeGantt {
     refresh() {}
@@ -142,9 +144,15 @@ function renderWithSettings(
   ui: ReactNode,
   userStateOverrides: Parameters<typeof createMockUserState>[0] = {},
 ) {
+  const {
+    lastUsed,
+    settings: { theme, notifications, ...settings },
+    ...account
+  } = createMockUserState(userStateOverrides);
+  window.localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ ...account, settings }));
   window.localStorage.setItem(
-    "worktime_user_state",
-    JSON.stringify(createMockUserState(userStateOverrides)),
+    DEVICE_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({ theme, notifications, lastUsed }),
   );
 
   return render(<SettingsProvider>{ui}</SettingsProvider>);
@@ -274,7 +282,9 @@ describe("GanttView", () => {
 
     expect(screen.getByRole("table", { name: "Gantt tasks" })).toBeInTheDocument();
     await waitFor(() => {
-      const stored = JSON.parse(window.localStorage.getItem("worktime_user_state") ?? "{}") as {
+      const stored = JSON.parse(
+        window.localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}",
+      ) as {
         lastUsed?: { ganttView?: string };
       };
       expect(stored.lastUsed?.ganttView).toBe("table");
@@ -317,7 +327,9 @@ describe("GanttView", () => {
     await user.click(screen.getByTestId("mock-change-view"));
 
     await waitFor(() => {
-      const stored = JSON.parse(window.localStorage.getItem("worktime_user_state") ?? "{}") as {
+      const stored = JSON.parse(
+        window.localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}",
+      ) as {
         lastUsed?: { ganttViewMode?: string };
       };
       expect(stored.lastUsed?.ganttViewMode).toBe("Week");

@@ -29,7 +29,7 @@ vi.mock("@/app/providers/SettingsContext", async (importOriginal) => {
         enableUnifiedCalendar: false,
         homeCountry: null,
         officeCountry: null,
-        notifications: "off",
+        notifications: false,
       },
       lastUsed: {
         activeTab: "calendar",
@@ -368,7 +368,7 @@ describe("CurrentStatus Component", () => {
         enableUnifiedCalendar: false,
         homeCountry: null,
         officeCountry: null,
-        notifications: "off" as const,
+        notifications: false,
       },
       lastUsed: {
         activeTab: "calendar" as const,

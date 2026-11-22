@@ -22,6 +22,8 @@ export type {
   PushSubscriptionRead,
   UserListResponse,
   UserPreferencesWrite,
+  AccountPreferencesInput,
+  AccountSettingsOutput,
   UserUpdate,
   UserPreferencesRead as PreferencesResponse,
   UserRead,

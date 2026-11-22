@@ -42,6 +42,7 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
+from app.schemas.preferences import AccountPreferences
 from app.services.audit.db import AuditActor, write_audit_entry
 from app.services.sse import notify_sync_changed
 
@@ -1054,9 +1055,12 @@ async def upsert_user_preferences(
     candidate_client_updated_at = as_utc(payload.client_updated_at)
     now = datetime.now(UTC)
 
+    data = payload.data
+    if isinstance(data, AccountPreferences):
+        data = data.model_copy(update={"updated_at": candidate_client_updated_at}).model_dump(mode="json")
     statement = pg_insert(UserPreferences).values(
         user_id=user_id,
-        data=payload.data,
+        data=data,
         client_updated_at=candidate_client_updated_at,
         updated_at=now,
     )

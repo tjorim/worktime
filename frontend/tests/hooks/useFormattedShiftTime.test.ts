@@ -14,7 +14,7 @@ const buildSettings = (timeFormat: "12h" | "24h") => ({
   settings: {
     timeFormat,
     theme: "auto" as const,
-    notifications: "off" as const,
+    notifications: false,
     enableTimeOff: false,
     enableTimeTracking: false,
     enableGantt: false,

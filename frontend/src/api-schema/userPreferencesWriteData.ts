@@ -5,5 +5,6 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: snapshot
  */
+import type { AccountPreferencesInput } from './accountPreferencesInput';
 
-export type UserPreferencesWriteData = { [key: string]: unknown };
+export type UserPreferencesWriteData = AccountPreferencesInput | { [key: string]: unknown };

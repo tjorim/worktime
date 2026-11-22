@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, timedelta
 from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from math import floor
-from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.datetime import as_utc
 from app.models import TimeOffEntry
 from app.routers.auth import AuthenticatedPrincipal
+from app.schemas.preferences import AccountPreferences
 from app.schemas.read_models import (
     CurrentStatusReadModel,
     DashboardReadModel,
@@ -163,16 +162,6 @@ _SCHEDULES: dict[ScheduleType, _ScheduleConfig] = {
         },
     ),
 }
-
-
-def _as_mapping(value: Any) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _resolve_schedule_type(raw_value: Any) -> ScheduleType | None:
-    if isinstance(raw_value, str) and raw_value in _SCHEDULES:
-        return cast(ScheduleType, raw_value)
-    return None
 
 
 def _decimal_hour(value: dt_datetime) -> float:
@@ -449,10 +438,9 @@ def _build_time_off_summary(
     )
 
 
-def _build_work_context(preferences_data: Mapping[str, Any]) -> ReadModelWorkContext:
-    schedule_type = _resolve_schedule_type(preferences_data.get("scheduleType"))
-    raw_team_number = preferences_data.get("myTeam")
-    team_number = raw_team_number if isinstance(raw_team_number, int) else None
+def _build_work_context(preferences: AccountPreferences) -> ReadModelWorkContext:
+    schedule_type = preferences.scheduleType
+    team_number = preferences.myTeam
 
     effective_team_number: int | None = None
     state: ReadModelState = "missing_work_context"
@@ -466,14 +454,13 @@ def _build_work_context(preferences_data: Mapping[str, Any]) -> ReadModelWorkCon
             effective_team_number = team_number
             state = "ready"
 
-    settings = _as_mapping(preferences_data.get("settings"))
     return ReadModelWorkContext(
         schedule_type=schedule_type,
         team_number=team_number,
         effective_team_number=effective_team_number,
         state=state,
         feature_flags=ReadModelFeatureFlags(
-            time_off_enabled=bool(settings.get("enableTimeOff")),
+            time_off_enabled=preferences.settings.enableTimeOff,
         ),
     )
 
@@ -488,7 +475,7 @@ async def get_schedule_type_for_user(session: AsyncSession, user_id: int) -> Sch
     """
     preferences = await get_user_preferences(session, user_id)
     preferences_data = preferences.data if preferences is not None else {}
-    return _build_work_context(preferences_data).schedule_type
+    return _build_work_context(AccountPreferences.from_stored(preferences_data)).schedule_type
 
 
 async def get_work_context_for_user(session: AsyncSession, user_id: int) -> ReadModelWorkContext:
@@ -501,7 +488,7 @@ async def get_work_context_for_user(session: AsyncSession, user_id: int) -> Read
     """
     preferences = await get_user_preferences(session, user_id)
     preferences_data = preferences.data if preferences is not None else {}
-    return _build_work_context(preferences_data)
+    return _build_work_context(AccountPreferences.from_stored(preferences_data))
 
 
 def compute_current_shift_day(as_of: dt_datetime, schedule_type: ScheduleType) -> dt_date:
@@ -543,7 +530,7 @@ async def build_dashboard_read_model(
     user = await get_user(session, principal.user_id)
     preferences = await get_user_preferences(session, principal.user_id)
     preferences_data = preferences.data if preferences is not None else {}
-    work_context = _build_work_context(preferences_data)
+    work_context = _build_work_context(AccountPreferences.from_stored(preferences_data))
 
     current_status = CurrentStatusReadModel(
         as_of=resolved_as_of,

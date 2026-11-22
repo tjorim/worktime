@@ -1,8 +1,17 @@
-import { DEVICE_LOCAL_SETTING_KEYS } from "@/config/deviceLocalSettings";
+import { isPreferenceRecord, toAccountPreferences } from "@/lib/storage/accountPreferences";
+import {
+  migrateLegacyDevicePreferences,
+  splitLegacyPreferences,
+  writePreferenceStorage,
+} from "@/lib/storage/devicePreferenceStorage";
 import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preferenceStorage";
 
-import type { PreferencesResponse } from "@/api-types";
+import type {
+  AccountPreferencesInput,
+  PreferencesResponse,
+  UserPreferencesWrite,
+} from "@/api-types";
 import type { FetchFn } from "@/lib/sync/syncRequests";
 
 /**
@@ -28,14 +37,17 @@ export async function fetchPreferences(fetch: FetchFn): Promise<PreferencesRespo
  */
 export async function pushPreferences(
   fetch: FetchFn,
-  data: Record<string, unknown>,
+  data: AccountPreferencesInput,
   clientUpdatedAt: string,
 ): Promise<boolean> {
   try {
     const response = await fetch("/api/preferences", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data, client_updated_at: clientUpdatedAt }),
+      body: JSON.stringify({
+        data,
+        client_updated_at: clientUpdatedAt,
+      } satisfies UserPreferencesWrite),
     });
     return response.ok;
   } catch {
@@ -43,48 +55,10 @@ export async function pushPreferences(
   }
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-/** Remove device-local settings fields (see DEVICE_LOCAL_SETTING_KEYS) before a settings object is pushed. */
-function omitDeviceLocalSettings(settings: unknown): unknown {
-  if (!isRecord(settings)) return settings;
-  const result = { ...settings };
-  for (const key of DEVICE_LOCAL_SETTING_KEYS) {
-    delete result[key];
-  }
-  return result;
-}
-
-/** Overlay this device's own device-local settings values onto pulled settings. */
-function withLocalDeviceSettings(incomingSettings: unknown, localSettings: unknown): unknown {
-  const overlay: Record<string, unknown> = {};
-  if (isRecord(localSettings)) {
-    for (const key of DEVICE_LOCAL_SETTING_KEYS) {
-      if (key in localSettings) overlay[key] = localSettings[key];
-    }
-  }
-  if (isRecord(incomingSettings)) {
-    return { ...incomingSettings, ...overlay };
-  }
-  return Object.keys(overlay).length > 0 ? overlay : incomingSettings;
-}
-
-/**
- * Read the current worktime_user_state from localStorage and return it as a
- * preferences payload suitable for pushPreferences().
- * Returns null if there is no local user state to push.
- *
- * `lastUsed` (active tab, last-viewed sub-view per tab) and the
- * DEVICE_LOCAL_SETTING_KEYS settings fields (theme, notification lead
- * time/quiet hours) are deliberately excluded: they're per-device state, not
- * real cross-device preferences, and SettingsContext already keeps them out
- * of _updatedAt's bumps for the same reason — sending them here would let a
- * device's local-only changes (a tab switch, a theme toggle) poison the
- * account's synced preferences.
- */
+/** Build a versioned account payload from the current owner's local state. */
 export function buildLocalPreferencesPayload(userId?: string): {
-  data: Record<string, unknown>;
+  data: AccountPreferencesInput;
+  hasStoredTimestamp: boolean;
   clientUpdatedAt: string;
 } | null {
   try {
@@ -92,75 +66,45 @@ export function buildLocalPreferencesPayload(userId?: string): {
     const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const stored = parsed as Record<string, unknown>;
-    // Undated state must not become newer on every sync cycle. Existing
-    // server preferences win; an empty server can still receive an initial copy.
-    const storedTimestamp =
-      typeof stored._updatedAt === "string" ? stored._updatedAt : "1970-01-01T00:00:00.000Z";
-    const { lastUsed: _lastUsed, _accountOwner: _owner, settings, ...restTop } = stored;
+    if (!isPreferenceRecord(parsed)) return null;
+    if (parsed.schemaVersion !== undefined && parsed.schemaVersion !== 1) return null;
+    const hasStoredTimestamp =
+      typeof parsed._updatedAt === "string" && Number.isFinite(Date.parse(parsed._updatedAt));
+    const clientUpdatedAt = hasStoredTimestamp
+      ? String(parsed._updatedAt)
+      : "1970-01-01T00:00:00.000Z";
     return {
-      data: { ...restTop, settings: omitDeviceLocalSettings(settings) },
-      clientUpdatedAt: storedTimestamp,
+      data: {
+        ...toAccountPreferences(parsed),
+        ...(hasStoredTimestamp && { _updatedAt: clientUpdatedAt }),
+      },
+      clientUpdatedAt,
+      hasStoredTimestamp,
     };
   } catch {
     return null;
   }
 }
 
-/**
- * Write pulled preferences data to worktime_user_state in localStorage,
- * replacing any existing value except `lastUsed` and the
- * DEVICE_LOCAL_SETTING_KEYS settings fields, which stay local to this device
- * (see buildLocalPreferencesPayload) — a pull must not let the account's
- * synced blob (or values pushed before this device excluded them) overwrite
- * this device's own navigation state or device-local settings.
- */
+/** Replace account preferences while keeping the browser's own device state. */
 export function applyPreferencesPull(data: Record<string, unknown>, owner?: string): boolean {
   try {
+    if (data.schemaVersion !== undefined && data.schemaVersion !== 1) return false;
     const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
-    let localLastUsed: unknown;
-    let localSettings: unknown;
-    let localOwner: unknown;
-    if (raw) {
-      try {
-        const parsedLocal: unknown = JSON.parse(raw);
-        if (isRecord(parsedLocal)) {
-          localLastUsed = parsedLocal.lastUsed;
-          localSettings = parsedLocal.settings;
-          localOwner = parsedLocal._accountOwner;
-        }
-      } catch {
-        // Malformed local state; nothing to preserve.
-      }
+    let localState: unknown;
+    try {
+      localState = raw === null ? null : JSON.parse(raw);
+    } catch {
+      // An unreadable account document contains no device state to migrate.
     }
-    const {
-      lastUsed: _incomingLastUsed,
-      _accountOwner: _incomingOwner,
-      settings: incomingSettings,
-      ...rest
-    } = data;
-    const merged: Record<string, unknown> = {
-      ...rest,
-      settings: withLocalDeviceSettings(incomingSettings, localSettings),
-    };
-    if (localLastUsed !== undefined) {
-      merged.lastUsed = localLastUsed;
-    }
-    const storedOwner = owner ?? localOwner;
-    if (typeof storedOwner === "string") merged._accountOwner = storedOwner;
-    const serialized = JSON.stringify(merged);
-    localStorage.setItem(USER_STATE_STORAGE_KEY, serialized);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: USER_STATE_STORAGE_KEY,
-          newValue: serialized,
-          oldValue: raw,
-          storageArea: localStorage,
-        }),
-      );
-    }
+    if (isPreferenceRecord(localState)) migrateLegacyDevicePreferences(localState);
+    const storedOwner =
+      owner ?? (isPreferenceRecord(localState) ? localState._accountOwner : undefined);
+    const { _accountOwner: _incomingOwner, ...account } = splitLegacyPreferences(data).account;
+    writePreferenceStorage(USER_STATE_STORAGE_KEY, {
+      ...account,
+      ...(typeof storedOwner === "string" && { _accountOwner: storedOwner }),
+    });
     return true;
   } catch {
     // Callers switching accounts must fail closed if the old copy remains.
@@ -178,7 +122,7 @@ function parseTimestampMs(ts: string | null | undefined): number {
  * Reconcile local and server preferences by last-write-wins on the stored
  * `_updatedAt` timestamp, and return the winning timestamp.
  *
- * Preferences are one opaque blob rather than per-field records, so this is a
+ * Preferences are stored as a single document, so this is a
  * whole-document comparison: the newer side replaces the older one outright.
  * Used by both the first-sync flow and every ongoing sync cycle so a device
  * that signs in with newer local settings does not silently lose them to an
@@ -203,12 +147,12 @@ export async function reconcilePreferences(
     if (localPrefs && (!serverPrefs || localMs > serverMs))
       return { push: localPrefs, timestamp: serverTimestamp };
     if (serverPrefs && (!localPrefs || serverMs > localMs)) {
-      applyPreferencesPull(serverPrefs.data, userId);
+      applyPreferencesPull({ ...serverPrefs.data, _updatedAt: serverTimestamp }, userId);
       return { timestamp: serverTimestamp };
     }
     // Undated local state ties with an epoch-dated server copy. Let the server
     // win once and stamp it, so devices converge and later cycles are no-ops.
-    if (serverPrefs && localPrefs && localPrefs.data._updatedAt === undefined) {
+    if (serverPrefs && localPrefs && !localPrefs.hasStoredTimestamp) {
       applyPreferencesPull({ ...serverPrefs.data, _updatedAt: serverTimestamp }, userId);
       return { timestamp: serverTimestamp };
     }

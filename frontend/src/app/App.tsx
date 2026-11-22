@@ -111,7 +111,7 @@ function AppContent() {
   const { tasks } = useTimeTrackingStorage();
 
   usePlannedTaskNotifications({
-    enabled: settings.notifications === "on",
+    enabled: settings.notifications,
     tasks,
     hasActivePushSubscription,
   });
