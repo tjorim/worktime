@@ -3,6 +3,7 @@ import type {
   AccessTokenListResponse,
   UserRead,
   CreatedApiToken,
+  CreatedIntegrationClient,
   UserListResponse,
 } from "@/api-types";
 import { jsonResponse, uncheckedJson } from "@/mocks/response";
@@ -107,19 +108,23 @@ afterEach(() => {
 });
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <SettingsProvider>
-      <EventStoreProvider>
-        <HdayHelperProvider>
-          <ToastProvider>
-            <PwaInstallProvider>
-              <AuthProvider>{ui}</AuthProvider>
-            </PwaInstallProvider>
-          </ToastProvider>
-        </HdayHelperProvider>
-      </EventStoreProvider>
-    </SettingsProvider>,
-  );
+  function Providers({ children }: { children: React.ReactNode }) {
+    return (
+      <SettingsProvider>
+        <EventStoreProvider>
+          <HdayHelperProvider>
+            <ToastProvider>
+              <PwaInstallProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </PwaInstallProvider>
+            </ToastProvider>
+          </HdayHelperProvider>
+        </EventStoreProvider>
+      </SettingsProvider>
+    );
+  }
+
+  return render(ui, { wrapper: Providers });
 }
 
 function mockAuthenticatedUser(displayName = "Alice") {
@@ -391,6 +396,63 @@ describe("SettingsPage Account Section", () => {
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="connections" />);
     expect(await screen.findByText("Could not load your API tokens right now.")).toBeVisible();
     expect(screen.getByRole("heading", { name: m.hday_helper_heading() })).toBeVisible();
+  });
+
+  it("keeps a created API token and an in-flight integration key across Settings sections", async () => {
+    mockAuthenticatedUser("Alice");
+    const clientRequest = vi.fn();
+    let releaseClientResponse!: () => void;
+    const clientResponse = new Promise<void>((resolve) => {
+      releaseClientResponse = resolve;
+    });
+    server.use(
+      http.post("*/api/access-tokens", () =>
+        jsonResponse<CreatedApiToken>(
+          {
+            id: "tok-1",
+            name: "Pebble watch",
+            token: "wtpat_navigation",
+            scopes: ["pebble:read", "pebble:write"],
+            created_at: "2026-07-24T00:00:00Z",
+          },
+          { status: 201 },
+        ),
+      ),
+      http.post("*/api/integration-clients", async () => {
+        clientRequest();
+        await clientResponse;
+        return jsonResponse<CreatedIntegrationClient>(
+          {
+            id: 7,
+            name: "Home hub",
+            key: "wtic_navigation",
+            scopes: ["worktime:mcp"],
+            rate_limit_per_minute: 120,
+            created_at: "2026-07-24T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    const onHide = vi.fn();
+    const connections = <SettingsContent onHide={onHide} activeSection="connections" />;
+    const { rerender } = renderWithProviders(connections);
+
+    await user.type(await screen.findByLabelText("Token name"), "Pebble watch");
+    await user.click(screen.getByRole("button", { name: "Generate token" }));
+    expect(await screen.findByText("wtpat_navigation")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Client name"), "Home hub");
+    await user.click(screen.getByRole("button", { name: "Create client" }));
+    await waitFor(() => expect(clientRequest).toHaveBeenCalledOnce());
+    rerender(<SettingsContent onHide={onHide} activeSection="account" />);
+    expect(screen.queryByText("wtpat_navigation")).not.toBeInTheDocument();
+    releaseClientResponse();
+
+    rerender(connections);
+    expect.soft(screen.queryByText("wtpat_navigation")).toBeVisible();
+    expect(await screen.findByText("wtic_navigation")).toBeVisible();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {

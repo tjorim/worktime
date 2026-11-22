@@ -60,6 +60,8 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
+import { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
+import { useSettingsIntegrationClients } from "@/features/settings/hooks/useSettingsIntegrationClients";
 import { useSettingsAccount } from "@/features/settings/hooks/useSettingsAccount";
 import { useSettingsAdminUsers } from "@/features/settings/hooks/useSettingsAdminUsers";
 import { useSettingsAuditTrail } from "@/features/settings/hooks/useSettingsAuditTrail";
@@ -90,6 +92,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
+  const { isAuthenticated, userId } = useAuth();
   const { showWarning } = useToast();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const requestedSection = search.section ?? "scheduleTeam";
@@ -193,6 +196,7 @@ export function SettingsPage() {
 
           <div className="min-w-0 lg:col-span-8 xl:col-span-9">
             <SettingsContent
+              key={isAuthenticated ? userId : null}
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
@@ -309,6 +313,19 @@ export function SettingsContent({
     onAccountDeleted: logout,
   });
   const isAdmin = accountProfile?.is_admin ?? false;
+  // Keep one-time credentials and in-flight mutations alive across section changes.
+  const loadConnections = activeSection === "connections";
+  const apiTokenSettings = useSettingsApiTokens({
+    isAuthenticated,
+    loadEnabled: loadConnections,
+    fetchFn,
+  });
+  const integrationClients = useSettingsIntegrationClients({
+    isAuthenticated,
+    accountIdentity: userId,
+    loadEnabled: loadConnections,
+    fetchFn,
+  });
   const {
     adminUsers,
     isAdminUsersLoading,
@@ -525,7 +542,12 @@ export function SettingsContent({
     connections: () => (
       <>
         {isAuthenticated ? (
-          <SettingsConnectionsSection isAdmin={isAdmin} userId={userId} fetchFn={fetchFn} />
+          <SettingsConnectionsSection
+            isAdmin={isAdmin}
+            apiTokenSettings={apiTokenSettings}
+            integrationClients={integrationClients}
+            fetchFn={fetchFn}
+          />
         ) : (
           <p className="px-4 py-3 text-muted-foreground">{m.settings_connections_signed_out()}</p>
         )}

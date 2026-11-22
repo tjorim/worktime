@@ -1,16 +1,18 @@
 import { SettingsApiTokensSection } from "@/features/settings/account/SettingsApiTokensSection";
 import { SettingsCalendarFeedSection } from "@/features/settings/account/SettingsCalendarFeedSection";
 import { SettingsIntegrationClientsSection } from "@/features/settings/account/SettingsIntegrationClientsSection";
-import { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
-import { useSettingsIntegrationClients } from "@/features/settings/hooks/useSettingsIntegrationClients";
+import type { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
+import type { useSettingsIntegrationClients } from "@/features/settings/hooks/useSettingsIntegrationClients";
 
 export function SettingsConnectionsSection({
   isAdmin,
-  userId,
+  apiTokenSettings,
+  integrationClients,
   fetchFn,
 }: {
   isAdmin: boolean;
-  userId: string | null;
+  apiTokenSettings: ReturnType<typeof useSettingsApiTokens>;
+  integrationClients: ReturnType<typeof useSettingsIntegrationClients>;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }) {
   const {
@@ -26,15 +28,7 @@ export function SettingsConnectionsSection({
     revokingApiTokenId,
     revokeApiTokenError,
     handleRevokeApiToken,
-  } = useSettingsApiTokens({
-    isAuthenticated: true,
-    fetchFn,
-  });
-  const integrationClients = useSettingsIntegrationClients({
-    isAuthenticated: true,
-    accountIdentity: userId,
-    fetchFn,
-  });
+  } = apiTokenSettings;
   return (
     <>
       <SettingsApiTokensSection

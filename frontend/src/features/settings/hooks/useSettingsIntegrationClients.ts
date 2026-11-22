@@ -14,6 +14,7 @@ export type IntegrationClientScope = IntegrationClient["scopes"][number];
 
 interface Params {
   isAuthenticated: boolean;
+  loadEnabled?: boolean;
   accountIdentity: string | null;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
@@ -21,6 +22,7 @@ interface Params {
 export function useSettingsIntegrationClients({
   isAuthenticated,
   accountIdentity,
+  loadEnabled = true,
   fetchFn,
 }: Params) {
   const [clients, setClients] = useState<IntegrationClient[] | null>(null);
@@ -81,7 +83,7 @@ export function useSettingsIntegrationClients({
   );
 
   useEffect(() => {
-    const generation = ++sessionGeneration.current;
+    sessionGeneration.current += 1;
     loadGeneration.current += 1;
     mutationInFlight.current = false;
     setClients(null);
@@ -90,8 +92,11 @@ export function useSettingsIntegrationClients({
     setIsCreating(false);
     setBusyClientId(null);
     setIsLoading(false);
-    if (isAuthenticated && accountIdentity !== null) void loadClients(generation);
-  }, [isAuthenticated, accountIdentity, loadClients]);
+  }, [isAuthenticated, accountIdentity]);
+
+  useEffect(() => {
+    if (isAuthenticated && accountIdentity !== null && loadEnabled) void loadClients();
+  }, [isAuthenticated, accountIdentity, loadClients, loadEnabled]);
 
   const createClient = async (name: string, scopes: IntegrationClientScope[]) => {
     if (mutationInFlight.current || createdClient) return;
