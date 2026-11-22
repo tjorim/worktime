@@ -47,14 +47,12 @@ for (const context of accessibilityContexts) {
             .getByRole("dialog")
             .getByRole("button", { name: "Add Task", exact: true })
             .click();
-          await page.locator(".viewmode-select").waitFor();
+          const zoom = page.getByRole("combobox", { name: "Timeline zoom" });
+          await zoom.selectOption("Week");
+          await expect(zoom).toHaveValue("Week");
         } else {
           await page.getByRole("button", { name: "Daily Log", exact: true }).click();
           await page.getByTestId("now-line").waitFor();
-        }
-        if (tab === "Gantt") {
-          await page.getByRole("combobox", { name: "Gantt view" }).selectOption("Week");
-          await expect(page.getByRole("combobox", { name: "Gantt view" })).toHaveValue("Week");
         }
         if (tab === "Time Tracking") {
           await page.getByRole("button", { name: "Daily Log", exact: true }).hover();

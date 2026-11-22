@@ -66,6 +66,10 @@ export const exclusions = {
   "app/providers/useSyncSignal.ts": {
     Bearer: "HTTP authorization scheme",
   },
+  "types/gantt.ts": {
+    "Quarter Day": "Frappe Gantt zoom identifier stored in preferences",
+    "Half Day": "Frappe Gantt zoom identifier stored in preferences",
+  },
   "features/gantt/GanttTaskModal.tsx": {
     "gap-1": "CSS class fragment",
   },

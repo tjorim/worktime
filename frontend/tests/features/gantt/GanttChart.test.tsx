@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GanttChart } from "@/features/gantt/GanttChart";
@@ -14,6 +14,8 @@ class MockFrappeGantt {
 
   options: {
     view_mode: "Day" | "Week" | "Month" | "Year";
+    scroll_to?: string;
+    on_view_change?: (mode: { name: "Day" | "Week" | "Month" | "Year" }) => void;
     view_mode_select: boolean;
     today_button: boolean;
     holidays: Record<string, string | string[]>;
@@ -130,11 +132,53 @@ describe("GanttChart", () => {
       expect(mockInstances).toHaveLength(1);
     });
 
+    expect(screen.getByText("Weekend")).toBeVisible();
+    expect(screen.getByText("Public Holiday")).toBeVisible();
+    expect(screen.getByText("Time Off")).toBeVisible();
+
     expect(mockInstances[0]!.options.holidays).toEqual({
-      "var(--wt-theme-secondary)": "weekend",
+      "url(#diagonalHatch)": "weekend",
       "var(--wt-theme-warning-bg)": ["2026-01-01"],
       "var(--wt-gantt-time-off-bg)": ["2026-03-03"],
     });
+  });
+
+  it("opens before the earliest unfinished bar and follows saved zoom changes", async () => {
+    const tasks = [
+      { id: "later", name: "Later", start: "2026-11-16", end: "2026-12-04", progress: 0 },
+      { id: "done", name: "Done", start: "2026-10-01", end: "2026-10-12", progress: 100 },
+      { id: "active", name: "Active", start: "2026-11-02", end: "2026-11-13", progress: 60 },
+    ];
+    const props = {
+      tasks,
+      onTaskClick: vi.fn(),
+      onDateChange: vi.fn(),
+      onProgressChange: vi.fn(),
+      onViewModeChange: vi.fn(),
+    };
+    const { rerender } = render(<GanttChart {...props} viewMode="Week" />);
+    await waitFor(() => expect(mockInstances).toHaveLength(1));
+    const [chart] = mockInstances;
+    expect(chart!.options).toMatchObject({ view_mode: "Week", scroll_to: "2026-11-01" });
+
+    chart!.options.on_view_change?.({ name: "Week" });
+    expect(props.onViewModeChange).not.toHaveBeenCalled();
+    act(() => chart!.options.on_view_change?.({ name: "Month" }));
+    expect(props.onViewModeChange).toHaveBeenCalledWith("Month");
+    rerender(<GanttChart {...props} viewMode="Month" />);
+    expect(chart!.change_view_mode).not.toHaveBeenCalled();
+    rerender(<GanttChart {...props} viewMode="Year" />);
+    expect(chart!.change_view_mode).toHaveBeenCalledWith("Year");
+
+    const renamed = tasks.map((task) =>
+      task.id === "active" ? { ...task, name: "Design & delivery" } : task,
+    );
+    rerender(<GanttChart {...props} tasks={renamed} viewMode="Year" />);
+    expect(chart!.refresh).toHaveBeenCalledWith([
+      tasks[0],
+      tasks[1],
+      expect.objectContaining({ id: "active", name: "Design &amp; delivery" }),
+    ]);
   });
 
   it("ignores malformed task payloads from frappe callbacks", async () => {
@@ -147,7 +191,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -179,7 +223,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -215,7 +259,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}
@@ -246,7 +290,7 @@ describe("GanttChart", () => {
             notes: "Some notes",
           },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -294,7 +338,7 @@ describe("GanttChart", () => {
             progress: 50,
           },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         loggedMinutesByTaskId={new Map([["task-1", 90]])}
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
@@ -332,7 +376,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "My Task", start: "2026-03-01", end: "2026-03-05", progress: 50 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -369,7 +413,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "My Task", start: "2026-03-01", end: "2026-03-02", progress: 50 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -406,7 +450,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-2", name: "No Notes", start: "2026-03-01", end: "2026-03-03", progress: 0 },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -443,7 +487,7 @@ describe("GanttChart", () => {
             notes: '<script>alert("xss")</script>',
           },
         ]}
-        initialViewMode="Day"
+        viewMode="Day"
         onTaskClick={vi.fn()}
         onDateChange={vi.fn()}
         onProgressChange={vi.fn()}
@@ -484,7 +528,7 @@ describe("GanttChart", () => {
         tasks={[
           { id: "task-1", name: "Task", start: "2026-03-01", end: "2026-03-03", progress: 0 },
         ]}
-        initialViewMode="Week"
+        viewMode="Week"
         onTaskClick={onTaskClick}
         onDateChange={onDateChange}
         onProgressChange={onProgressChange}

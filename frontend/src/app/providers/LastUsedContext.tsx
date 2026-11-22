@@ -1,7 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type {
   GanttViewKey,
-  GanttViewMode,
   LastUsed,
   ScheduleViewKey,
   TabKey,
@@ -9,6 +8,7 @@ import type {
   TimeTrackingViewKey,
 } from "@/app/providers/SettingsContext";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
+import type { GanttViewMode } from "@/types/gantt";
 
 export interface LastUsedContextType {
   lastUsed: LastUsed;

@@ -29,4 +29,12 @@
   [data-slot="gantt-scroll"] .gantt-container {
     overflow-y: hidden;
   }
+  [data-slot="gantt-weekend-swatch"] {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 2px,
+      var(--wt-theme-muted-foreground) 2px 3px,
+      transparent 3px 4px
+    );
+  }
 }

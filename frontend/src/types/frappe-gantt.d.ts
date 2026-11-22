@@ -26,10 +26,11 @@ declare module "frappe-gantt" {
   }
 
   export interface GanttOptions {
-    view_mode?: "Day" | "Week" | "Month" | "Year";
+    view_mode?: import("@/types/gantt").GanttViewMode;
+    scroll_to?: string;
     view_mode_select?: boolean;
     today_button?: boolean;
-    ignore?: string | string[];
+    ignore?: string | string[] | ((date: Date) => boolean);
     holidays?: Record<string, string | string[]>;
     language?: string;
     popup?: (ctx: GanttPopupContext) => void;
@@ -37,13 +38,13 @@ declare module "frappe-gantt" {
     on_click?: (task: GanttTaskLike) => void;
     on_date_change?: (task: GanttTaskLike, start: Date, end: Date) => void;
     on_progress_change?: (task: GanttTaskLike, progress: number) => void;
-    on_view_change?: (mode: GanttViewModeName) => void;
+    on_view_change?: (mode: GanttViewMode) => void;
   }
 
   export type GanttViewModeName = NonNullable<GanttOptions["view_mode"]>;
 
   export interface GanttViewMode {
-    name: string;
+    name: GanttViewModeName;
     step?: string;
     padding?: string;
     lower_text?: string;
@@ -54,6 +55,7 @@ declare module "frappe-gantt" {
   }
 
   export class Gantt {
+    readonly options: GanttOptions;
     constructor(wrapper: string | Element, tasks: GanttTaskLike[], options?: GanttOptions);
     refresh(tasks: GanttTaskLike[]): void;
     update_task(id: string, details: Partial<GanttTaskLike>): void;

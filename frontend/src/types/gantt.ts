@@ -1,5 +1,16 @@
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 
+export const GANTT_VIEW_MODES = [
+  "Hour",
+  "Quarter Day",
+  "Half Day",
+  "Day",
+  "Week",
+  "Month",
+  "Year",
+] as const;
+export type GanttViewMode = (typeof GANTT_VIEW_MODES)[number];
+
 const GANTT_DATE_FORMAT = "YYYY-MM-DD";
 
 // Keep this helper to make the validation intent explicit and avoid duplicating strict parse args.
