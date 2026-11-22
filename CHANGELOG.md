@@ -30,6 +30,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Validate versioned account preferences and store theme, notification settings and navigation state on the device. Existing browser settings migrate when the app opens.
+
 - Use one request-timing middleware for both timing headers and metrics, align MCP, router and calendar module names, and split sync code into smaller modules. Keep parsed .hday events at the file and helper boundaries.
 - Remove unused web translations and vacation allowance references, and check message usage in CI.
 - Index the current documentation, archive finished migrations and old plans, and save browser review screenshots to ignored test output (#1993).

@@ -448,7 +448,7 @@ export function SettingsContent({
 
   const handleNotificationsChange = async (enabled: boolean) => {
     if (!enabled) {
-      updateNotifications("off");
+      updateNotifications(false);
       void unsubscribeFromPush();
       return;
     }
@@ -466,7 +466,7 @@ export function SettingsContent({
       toast?.showWarning(m.notifications_permission_denied());
       return;
     }
-    updateNotifications("on");
+    updateNotifications(true);
     // Best-effort: push works when the app is closed, but the foreground
     // reminder (already enabled above) covers the open-tab case regardless
     // of whether this succeeds (unsupported browser, push not configured
@@ -617,7 +617,7 @@ export function SettingsContent({
         highContrast={appearance.highContrast}
         onHighContrastChange={updateHighContrast}
         locale={getLocale() === "nl" ? "nl" : "en"}
-        notificationsEnabled={settings.notifications === "on"}
+        notificationsEnabled={settings.notifications}
         onTimeFormatChange={updateTimeFormat}
         onThemeChange={updateTheme}
         onLocaleChange={setLocale}

@@ -9,7 +9,11 @@ import {
   restoreAppBackup,
   validateAppBackupPayload,
 } from "@/features/settings/appBackup";
-import { getSyncOutboxKey, USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
+import {
+  DEVICE_PREFERENCES_STORAGE_KEY,
+  getSyncOutboxKey,
+  USER_STATE_STORAGE_KEY,
+} from "@/config/storageKeys";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { IsoAlpha2 } from "@/types/countries";
 import {
@@ -415,6 +419,40 @@ describe("appBackup", () => {
     beforeEach(() => {
       vi.spyOn(window.location, "reload").mockImplementation(() => {});
       labelsCollection.insert({ id: "l1", name: "Work", color: "#198754" });
+    });
+
+    it("round-trips device choices in a backup compatible with older clients", async () => {
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({
+          theme: "dark",
+          notifications: true,
+          lastUsed: { activeTab: "schedule" },
+        }),
+      );
+      expect(checkBackupDataPresence().hasUserState).toBe(true);
+      const payload = buildBackupPayload();
+      expect(payload.userState).toEqual({
+        settings: { theme: "dark", notifications: "on" },
+        lastUsed: { activeTab: "schedule" },
+      });
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({
+          theme: "light",
+          appearance: { highContrast: true },
+        }),
+      );
+      await restoreAppBackup(payload);
+      expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY)!)).toEqual({
+        theme: "dark",
+        notifications: true,
+        lastUsed: { activeTab: "schedule" },
+        appearance: { highContrast: true },
+      });
+      const restored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
+      expect(restored).not.toHaveProperty("lastUsed");
+      expect(restored.settings).toEqual({});
     });
 
     it("writes userState to localStorage and reloads", async () => {

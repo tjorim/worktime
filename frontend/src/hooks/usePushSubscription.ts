@@ -155,7 +155,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
   // current account. Never create a subscription implicitly.
   useEffect(() => {
     if (isValidating) return;
-    if (!isAuthenticated || notifications !== "on") invalidatePushRegistration();
+    if (!isAuthenticated || !notifications) invalidatePushRegistration();
     let cancelled = false;
     void getActiveSubscription().then(async (subscription) => {
       if (cancelled) return;
@@ -163,7 +163,7 @@ export function usePushSubscription(): UsePushSubscriptionReturn {
         setHasActiveSubscription(false);
         return;
       }
-      if (!isAuthenticated || notifications !== "on") {
+      if (!isAuthenticated || !notifications) {
         setHasActiveSubscription(false);
         if (isAuthenticated) {
           await unsubscribeFromPush();

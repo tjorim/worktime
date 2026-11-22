@@ -1326,8 +1326,8 @@ describe("SettingsPage General Section", () => {
     expect(requestPermission).toHaveBeenCalled();
     await waitFor(() => expect(toggle).toBeChecked());
 
-    const stored = localStorage.getItem(USER_STATE_STORAGE_KEY);
-    expect(JSON.parse(stored ?? "{}").settings.notifications).toBe("on");
+    const stored = localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY);
+    expect(JSON.parse(stored ?? "{}").notifications).toBe(true);
   });
 
   it("shows a warning and stays off when notification permission is denied", async () => {

@@ -86,7 +86,7 @@ describe("usePushSubscription", () => {
     mockAuth("user-1");
     // Auth remains resolving for imperative-operation tests, so reconciliation
     // does not interfere. Reconciliation tests settle auth explicitly.
-    mockSettings({ notifications: "off" });
+    mockSettings({ notifications: false });
 
     vi.stubGlobal("navigator", {
       ...navigator,
@@ -310,7 +310,7 @@ describe("usePushSubscription", () => {
     // inactive) rather than silently treated as belonging to whoever's signed in now.
     it("re-registers an existing subscription for the signed-in account on mount", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi
         .fn()
         .mockResolvedValueOnce(
@@ -345,7 +345,7 @@ describe("usePushSubscription", () => {
 
     it("revokes an existing subscription when notifications are off", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "off" });
+      mockSettings({ notifications: false });
       const apiFetch = vi.fn();
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
@@ -361,7 +361,7 @@ describe("usePushSubscription", () => {
 
     it("does not create a subscription when none exists, even with notifications on", async () => {
       getSubscription.mockResolvedValue(null);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi.fn();
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
 
@@ -379,7 +379,7 @@ describe("usePushSubscription", () => {
       // which previously tripped the API client's session-expired/login-redirect flow
       // for a user who isn't even signed in.
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       mockAuth(null);
       vi.mocked(useAuth).mockReturnValue({ ...useAuth(), isValidating: false });
       const apiFetch = vi.fn();
@@ -395,7 +395,7 @@ describe("usePushSubscription", () => {
 
     it("revokes locally when an active session ends remotely or expires", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi
         .fn()
         .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
@@ -424,7 +424,7 @@ describe("usePushSubscription", () => {
 
     it("revokes A's subscription when B signs in with notifications off", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi
         .fn()
         .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));
@@ -433,7 +433,7 @@ describe("usePushSubscription", () => {
       await waitFor(() => expect(result.current.hasActiveSubscription).toBe(true));
       mockAuth("user-2");
       vi.mocked(useAuth).mockReturnValue({ ...useAuth(), isValidating: false });
-      mockSettings({ notifications: "off" });
+      mockSettings({ notifications: false });
       apiFetch.mockRejectedValue(new Error("offline"));
       rerender();
       await waitFor(() => expect(mockSubscription.unsubscribe).toHaveBeenCalled());
@@ -443,7 +443,7 @@ describe("usePushSubscription", () => {
 
     it("revokes a previous owner's subscription if re-registration fails", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
       vi.mocked(useApiClient).mockReturnValue(apiFetch);
       const { result } = renderHook(() => usePushSubscription());
@@ -453,7 +453,7 @@ describe("usePushSubscription", () => {
 
     it("re-reconciles when the signed-in account changes", async () => {
       getSubscription.mockResolvedValue(mockSubscription);
-      mockSettings({ notifications: "on" });
+      mockSettings({ notifications: true });
       const apiFetch = vi
         .fn()
         .mockResolvedValue(jsonResponse<VapidPublicKeyResponse>({ publicKey: "test-vapid-key" }));

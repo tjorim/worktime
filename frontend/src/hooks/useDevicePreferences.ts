@@ -1,10 +1,14 @@
 import { useCallback } from "react";
 import { DEVICE_PREFERENCES_STORAGE_KEY } from "@/config/storageKeys";
+import type { LastUsed, Theme } from "@/types/deviceSettings";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export type DismissibleHint = "unifiedCalendar";
 
 export interface DevicePreferences {
+  theme?: Theme;
+  notifications?: boolean;
+  lastUsed?: Partial<LastUsed>;
   appearance?: { highContrast?: boolean };
   dismissedHints?: Partial<Record<DismissibleHint, boolean>>;
   flexStartOverride?: { date: string; time: string } | null;

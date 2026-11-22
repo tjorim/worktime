@@ -4564,6 +4564,210 @@
         "title": "AccountCapabilities",
         "description": "Capability flags relevant for frontend feature enablement."
       },
+      "AccountPreferences-Input": {
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schemaversion"
+          },
+          "scheduleType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "9-5",
+                  "2-shift",
+                  "weekend-shift",
+                  "5-shift"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduletype"
+          },
+          "myTeam": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Myteam"
+          },
+          "hasCompletedOnboarding": {
+            "type": "boolean",
+            "title": "Hascompletedonboarding",
+            "default": false
+          },
+          "accountSyncAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accountsyncannouncementseen"
+          },
+          "ganttAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ganttannouncementseen"
+          },
+          "crossBorderAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crossborderannouncementseen"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/AccountSettings-Input"
+          },
+          "_updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion"
+        ],
+        "title": "AccountPreferences"
+      },
+      "AccountPreferences-Output": {
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schemaversion"
+          },
+          "scheduleType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "9-5",
+                  "2-shift",
+                  "weekend-shift",
+                  "5-shift"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduletype"
+          },
+          "myTeam": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Myteam"
+          },
+          "hasCompletedOnboarding": {
+            "type": "boolean",
+            "title": "Hascompletedonboarding",
+            "default": false
+          },
+          "accountSyncAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accountsyncannouncementseen"
+          },
+          "ganttAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ganttannouncementseen"
+          },
+          "crossBorderAnnouncementSeen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crossborderannouncementseen"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/AccountSettings-Output"
+          },
+          "_updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "scheduleType",
+          "myTeam",
+          "hasCompletedOnboarding",
+          "accountSyncAnnouncementSeen",
+          "ganttAnnouncementSeen",
+          "crossBorderAnnouncementSeen",
+          "settings",
+          "_updatedAt"
+        ],
+        "title": "AccountPreferences"
+      },
       "AccountProfile": {
         "properties": {
           "id": {
@@ -4596,6 +4800,165 @@
         ],
         "title": "AccountProfile",
         "description": "Response schema for the authenticated account profile endpoint."
+      },
+      "AccountSettings-Input": {
+        "properties": {
+          "timeFormat": {
+            "type": "string",
+            "enum": [
+              "12h",
+              "24h"
+            ],
+            "title": "Timeformat",
+            "default": "24h"
+          },
+          "enableTimeOff": {
+            "type": "boolean",
+            "title": "Enabletimeoff",
+            "default": false
+          },
+          "enableTimeTracking": {
+            "type": "boolean",
+            "title": "Enabletimetracking",
+            "default": false
+          },
+          "enableGantt": {
+            "type": "boolean",
+            "title": "Enablegantt",
+            "default": false
+          },
+          "enableCrossBorderTracking": {
+            "type": "boolean",
+            "title": "Enablecrossbordertracking",
+            "default": false
+          },
+          "enableUnifiedCalendar": {
+            "type": "boolean",
+            "title": "Enableunifiedcalendar",
+            "default": false
+          },
+          "homeCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homecountry"
+          },
+          "officeCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officecountry"
+          },
+          "hdayUsername": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hdayusername"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AccountSettings"
+      },
+      "AccountSettings-Output": {
+        "properties": {
+          "timeFormat": {
+            "type": "string",
+            "enum": [
+              "12h",
+              "24h"
+            ],
+            "title": "Timeformat",
+            "default": "24h"
+          },
+          "enableTimeOff": {
+            "type": "boolean",
+            "title": "Enabletimeoff",
+            "default": false
+          },
+          "enableTimeTracking": {
+            "type": "boolean",
+            "title": "Enabletimetracking",
+            "default": false
+          },
+          "enableGantt": {
+            "type": "boolean",
+            "title": "Enablegantt",
+            "default": false
+          },
+          "enableCrossBorderTracking": {
+            "type": "boolean",
+            "title": "Enablecrossbordertracking",
+            "default": false
+          },
+          "enableUnifiedCalendar": {
+            "type": "boolean",
+            "title": "Enableunifiedcalendar",
+            "default": false
+          },
+          "homeCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homecountry"
+          },
+          "officeCountry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officecountry"
+          },
+          "hdayUsername": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hdayusername"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "timeFormat",
+          "enableTimeOff",
+          "enableTimeTracking",
+          "enableGantt",
+          "enableCrossBorderTracking",
+          "enableUnifiedCalendar",
+          "homeCountry",
+          "officeCountry",
+          "hdayUsername"
+        ],
+        "title": "AccountSettings"
       },
       "AuditEntryListResponse": {
         "properties": {
@@ -9096,8 +9459,15 @@
             "title": "User Id"
           },
           "data": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccountPreferences-Output"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ],
             "title": "Data"
           },
           "client_updated_at": {
@@ -9125,13 +9495,26 @@
           "updated_at"
         ],
         "title": "UserPreferencesRead",
-        "description": "Response schema for the authenticated user's preferences blob."
+        "description": "The authenticated user's preferences, including legacy documents."
       },
       "UserPreferencesWrite": {
         "properties": {
           "data": {
-            "additionalProperties": true,
-            "type": "object",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccountPreferences-Input"
+              },
+              {
+                "not": {
+                  "required": [
+                    "schemaVersion"
+                  ]
+                },
+                "additionalProperties": true,
+                "type": "object",
+                "description": "Unversioned preferences accepted for compatibility with older clients."
+              }
+            ],
             "title": "Data"
           },
           "client_updated_at": {
@@ -9147,7 +9530,7 @@
           "client_updated_at"
         ],
         "title": "UserPreferencesWrite",
-        "description": "Request schema for writing the authenticated user's preferences blob.\n\n``client_updated_at`` is the client-side timestamp of the local state being\npushed, used for last-write-wins conflict detection.\n``data`` is the full preferences JSON object (opaque to the server)."
+        "description": "Replace the document if the client timestamp is newer."
       },
       "UserRead": {
         "properties": {

@@ -7,6 +7,7 @@ import { useLastUsed } from "@/app/providers/LastUsedContext";
 import { SettingsProvider, useSettings } from "@/app/providers/SettingsContext";
 import {
   ANONYMOUS_USER_STATE_OWNER,
+  DEVICE_PREFERENCES_STORAGE_KEY,
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
 } from "@/config/storageKeys";
@@ -25,14 +26,23 @@ describe("SettingsContext unified user state", () => {
     vi.restoreAllMocks();
   });
 
-  it.each(["account", "device"])("marks new %s settings as anonymous", async (kind) => {
-    const { result } = renderHook(() => useSettings(), { wrapper });
-    await act(async () => {
-      if (kind === "account") result.current.setMyTeam(3);
-      else result.current.updateTheme("dark");
-    });
-    expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe(ANONYMOUS_USER_STATE_OWNER);
-  });
+  function readDeviceState() {
+    return JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY) ?? "{}");
+  }
+
+  it.each(["account", "device"])(
+    "only new account settings create anonymous ownership (%s edit)",
+    async (kind) => {
+      const { result } = renderHook(() => useSettings(), { wrapper });
+      await act(async () => {
+        if (kind === "account") result.current.setMyTeam(3);
+        else result.current.updateTheme("dark");
+      });
+      expect(localStorage.getItem(USER_STATE_OWNER_STORAGE_KEY)).toBe(
+        kind === "account" ? ANONYMOUS_USER_STATE_OWNER : null,
+      );
+    },
+  );
 
   it("does not claim legacy preferences as anonymous when editing them", async () => {
     localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ myTeam: 2 }));
@@ -102,7 +112,7 @@ describe("SettingsContext unified user state", () => {
       expect(saved.settings.timeFormat).toBe("12h");
       expect(saved.myTeam).toBe(kind === "account" ? 4 : 2);
       if (kind === "device") {
-        expect(saved.settings.theme).toBe("dark");
+        expect(readDeviceState().theme).toBe("dark");
         expect(saved._updatedAt).toBe("2026-01-01T00:00:00Z");
       }
     },
@@ -148,8 +158,8 @@ describe("SettingsContext unified user state", () => {
       const saved = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
       expect(saved.myTeam).toBe(3);
       expect(saved._accountOwner).toBe("user-a");
-      expect(saved.lastUsed.activeTab).toBe("schedule");
-      expect(saved.settings.theme).toBe("dark");
+      expect(readDeviceState().lastUsed.activeTab).toBe("schedule");
+      expect(readDeviceState().theme).toBe("dark");
       if (externalEdit) expect(saved.settings.timeFormat).toBe("12h");
     },
   );
@@ -239,7 +249,7 @@ describe("SettingsContext unified user state", () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     expect(result.current.settings.timeFormat).toBe("24h");
     expect(result.current.settings.theme).toBe("auto");
-    expect(result.current.settings.notifications).toBe("off");
+    expect(result.current.settings.notifications).toBe(false);
     expect(result.current.settings.homeCountry).toBe(null);
     expect(result.current.settings.officeCountry).toBe(null);
     expect(result.current.settings.enableCrossBorderTracking).toBe(false);
@@ -260,9 +270,9 @@ describe("SettingsContext unified user state", () => {
     });
     expect(result.current.settings.theme).toBe("dark");
     await act(async () => {
-      result.current.updateNotifications("on");
+      result.current.updateNotifications(true);
     });
-    expect(result.current.settings.notifications).toBe("on");
+    expect(result.current.settings.notifications).toBe(true);
     await act(async () => {
       result.current.setMyTeam(3);
     });
@@ -328,7 +338,7 @@ describe("SettingsContext unified user state", () => {
     expect(result.current.scheduleType).toBe(null);
   });
 
-  it("resetSettings writes the default unified user state", async () => {
+  it("resetSettings restores account and device defaults", async () => {
     const { result } = renderHook(() => useSettings(), { wrapper });
     await act(async () => {
       result.current.setMyTeam(1);
@@ -350,8 +360,6 @@ describe("SettingsContext unified user state", () => {
       scheduleType: null,
       settings: {
         timeFormat: "24h",
-        theme: "auto",
-        notifications: "off",
         enableTimeOff: false,
         enableTimeTracking: false,
         enableGantt: false,
@@ -361,6 +369,10 @@ describe("SettingsContext unified user state", () => {
         officeCountry: null,
         hdayUsername: null,
       },
+    });
+    expect(readDeviceState()).toMatchObject({
+      theme: "auto",
+      notifications: false,
       lastUsed: {
         activeTab: "calendar",
         scheduleView: "schedule",
@@ -397,12 +409,43 @@ describe("SettingsContext unified user state", () => {
   });
 
   describe("Device-local settings (not synced across devices)", () => {
-    // theme and notifications (which drives a per-device push subscription) are
-    // per-device state, not real cross-device preferences (see
-    // config/deviceLocalSettings.ts) — updating them must not bump
-    // _updatedAt, the timestamp sync's last-write-wins reconciliation compares,
-    // or a device-local change could make this device's stale settings look
-    // "newer" than a real change synced from another device.
+    it("migrates existing device preferences without changing the account timestamp or owner", async () => {
+      const account = {
+        _accountOwner: "user-a",
+        _updatedAt: "2026-01-01T00:00:00.000Z",
+        settings: { enableTimeOff: true },
+      };
+      localStorage.setItem(
+        USER_STATE_STORAGE_KEY,
+        JSON.stringify({
+          ...account,
+          settings: { ...account.settings, theme: "dark", notifications: "on" },
+          lastUsed: { activeTab: "timeoff", timeOffView: "team" },
+        }),
+      );
+      localStorage.setItem(
+        DEVICE_PREFERENCES_STORAGE_KEY,
+        JSON.stringify({
+          appearance: { highContrast: true },
+          theme: "light",
+        }),
+      );
+      const { result } = renderHook(() => ({ settings: useSettings(), last: useLastUsed() }), {
+        wrapper,
+      });
+      await act(async () => withPreferenceLock(() => {}));
+      expect(result.current.settings.settings.theme).toBe("light");
+      expect(result.current.settings.settings.notifications).toBe(true);
+      expect(result.current.last.lastUsed.activeTab).toBe("timeoff");
+      expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toEqual(account);
+      expect(readDeviceState()).toEqual({
+        appearance: { highContrast: true },
+        theme: "light",
+        notifications: true,
+        lastUsed: { activeTab: "timeoff", timeOffView: "team" },
+      });
+    });
+
     it("does not stamp _updatedAt when updateTheme changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
@@ -410,17 +453,17 @@ describe("SettingsContext unified user state", () => {
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
       expect(stored._updatedAt).toBeUndefined();
-      expect(stored.settings.theme).toBe("dark");
+      expect(readDeviceState().theme).toBe("dark");
     });
 
     it("does not stamp _updatedAt when updateNotifications changes", async () => {
       const { result } = renderHook(() => useSettings(), { wrapper });
       await act(async () => {
-        result.current.updateNotifications("on");
+        result.current.updateNotifications(true);
       });
       const stored = JSON.parse(window.localStorage.getItem(USER_STATE_STORAGE_KEY) || "{}");
       expect(stored._updatedAt).toBeUndefined();
-      expect(stored.settings.notifications).toBe("on");
+      expect(readDeviceState().notifications).toBe(true);
     });
 
     it("still stamps _updatedAt for a real synced setting like updateTimeOffEnabled", async () => {
@@ -559,7 +602,7 @@ describe("SettingsContext unified user state", () => {
       // device's stale settings look "newer" than a real change synced from
       // another device and win last-write-wins reconciliation.
       expect(stored._updatedAt).toBeUndefined();
-      expect(stored.lastUsed.activeTab).toBe("schedule");
+      expect(readDeviceState().lastUsed.activeTab).toBe("schedule");
     });
 
     it("updates lastUsed.otherSchedule via updateLastOtherSchedule", async () => {

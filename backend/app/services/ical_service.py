@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import calendar
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import TimeOffEntry, TimeTrackingTask
 from app.routers.holidays import HOLIDAY_COUNTRY_CODE, NAGER_BASE_URL, _build_holiday_date_set, _get_or_fetch_holidays
+from app.schemas.preferences import AccountPreferences, AccountSettings
 from app.services.db_service import (
     get_user_preferences,
     list_labels_for_user,
@@ -119,10 +120,10 @@ def _time_off_dates(entry: TimeOffEntry, start: date, end: date) -> Iterable[dat
             day += timedelta(days=7)
 
 
-def _classify_work_location(country_code: str, settings: Mapping[str, object]) -> str:
-    if country_code == settings.get("homeCountry"):
+def _classify_work_location(country_code: str, settings: AccountSettings) -> str:
+    if country_code == settings.homeCountry:
         return "home"
-    if country_code == settings.get("officeCountry"):
+    if country_code == settings.officeCountry:
         return "office"
     return "other"
 
@@ -186,8 +187,7 @@ async def build_ical_feed(session: AsyncSession, user_id: int, *, today: date | 
     start, end = _add_months(today, -3), _add_months(today, 12)
     context = await get_work_context_for_user(session, user_id)
     preferences = await get_user_preferences(session, user_id)
-    raw_settings = preferences.data.get("settings") if preferences is not None else None
-    settings: Mapping[str, object] = raw_settings if isinstance(raw_settings, Mapping) else {}
+    settings = AccountPreferences.from_stored(preferences.data if preferences is not None else {}).settings
     entries = [entry for entry in await list_time_off_entries(session, user_id=user_id) if entry.deleted_at is None]
 
     # A full-day time-off entry replaces the shift event that day rather than

@@ -1,6 +1,14 @@
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { LastUsedProvider, type LastUsedContextType } from "@/app/providers/LastUsedContext";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -12,55 +20,51 @@ import {
   USER_STATE_OWNER_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
 } from "@/config/storageKeys";
-import { DEVICE_LOCAL_SETTING_KEYS } from "@/config/deviceLocalSettings";
+import type { AccountSettingsOutput } from "@/api-types";
+import { isPreferenceRecord, toAccountPreferences } from "@/lib/storage/accountPreferences";
+import {
+  migrateLegacyDevicePreferences,
+  splitLegacyPreferences,
+  writePreferenceStorage,
+} from "@/lib/storage/devicePreferenceStorage";
+import type { DevicePreferences } from "@/hooks/useDevicePreferences";
 import {
   getPreferenceOwner,
   preservePreferenceOwner,
   withPreferenceLock,
 } from "@/lib/storage/preferenceStorage";
 import { logger } from "@/lib/logger";
-import { GANTT_VIEW_MODES, type GanttViewMode } from "@/types/gantt";
+import { GANTT_VIEW_MODES } from "@/types/gantt";
+import type {
+  Theme,
+  TabKey,
+  ScheduleViewKey,
+  TimeOffViewKey,
+  TimeTrackingViewKey,
+  GanttViewKey,
+  LastUsed,
+} from "@/types/deviceSettings";
 
 export type TimeFormat = "12h" | "24h";
-export type Theme = "light" | "dark" | "auto";
-export type NotificationSetting = "on" | "off";
-export type TabKey =
-  | "calendar"
-  | "unified-calendar"
-  | "schedule"
-  | "timeoff"
-  | "timetracking"
-  | "gantt";
-export type ScheduleViewKey = "schedule" | "transfer";
-export type TimeOffViewKey = "table" | "stats" | "team";
-export type TimeTrackingViewKey = "daily" | "weekly";
-export type GanttViewKey = "chart" | "table";
+export type {
+  Theme,
+  TabKey,
+  ScheduleViewKey,
+  TimeOffViewKey,
+  TimeTrackingViewKey,
+  GanttViewKey,
+  LastUsed,
+} from "@/types/deviceSettings";
 
-export interface LastUsed {
-  activeTab: TabKey;
-  scheduleView: ScheduleViewKey;
-  otherSchedule: ScheduleOption | null;
-  timeOffView: TimeOffViewKey;
-  timeTrackingView: TimeTrackingViewKey;
-  otherTeam: number | null;
-  ganttViewMode: GanttViewMode;
-  ganttView: GanttViewKey;
-}
-
-export interface UserSettings {
-  timeFormat: TimeFormat;
-  theme: Theme;
-  /** Whether reminders for upcoming planned time-tracking entries are enabled. */
-  notifications: NotificationSetting;
-  enableTimeOff: boolean;
-  enableTimeTracking: boolean;
-  enableGantt: boolean;
-  enableCrossBorderTracking: boolean;
-  enableUnifiedCalendar: boolean;
+type AccountSettings = Omit<AccountSettingsOutput, "homeCountry" | "officeCountry"> & {
   homeCountry: CountryCode | null;
   officeCountry: CountryCode | null;
-  /** The user's username on the legacy `.hday` share, used by the hday-helper pull/push actions. */
-  hdayUsername: string | null;
+};
+
+export interface UserSettings extends AccountSettings {
+  theme: Theme;
+  /** Whether reminders for upcoming planned time-tracking entries are enabled. */
+  notifications: boolean;
 }
 
 export function normalizeAppearance(value: unknown): { highContrast: boolean } {
@@ -74,7 +78,7 @@ interface SettingsContextType {
   settings: UserSettings;
   updateTimeFormat: (format: TimeFormat) => void;
   updateTheme: (theme: Theme) => void;
-  updateNotifications: (setting: NotificationSetting) => void;
+  updateNotifications: (enabled: boolean) => void;
   updateTimeOffEnabled: (enabled: boolean) => void;
   updateTimeTrackingEnabled: (enabled: boolean) => void;
   updateGanttEnabled: (enabled: boolean) => void;
@@ -121,10 +125,8 @@ interface SettingsContextType {
   ) => void;
 }
 
-export const defaultSettings: UserSettings = {
+const defaultAccountSettings: AccountSettings = {
   timeFormat: "24h",
-  theme: "auto",
-  notifications: "off",
   enableTimeOff: false,
   enableTimeTracking: false,
   enableGantt: false,
@@ -133,6 +135,12 @@ export const defaultSettings: UserSettings = {
   homeCountry: null,
   officeCountry: null,
   hdayUsername: null,
+};
+
+export const defaultSettings: UserSettings = {
+  ...defaultAccountSettings,
+  theme: "auto",
+  notifications: false,
 };
 
 export const defaultLastUsed: LastUsed = {
@@ -173,19 +181,16 @@ interface WorktimeUserState {
   crossBorderAnnouncementSeen?: boolean;
   myTeam: number | null; // The user's team from onboarding
   scheduleType: ScheduleOption | null;
-  settings: UserSettings;
-  lastUsed: LastUsed;
+  settings: AccountSettings;
 }
 
-type RawState = Record<string, unknown>;
 type Validator<T> = (value: unknown) => T;
 
 const defaultUserState: WorktimeUserState = {
   hasCompletedOnboarding: false,
   myTeam: null,
   scheduleType: null,
-  settings: defaultSettings,
-  lastUsed: defaultLastUsed,
+  settings: defaultAccountSettings,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -216,35 +221,12 @@ function useStableShallowObject<T extends object>(value: T): T {
   return stable;
 }
 
-const isObjectRecord = (value: unknown): value is RawState =>
-  typeof value === "object" && value !== null;
-
-const optionalBoolean = (value: unknown): boolean | undefined =>
-  value === true ? true : value === false ? false : undefined;
-
-const booleanWithDefault =
-  (fallback: boolean): Validator<boolean> =>
-  (value) =>
-    typeof value === "boolean" ? value : fallback;
+const isObjectRecord = isPreferenceRecord;
 
 const enumWithDefault =
   <T extends string>(validValues: ReadonlySet<T>, fallback: T): Validator<T> =>
   (value) =>
     typeof value === "string" && validValues.has(value as T) ? (value as T) : fallback;
-
-const countryWithDefault =
-  (fallback: CountryCode | null): Validator<CountryCode | null> =>
-  (value) =>
-    isValidCountryCode(value) ? value : fallback;
-
-const nullableTrimmedStringWithDefault =
-  (fallback: string | null): Validator<string | null> =>
-  (value) => {
-    if (value === null) return null;
-    if (typeof value !== "string") return fallback;
-    const trimmed = value.trim();
-    return trimmed === "" ? fallback : trimmed;
-  };
 
 const nullableScheduleOptionWithDefault =
   (
@@ -269,52 +251,22 @@ const nullableFiniteNumberWithDefault =
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
   };
 
-const normalizeUserState = (state: unknown): WorktimeUserState => {
-  if (!isObjectRecord(state)) {
-    return defaultUserState;
-  }
-
-  const s = state;
-
-  const settings = isObjectRecord(s.settings) ? s.settings : {};
+function normalizeLastUsed(value: unknown, settings: AccountSettings): LastUsed {
+  const rawLastUsed = isObjectRecord(value) ? value : {};
   const scheduleOptionValues = new Set(SCHEDULE_OPTIONS.map((option) => option.value));
-
-  const settingsValidators = {
-    timeFormat: enumWithDefault(new Set<TimeFormat>(["12h", "24h"]), defaultSettings.timeFormat),
-    theme: enumWithDefault(new Set<Theme>(["light", "dark", "auto"]), defaultSettings.theme),
-    notifications: enumWithDefault(
-      new Set<NotificationSetting>(["on", "off"]),
-      defaultSettings.notifications,
-    ),
-    enableTimeOff: booleanWithDefault(defaultSettings.enableTimeOff),
-    enableTimeTracking: booleanWithDefault(defaultSettings.enableTimeTracking),
-    enableGantt: booleanWithDefault(defaultSettings.enableGantt),
-    enableCrossBorderTracking: booleanWithDefault(defaultSettings.enableCrossBorderTracking),
-    enableUnifiedCalendar: booleanWithDefault(defaultSettings.enableUnifiedCalendar),
-    homeCountry: countryWithDefault(defaultSettings.homeCountry),
-    officeCountry: countryWithDefault(defaultSettings.officeCountry),
-    hdayUsername: nullableTrimmedStringWithDefault(defaultSettings.hdayUsername),
-  } satisfies { [K in keyof UserSettings]: Validator<UserSettings[K]> };
-
-  const normalizedSettings = Object.fromEntries(
-    Object.entries(settingsValidators).map(([key, validator]) => [key, validator(settings[key])]),
-  ) as unknown as UserSettings;
-
-  // --- Validate lastUsed ---
-  const rawLastUsed = isObjectRecord(s.lastUsed) ? s.lastUsed : {};
 
   const isTabEnabled = (tab: TabKey) => {
     if (tab === "timeoff") {
-      return normalizedSettings.enableTimeOff;
+      return settings.enableTimeOff;
     }
     if (tab === "timetracking") {
-      return normalizedSettings.enableTimeTracking;
+      return settings.enableTimeTracking;
     }
     if (tab === "gantt") {
-      return normalizedSettings.enableGantt;
+      return settings.enableGantt;
     }
     if (tab === "unified-calendar") {
-      return normalizedSettings.enableUnifiedCalendar;
+      return settings.enableUnifiedCalendar;
     }
     return true;
   };
@@ -338,51 +290,43 @@ const normalizeUserState = (state: unknown): WorktimeUserState => {
     ganttView: enumWithDefault(validGanttViewKeys, defaultLastUsed.ganttView),
   } satisfies { [K in keyof LastUsed]: Validator<LastUsed[K]> };
 
-  const normalizedLastUsed = Object.fromEntries(
+  return Object.fromEntries(
     Object.entries(lastUsedValidators).map(([key, validator]) => [
       key,
       validator(rawLastUsed[key]),
     ]),
   ) as unknown as LastUsed;
+}
 
-  // --- Validate scheduleType ---
-  const scheduleType = (() => {
-    const rawValue = s.scheduleType;
-    if (rawValue === undefined) {
-      return defaultUserState.scheduleType;
-    }
-    if (rawValue === null) {
-      return null;
-    }
-    if (typeof rawValue === "string" && scheduleOptionValues.has(rawValue as ScheduleOption)) {
-      return rawValue as ScheduleOption;
-    }
+function normalizeUserState(state: unknown): WorktimeUserState {
+  if (!isObjectRecord(state)) return defaultUserState;
+  const account = toAccountPreferences(state);
+  const settings = account.settings;
+  if (state.scheduleType !== undefined && account.scheduleType === undefined) {
     logger.warn(
-      `Invalid schedule option "${rawValue}" found in localStorage. Falling back to default.`,
+      `Invalid schedule option "${state.scheduleType}" found in localStorage. Falling back to default.`,
     );
-    return defaultUserState.scheduleType;
-  })();
-
+  }
   return {
-    hasCompletedOnboarding:
-      typeof s.hasCompletedOnboarding === "boolean"
-        ? s.hasCompletedOnboarding
-        : defaultUserState.hasCompletedOnboarding,
-    // Per-feature announcement flags: undefined = not yet shown, false = seen/dismissed, true = seen and enabled
-    accountSyncAnnouncementSeen: optionalBoolean(s.accountSyncAnnouncementSeen),
-    ganttAnnouncementSeen: optionalBoolean(s.ganttAnnouncementSeen),
-    crossBorderAnnouncementSeen: optionalBoolean(s.crossBorderAnnouncementSeen),
-    myTeam:
-      s.myTeam === undefined
-        ? defaultUserState.myTeam
-        : typeof s.myTeam === "number" || s.myTeam === null
-          ? s.myTeam
-          : defaultUserState.myTeam,
-    scheduleType,
-    settings: normalizedSettings,
-    lastUsed: normalizedLastUsed,
+    hasCompletedOnboarding: account.hasCompletedOnboarding ?? false,
+    accountSyncAnnouncementSeen: account.accountSyncAnnouncementSeen ?? undefined,
+    ganttAnnouncementSeen: account.ganttAnnouncementSeen ?? undefined,
+    crossBorderAnnouncementSeen: account.crossBorderAnnouncementSeen ?? undefined,
+    myTeam: account.myTeam ?? null,
+    scheduleType: account.scheduleType ?? null,
+    settings: {
+      timeFormat: settings?.timeFormat ?? defaultAccountSettings.timeFormat,
+      enableTimeOff: settings?.enableTimeOff ?? false,
+      enableTimeTracking: settings?.enableTimeTracking ?? false,
+      enableGantt: settings?.enableGantt ?? false,
+      enableCrossBorderTracking: settings?.enableCrossBorderTracking ?? false,
+      enableUnifiedCalendar: settings?.enableUnifiedCalendar ?? false,
+      homeCountry: isValidCountryCode(settings?.homeCountry) ? settings.homeCountry : null,
+      officeCountry: isValidCountryCode(settings?.officeCountry) ? settings.officeCountry : null,
+      hdayUsername: settings?.hdayUsername ?? null,
+    },
   };
-};
+}
 
 /** Mark only newly created state as anonymous; existing unowned state is legacy. */
 function markNewAnonymousPreferences(): void {
@@ -416,7 +360,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     },
     [setPreferences],
   );
-  // Unified user state in a single localStorage key.
+  // Account state has its own localStorage key.
   // _setRawUserState is the raw setter; setUserState wraps it to inject _updatedAt
   // so that buildLocalPreferencesPayload in syncClient.ts can use the actual
   // modification time rather than always defaulting to "now".
@@ -425,18 +369,39 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     defaultUserState,
   );
 
+  useEffect(() => {
+    if (!isObjectRecord(rawUserState) || !splitLegacyPreferences(rawUserState).needsMigration)
+      return;
+    const migrate = () => {
+      const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
+      const stored: unknown = raw === null ? null : JSON.parse(raw);
+      if (!isObjectRecord(stored)) return;
+      const { account, needsMigration } = migrateLegacyDevicePreferences(stored);
+      if (needsMigration) writePreferenceStorage(USER_STATE_STORAGE_KEY, account);
+    };
+    const handleError = (error: unknown) =>
+      logger.error("Failed to migrate device preferences:", error);
+    if (typeof navigator.locks?.request === "function") {
+      void withPreferenceLock(migrate).catch(handleError);
+    } else {
+      try {
+        migrate();
+      } catch (error) {
+        handleError(error);
+      }
+    }
+  }, [rawUserState]);
+
   const unsavedEdits = useRef<{
     owner: string | null;
     updates: Array<(previous: WorktimeUserState) => WorktimeUserState>;
   } | null>(null);
 
-  const commitUserState = useCallback(
-    (
-      updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState),
-      accountChange: boolean,
-    ) => {
+  const setUserState = useCallback(
+    (updater?: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) => {
+      if (!updater && !unsavedEdits.current) return;
       const commit = () => {
-        markNewAnonymousPreferences();
+        if (updater) markNewAnonymousPreferences();
         // Storage events can arrive after an interaction in an older tab. Read
         // inside the switch lock so cached data cannot undo another tab's switch.
         const raw = localStorage.getItem(USER_STATE_STORAGE_KEY);
@@ -453,21 +418,28 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         // Replay only this tab's failed edits, over fresh persisted data. This
         // retains unrelated edits from another tab, without crossing owners.
         const updates = pending?.owner === owner ? [...pending.updates] : [];
-        const timestamp = new Date().toISOString();
-        updates.push((state) => {
-          const next = typeof updater === "function" ? updater(state) : updater;
-          const storedTimestamp = isObjectRecord(state) ? state._updatedAt : undefined;
-          // A failed edit may replay over a newer save from another tab.
-          const updatedAt =
-            typeof storedTimestamp === "string" &&
-            Date.parse(storedTimestamp) > Date.parse(timestamp)
-              ? storedTimestamp
-              : timestamp;
-          return preservePreferenceOwner(
-            state,
-            accountChange ? { ...next, _updatedAt: updatedAt } : next,
-          );
-        });
+        if (updater) {
+          const timestamp = new Date().toISOString();
+          updates.push((state) => {
+            const next = typeof updater === "function" ? updater(state) : updater;
+            const storedTimestamp = isObjectRecord(state) ? state._updatedAt : undefined;
+            // A failed edit may replay over a newer save from another tab.
+            const updatedAt =
+              typeof storedTimestamp === "string" &&
+              Date.parse(storedTimestamp) > Date.parse(timestamp)
+                ? storedTimestamp
+                : timestamp;
+            return preservePreferenceOwner(state, { ...next, _updatedAt: updatedAt });
+          });
+        }
+        if (updates.length === 0) {
+          unsavedEdits.current = null;
+          return;
+        }
+        if (isObjectRecord(previous)) {
+          const { account, needsMigration } = migrateLegacyDevicePreferences(previous);
+          if (needsMigration) previous = { ...defaultUserState, ...account };
+        }
         for (const update of updates) previous = update(previous);
         _setRawUserState(previous);
         unsavedEdits.current =
@@ -486,55 +458,46 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [_setRawUserState],
   );
 
-  const setUserState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
-      commitUserState(updater, true),
-    [commitUserState],
+  const userState = normalizeUserState(rawUserState);
+  const legacyDevice = isObjectRecord(rawUserState)
+    ? splitLegacyPreferences(rawUserState).device
+    : {};
+  const device = { ...legacyDevice, ...preferences };
+  const stableSettings = useStableShallowObject<UserSettings>({
+    ...userState.settings,
+    theme:
+      device.theme === "light" || device.theme === "dark" ? device.theme : defaultSettings.theme,
+    notifications: device.notifications === true,
+  });
+  const stableLastUsed = useStableShallowObject(
+    normalizeLastUsed(device.lastUsed, userState.settings),
   );
-
-  // `lastUsed` (active tab, last-viewed sub-view per tab) and a handful of
-  // UserSettings fields (theme, notification lead time/quiet hours — see
-  // DEVICE_LOCAL_SETTING_KEYS) are per-device state, not real cross-device
-  // preferences — they're deliberately excluded from what syncs (see
-  // buildLocalPreferencesPayload/applyPreferencesPull in syncClient.ts).
-  // Routing their updates through this setter instead of setUserState keeps
-  // it that way: bumping the shared _updatedAt for a purely local change
-  // (a tab switch, a theme toggle) would make sync's last-write-wins
-  // comparison pick this device's copy for that reason alone, discarding a
-  // genuinely newer settings change synced from elsewhere.
-  const setDeviceLocalState = useCallback(
-    (updater: WorktimeUserState | ((prev: WorktimeUserState) => WorktimeUserState)) =>
-      commitUserState(updater, false),
-    [commitUserState],
-  );
-
-  const userState: WorktimeUserState = normalizeUserState(rawUserState);
-  const stableSettings = useStableShallowObject(userState.settings);
-  const stableLastUsed = useStableShallowObject(userState.lastUsed);
 
   const settingUpdaters = useMemo(() => {
-    const deviceLocalSettingKeys: ReadonlySet<string> = new Set(DEVICE_LOCAL_SETTING_KEYS);
-
-    const updateSetting = <K extends keyof UserSettings>(key: K) => {
-      const setter = deviceLocalSettingKeys.has(key) ? setDeviceLocalState : setUserState;
-      return (value: UserSettings[K]) => {
-        setter((prev) => {
-          // `prev` is the raw localStorage value, which can be null or
-          // corrupted at runtime despite its static type; guard before spreading.
+    const updateSetting = <K extends keyof AccountSettings>(key: K) => {
+      return (value: AccountSettings[K]) => {
+        setUserState((prev) => {
           const base = isObjectRecord(prev) ? prev : defaultUserState;
-          const prevSettings = isObjectRecord(base.settings) ? base.settings : defaultSettings;
-          return {
-            ...base,
-            settings: { ...prevSettings, [key]: value },
-          };
+          const prevSettings = isObjectRecord(base.settings)
+            ? base.settings
+            : defaultAccountSettings;
+          return { ...base, settings: { ...prevSettings, [key]: value } };
         });
       };
+    };
+    const updateDevice = <K extends "theme" | "notifications">(
+      key: K,
+      value: DevicePreferences[K],
+    ) => {
+      setPreferences((previous) => ({ ...previous, [key]: value }));
+      // A later interaction can retry a previously failed account write.
+      setUserState();
     };
 
     return {
       updateTimeFormat: updateSetting("timeFormat"),
-      updateTheme: updateSetting("theme"),
-      updateNotifications: updateSetting("notifications"),
+      updateTheme: (theme: Theme) => updateDevice("theme", theme),
+      updateNotifications: (enabled: boolean) => updateDevice("notifications", enabled),
       updateTimeOffEnabled: updateSetting("enableTimeOff"),
       updateTimeTrackingEnabled: updateSetting("enableTimeTracking"),
       updateGanttEnabled: updateSetting("enableGantt"),
@@ -544,21 +507,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateOfficeCountry: updateSetting("officeCountry"),
       updateHdayUsername: updateSetting("hdayUsername"),
     };
-  }, [setUserState, setDeviceLocalState]);
+  }, [setUserState, setPreferences]);
 
   const lastUsedUpdaters = useMemo(() => {
     const updateLastUsed = <K extends keyof LastUsed>(key: K) => {
       return (value: LastUsed[K]) => {
-        setDeviceLocalState((prev) => {
-          // `prev` is the raw localStorage value, which can be null or
-          // corrupted at runtime despite its static type; guard before spreading.
-          const base = isObjectRecord(prev) ? prev : defaultUserState;
-          const prevLastUsed = isObjectRecord(base.lastUsed) ? base.lastUsed : defaultLastUsed;
-          return {
-            ...base,
-            lastUsed: { ...prevLastUsed, [key]: value },
-          };
-        });
+        setPreferences((previous) => ({
+          ...previous,
+          lastUsed: { ...previous?.lastUsed, [key]: value },
+        }));
+        setUserState();
       };
     };
 
@@ -572,7 +530,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateLastGanttViewMode: updateLastUsed("ganttViewMode"),
       updateLastGanttView: updateLastUsed("ganttView"),
     };
-  }, [setDeviceLocalState]);
+  }, [setPreferences, setUserState]);
 
   const {
     updateTimeFormat,
@@ -601,7 +559,13 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const resetSettings = useCallback(() => {
     setUserState(defaultUserState);
-    setPreferences((previous) => ({ ...previous, appearance: normalizeAppearance(null) }));
+    setPreferences((previous) => ({
+      ...previous,
+      appearance: normalizeAppearance(null),
+      theme: defaultSettings.theme,
+      notifications: defaultSettings.notifications,
+      lastUsed: defaultLastUsed,
+    }));
   }, [setUserState, setPreferences]);
 
   const setMyTeam = useCallback(

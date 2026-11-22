@@ -39,6 +39,7 @@ import {
   getSyncCursorKey,
   getSyncOutboxKey,
   SYNC_PENDING_OUTBOX_KEY,
+  DEVICE_PREFERENCES_STORAGE_KEY,
   USER_STATE_STORAGE_KEY,
 } from "@/config/storageKeys";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
@@ -1663,7 +1664,11 @@ describe("syncClient", () => {
   describe("pushPreferences", () => {
     it("PUTs the preferences payload and returns true on success", async () => {
       mockFetch.mockResolvedValue({ ok: true });
-      const result = await pushPreferences(mockFetch, { theme: "dark" }, "2026-01-01T00:00:00Z");
+      const result = await pushPreferences(
+        mockFetch,
+        { schemaVersion: 1, settings: { timeFormat: "12h" } },
+        "2026-01-01T00:00:00Z",
+      );
       expect(result).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/preferences",
@@ -1673,12 +1678,16 @@ describe("syncClient", () => {
 
     it("returns false when response is not ok", async () => {
       mockFetch.mockResolvedValue({ ok: false });
-      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+      expect(await pushPreferences(mockFetch, { schemaVersion: 1 }, "2026-01-01T00:00:00Z")).toBe(
+        false,
+      );
     });
 
     it("returns false when fetch throws", async () => {
       mockFetch.mockRejectedValue(new Error("network error"));
-      expect(await pushPreferences(mockFetch, {}, "2026-01-01T00:00:00Z")).toBe(false);
+      expect(await pushPreferences(mockFetch, { schemaVersion: 1 }, "2026-01-01T00:00:00Z")).toBe(
+        false,
+      );
     });
   });
 
@@ -1692,7 +1701,7 @@ describe("syncClient", () => {
       localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
       const result = buildLocalPreferencesPayload();
       expect(result).not.toBeNull();
-      expect(result?.data).toEqual(userState);
+      expect(result?.data).toEqual({ ...userState, schemaVersion: 1 });
       expect(result?.clientUpdatedAt).toBeTruthy();
     });
 
@@ -1718,7 +1727,11 @@ describe("syncClient", () => {
       };
       localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify(userState));
       const result = buildLocalPreferencesPayload();
-      expect(result?.data).toEqual({ hasCompletedOnboarding: true, scheduleType: "9-5" });
+      expect(result?.data).toEqual({
+        schemaVersion: 1,
+        hasCompletedOnboarding: true,
+        scheduleType: "9-5",
+      });
       expect(result?.data).not.toHaveProperty("lastUsed");
     });
 
@@ -1901,10 +1914,7 @@ describe("syncClient", () => {
       JSON.stringify({ _accountOwner: "user-b", scheduleType: "3-shift" }),
     );
     expect(buildLocalPreferencesPayload("user-a")).toBeNull();
-    expect(buildLocalPreferencesPayload("user-b")?.data).toEqual({
-      scheduleType: "3-shift",
-      settings: undefined,
-    });
+    expect(buildLocalPreferencesPayload("user-b")?.data).toEqual({ schemaVersion: 1 });
     expect(JSON.stringify(buildLocalPreferencesPayload("user-b"))).not.toContain("_accountOwner");
     applyPreferencesPull({ _accountOwner: "injected", scheduleType: "5-shift" });
     expect(JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!)).toHaveProperty(
@@ -1947,7 +1957,10 @@ describe("syncClient", () => {
       });
       const stored = JSON.parse(localStorage.getItem(USER_STATE_STORAGE_KEY)!);
       expect(stored.hasCompletedOnboarding).toBe(true);
-      expect(stored.lastUsed).toEqual({ activeTab: "timetracking", scheduleView: "schedule" });
+      expect(stored).not.toHaveProperty("lastUsed");
+      expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY)!)).toEqual({
+        lastUsed: { activeTab: "timetracking", scheduleView: "schedule" },
+      });
     });
 
     it("omits lastUsed entirely when there is no local state to preserve it from", () => {
@@ -1988,9 +2001,10 @@ describe("syncClient", () => {
         // Synced from the pull.
         timeFormat: "12h",
         enableTimeOff: true,
-        // Preserved from this device's local state.
+      });
+      expect(JSON.parse(localStorage.getItem(DEVICE_PREFERENCES_STORAGE_KEY)!)).toMatchObject({
         theme: "dark",
-        notifications: "on",
+        notifications: true,
       });
     });
   });

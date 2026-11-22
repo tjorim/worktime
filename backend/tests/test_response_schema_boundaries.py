@@ -9,7 +9,7 @@ OPAQUE = {
     "AuditEntryRead/properties/details": "Action-specific diagnostic metadata, not a stable record.",
     "UserRead/properties/settings": "Legacy user settings JSON, opaque to the backend.",
     "UserDataExport/properties/preferences": "Client-owned preferences exported unchanged.",
-    "UserPreferencesRead/properties/data": "Client-owned, versioned preferences JSON.",
+    "UserPreferencesRead/properties/data/anyOf/1": "Historical unversioned documents returned unchanged for older clients.",
     "McpCapabilities/properties/resources/items": "Always empty in MCP contract v1; no resource wire record yet.",
     "McpCapabilities/properties/prompts/items": "Always empty in MCP contract v1; no prompt wire record yet.",
 }
