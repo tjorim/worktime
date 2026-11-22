@@ -7,7 +7,7 @@ for (const theme of ["light", "dark"]) {
         await page.setViewportSize({ width, height: 1000 });
         const capture = async (state: string) =>
           page.screenshot({
-            path: `../docs/screenshots/1683/${lang}-${theme}-${width}-${state}.png`,
+            path: `test-results/review-screenshots/1683/${lang}-${theme}-${width}-${state}.png`,
           });
 
         for (const state of ["populated", "team", "empty"]) {

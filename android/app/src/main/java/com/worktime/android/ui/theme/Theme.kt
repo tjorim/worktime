@@ -26,7 +26,7 @@ private val DarkColors =
 
 // 12dp cards, 16dp prominent summary surfaces; pill shapes stay reserved for filter/status
 // chips, which already default to extraLarge in Material 3. See the design system proposal
-// in docs/android-audit-2026-08.md.
+// in docs/archive/android-audit-2026-08.md.
 private val WorktimeShapes =
     Shapes(
         extraSmall = RoundedCornerShape(4.dp),
@@ -38,7 +38,7 @@ private val WorktimeShapes =
 
 private val LocalShiftColors = staticCompositionLocalOf { LightShiftColors }
 
-/** 4dp-based spacing scale — see docs/android-audit-2026-08.md's proposed design system. */
+/** 4dp-based spacing scale — see docs/archive/android-audit-2026-08.md's proposed design system. */
 object WorktimeSpacing {
     val tight = 4.dp
     val inline = 8.dp

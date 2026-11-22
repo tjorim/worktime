@@ -21,13 +21,15 @@ for (const context of contexts) {
           }),
         );
       });
-      await mkdir("../docs/screenshots/1686", { recursive: true });
+      await mkdir("test-results/review-screenshots/1686", { recursive: true });
     });
     test("unknown routes offer a working link home", async ({ page }) => {
       await page.goto("/this-page-does-not-exist");
       await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
       await expectNoAccessibilityViolations(page, `404 ${context.name}`);
-      await page.screenshot({ path: `../docs/screenshots/1686/not-found-${context.name}.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1686/not-found-${context.name}.png`,
+      });
       await page.getByRole("link", { name: "Back to Worktime" }).click();
       await expect(page).toHaveURL("/");
     });
@@ -40,7 +42,7 @@ for (const context of contexts) {
       await expect(page.getByRole("main")).not.toContainText("private-provider-diagnostic");
       await expectNoAccessibilityViolations(page, `sign-in failure ${context.name}`);
       await page.screenshot({
-        path: `../docs/screenshots/1686/sign-in-failed-${context.name}.png`,
+        path: `test-results/review-screenshots/1686/sign-in-failed-${context.name}.png`,
       });
     });
     test("anonymous header and date-code help work without hover", async ({ page }) => {
@@ -51,14 +53,14 @@ for (const context of contexts) {
       const trigger = page.getByRole("button", { name: /^Date code:/ });
       await expect(trigger).toBeVisible();
       await page.screenshot({
-        path: `../docs/screenshots/1686/header-date-code-${context.name}.png`,
+        path: `test-results/review-screenshots/1686/header-date-code-${context.name}.png`,
       });
       await trigger.focus();
       await page.keyboard.press("Enter");
       await expect(page.getByRole("dialog")).toBeVisible();
       await expectNoAccessibilityViolations(page, `date code ${context.name}`);
       await page.screenshot({
-        path: `../docs/screenshots/1686/date-code-help-${context.name}.png`,
+        path: `test-results/review-screenshots/1686/date-code-help-${context.name}.png`,
       });
       await page.keyboard.press("Escape");
       await expect(trigger).toBeFocused();

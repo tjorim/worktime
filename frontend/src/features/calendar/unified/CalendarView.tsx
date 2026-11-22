@@ -93,6 +93,8 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
   const [editForm, setEditForm] = useState<TaskEditForm>(EMPTY_EDIT_FORM);
   const [editError, setEditError] = useState("");
   const [timeOffEvent, setTimeOffEvent] = useState<CalendarEvent | null>(null);
+  const timeOffStart = timeOffEvent && calendarDate(timeOffEvent.start);
+  const timeOffEnd = timeOffEvent && calendarDate(timeOffEvent.end);
   const [shiftTeam, setShiftTeam] = useState<number | null>(null);
   const [addDate, setAddDate] = useState("");
   const [addText, setAddText] = useState("");
@@ -450,12 +452,10 @@ function ConfiguredCalendarView({ onChangeSchedule, onChangeTeam }: CalendarView
               <dd>{timeOffEvent?.title}</dd>
               <dt>{m.calendar_detail_dates()}</dt>
               <dd>
-                {timeOffEvent
-                  ? `${calendarDate(timeOffEvent.start)} – ${calendarDate(timeOffEvent.end)}`
-                  : ""}
+                {timeOffStart === timeOffEnd ? timeOffStart : `${timeOffStart} – ${timeOffEnd}`}
               </dd>
               <dt>{m.calendar_detail_type()}</dt>
-              <dd>{String(timeOffEvent?.entryType ?? "")}</dd>
+              <dd>{timeOffEvent?.entryTypeLabel}</dd>
             </dl>
           </div>
         </DialogContent>

@@ -30,7 +30,7 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
   await page.goto("/settings?section=account");
   const indicator = page.getByRole("status", { name: /^Sync status:/ });
   await expect(indicator).toContainText("Synced");
-  await mkdir("../docs/screenshots/1681", { recursive: true });
+  await mkdir("test-results/review-screenshots/1681", { recursive: true });
   const capture = async (state: string) => {
     for (const close of await page.getByRole("button", { name: "Close notification" }).all())
       await close.click();
@@ -55,7 +55,7 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
         if (state === "synced" || state === "recovered")
           await expect(indicator).toContainText("Synced");
         await page.screenshot({
-          path: `../docs/screenshots/1681/${state}-${theme}-${width}.png`,
+          path: `test-results/review-screenshots/1681/${state}-${theme}-${width}.png`,
           fullPage: true,
         });
       }

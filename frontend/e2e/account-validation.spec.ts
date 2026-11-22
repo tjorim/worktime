@@ -40,10 +40,10 @@ for (const theme of ["light", "dark"]) {
       await expect(
         page.getByText("Use no more than 150 characters for the display name."),
       ).toBeVisible();
-      await mkdir("../docs/screenshots/1695", { recursive: true });
+      await mkdir("test-results/review-screenshots/1695", { recursive: true });
       await input.scrollIntoViewIfNeeded();
       await page.screenshot({
-        path: `../docs/screenshots/1695/display-name-invalid-${theme}-${width}.png`,
+        path: `test-results/review-screenshots/1695/display-name-invalid-${theme}-${width}.png`,
       });
       await input.fill("Valid Name");
       await page.getByRole("button", { name: "Save profile" }).click();

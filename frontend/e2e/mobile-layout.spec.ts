@@ -10,7 +10,7 @@ for (const lang of ["en", "nl"]) {
         await page.setViewportSize({ width, height: 1000 });
         const capture = (state: string) =>
           page.screenshot({
-            path: `../docs/screenshots/1682/${lang}-${theme}-${width}-${state}.png`,
+            path: `test-results/review-screenshots/1682/${lang}-${theme}-${width}-${state}.png`,
           });
         await page.addInitScript(
           ({ stateKey, localeKey, lang, theme }) => {
@@ -105,7 +105,7 @@ test.describe("touch button targets", () => {
       expect(box!.width).toBeGreaterThanOrEqual(44);
     }
     await page.screenshot({
-      path: "../docs/screenshots/1682/en-light-390-touch.png",
+      path: "test-results/review-screenshots/1682/en-light-390-touch.png",
       fullPage: true,
     });
   });

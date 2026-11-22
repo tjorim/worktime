@@ -127,5 +127,5 @@ These workflows are intentionally separated from normal CI:
 - [AGENTS.md](AGENTS.md) for repo conventions, commands, CI and release rules (`CLAUDE.md` points there)
 - [backend/README.md](backend/README.md) for backend setup, architecture, API surface and deployment
 - [frontend/README.md](frontend/README.md) and [frontend/e2e/README.md](frontend/e2e/README.md) for the web app and its browser tests
-- [docs/](docs/) for design docs, specs and audit records, including [UI dependency and component maintenance](docs/ui-maintenance.md) and the [Node and pnpm toolchain](docs/toolchain.md)
+- [Documentation index](docs/README.md) for current reference docs and archived migration records, including [UI dependency and component maintenance](docs/ui-maintenance.md) and the [Node and pnpm toolchain](docs/toolchain.md)
 - `examples/` for sample `.hday` and share-style data
