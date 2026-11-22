@@ -65,7 +65,7 @@ interface WelcomeWizardProps {
  * @param onTeamSelect - Called with the chosen team number when a team button is selected
  * @param onScheduleSelect - Optional callback invoked when the user selects a schedule
  * @param onSkip - Optional callback invoked when the user chooses to browse all teams instead of selecting one
- * @param onHide - Called when the wizard is completed with optional vacation allowance data (marks onboarding as done)
+ * @param onHide - Called when the wizard is completed with the selected features
  * @param onDefer - Optional callback invoked when user clicks "Maybe Later" (defers wizard to next visit)
  * @param isLoading - When true, disables interactions and displays a setup spinner
  * @param mode - Determines the wizard flow ("onboarding" | "change-team" | "change-schedule")
