@@ -1,10 +1,9 @@
 import type {
   AccountProfile,
-  IcalFeedStatus,
   AccessTokenListResponse,
-  IntegrationClientListResponse,
   UserRead,
   CreatedApiToken,
+  CreatedIntegrationClient,
   UserListResponse,
 } from "@/api-types";
 import { jsonResponse, uncheckedJson } from "@/mocks/response";
@@ -109,19 +108,23 @@ afterEach(() => {
 });
 
 function renderWithProviders(ui: React.ReactElement) {
-  return render(
-    <SettingsProvider>
-      <EventStoreProvider>
-        <HdayHelperProvider>
-          <ToastProvider>
-            <PwaInstallProvider>
-              <AuthProvider>{ui}</AuthProvider>
-            </PwaInstallProvider>
-          </ToastProvider>
-        </HdayHelperProvider>
-      </EventStoreProvider>
-    </SettingsProvider>,
-  );
+  function Providers({ children }: { children: React.ReactNode }) {
+    return (
+      <SettingsProvider>
+        <EventStoreProvider>
+          <HdayHelperProvider>
+            <ToastProvider>
+              <PwaInstallProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </PwaInstallProvider>
+            </ToastProvider>
+          </HdayHelperProvider>
+        </EventStoreProvider>
+      </SettingsProvider>
+    );
+  }
+
+  return render(ui, { wrapper: Providers });
 }
 
 function mockAuthenticatedUser(displayName = "Alice") {
@@ -359,47 +362,97 @@ describe("SettingsPage Account Section", () => {
     expect(mockSignoutRedirect).toHaveBeenCalled();
   });
 
-  it("groups account load failures into one notification and retries the profile inline", async () => {
+  it("retries a failed profile inline and loads connections only in their section", async () => {
     mockAuthenticatedUser("Alice");
     let unavailable = true;
+    let tokenRequests = 0;
     server.use(
-      ...["*/api/me", "*/api/access-tokens", "*/api/ical", "*/api/integration-clients"].map(
-        (path) =>
-          http.get(path, () =>
-            unavailable
-              ? new HttpResponse(null, { status: 503 })
-              : path === "*/api/me"
-                ? jsonResponse<AccountProfile>({
-                    id: 1,
-                    display_name: "Recovered",
-                    username: "alice",
-                    is_admin: false,
-                    capabilities: { backup_enabled: false },
-                  })
-                : path === "*/api/ical"
-                  ? jsonResponse<IcalFeedStatus>({
-                      configured: false,
-                      token_preview: null,
-                      created_at: null,
-                      last_used_at: null,
-                    })
-                  : path === "*/api/access-tokens"
-                    ? jsonResponse<AccessTokenListResponse>({ items: [], total: 0 })
-                    : jsonResponse<IntegrationClientListResponse>({ items: [], total: 0 }),
-          ),
+      http.get("*/api/me", () =>
+        unavailable
+          ? new HttpResponse(null, { status: 503 })
+          : jsonResponse<AccountProfile>({
+              id: 1,
+              display_name: "Recovered",
+              username: "alice",
+              is_admin: false,
+              capabilities: { backup_enabled: false },
+            }),
       ),
+      http.get("*/api/access-tokens", () => {
+        tokenRequests++;
+        return new HttpResponse(null, { status: 503 });
+      }),
     );
-    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
-    const banner = await screen.findByText(/Some account sections could not be loaded/);
-    expect(banner).toHaveAttribute("role", "alert");
-    await screen.findByText("Could not load your API tokens right now.");
-    expect(screen.getAllByText(/Some account sections could not be loaded/)).toHaveLength(1);
-    expect(
-      screen.getByText("Could not load your API tokens right now.").closest('[role="note"]'),
-    ).not.toBeNull();
+    const { unmount } = renderWithProviders(
+      <SettingsContent onHide={vi.fn()} activeSection="account" />,
+    );
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(tokenRequests).toBe(0);
     unavailable = false;
-    await userEvent.setup().click(screen.getAllByRole("button", { name: "Retry" })[0]!);
+    await userEvent.setup().click(retry);
     expect(await screen.findByDisplayValue("Recovered")).toBeInTheDocument();
+
+    unmount();
+    renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="connections" />);
+    expect(await screen.findByText("Could not load your API tokens right now.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: m.hday_helper_heading() })).toBeVisible();
+  });
+
+  it("keeps a created API token and an in-flight integration key across Settings sections", async () => {
+    mockAuthenticatedUser("Alice");
+    const clientRequest = vi.fn();
+    let releaseClientResponse!: () => void;
+    const clientResponse = new Promise<void>((resolve) => {
+      releaseClientResponse = resolve;
+    });
+    server.use(
+      http.post("*/api/access-tokens", () =>
+        jsonResponse<CreatedApiToken>(
+          {
+            id: "tok-1",
+            name: "Pebble watch",
+            token: "wtpat_navigation",
+            scopes: ["pebble:read", "pebble:write"],
+            created_at: "2026-07-24T00:00:00Z",
+          },
+          { status: 201 },
+        ),
+      ),
+      http.post("*/api/integration-clients", async () => {
+        clientRequest();
+        await clientResponse;
+        return jsonResponse<CreatedIntegrationClient>(
+          {
+            id: 7,
+            name: "Home hub",
+            key: "wtic_navigation",
+            scopes: ["worktime:mcp"],
+            rate_limit_per_minute: 120,
+            created_at: "2026-07-24T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    const onHide = vi.fn();
+    const connections = <SettingsContent onHide={onHide} activeSection="connections" />;
+    const { rerender } = renderWithProviders(connections);
+
+    await user.type(await screen.findByLabelText("Token name"), "Pebble watch");
+    await user.click(screen.getByRole("button", { name: "Generate token" }));
+    expect(await screen.findByText("wtpat_navigation")).toBeVisible();
+
+    await user.type(screen.getByLabelText("Client name"), "Home hub");
+    await user.click(screen.getByRole("button", { name: "Create client" }));
+    await waitFor(() => expect(clientRequest).toHaveBeenCalledOnce());
+    rerender(<SettingsContent onHide={onHide} activeSection="account" />);
+    expect(screen.queryByText("wtpat_navigation")).not.toBeInTheDocument();
+    releaseClientResponse();
+
+    rerender(connections);
+    expect.soft(screen.queryByText("wtpat_navigation")).toBeVisible();
+    expect(await screen.findByText("wtic_navigation")).toBeVisible();
   });
 
   it("loads profile details and sync stats for authenticated users", async () => {

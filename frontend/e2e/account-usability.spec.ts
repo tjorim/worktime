@@ -1,4 +1,4 @@
-import type { IcalFeedStatus } from "@/api-types";
+import type { AuditEntryListResponse, IcalFeedStatus } from "@/api-types";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { expectNoAccessibilityViolations } from "./axe";
@@ -45,10 +45,28 @@ for (const theme of ["light", "dark"] as const) {
       test.use({ colorScheme: theme, viewport: { width, height: 900 } });
       test.setTimeout(90_000);
 
-      test("account page order, field help and confirmations", async ({ page }) => {
+      test("account, connections, activity and exports", async ({ page }, testInfo) => {
         await mkdir(SHOTS, { recursive: true });
         await seed(page, theme);
-        // MSW's service worker answers before page.route can, so stub the one GET in the page.
+        const capture = async (section: string) => {
+          const path = testInfo.outputPath(`${section}-${label}.png`);
+          await page.screenshot({ path, fullPage: true, animations: "disabled" });
+          await testInfo.attach(`${section}-${label}`, { path, contentType: "image/png" });
+        };
+        const openSection = async (section: string, name: string) => {
+          if (width < 1024) {
+            await page
+              .getByRole("combobox", { name: "Sections", exact: true })
+              .selectOption(section);
+          } else {
+            await page
+              .getByRole("navigation", { name: "Sections" })
+              .getByRole("button", { name, exact: true })
+              .click();
+          }
+          await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
+        };
+        // Stub GETs in the page so they take precedence over the MSW service worker.
         await page.addInitScript(() => {
           const realFetch = window.fetch.bind(window);
           window.fetch = (input, init) => {
@@ -61,7 +79,30 @@ for (const theme of ["light", "dark"] as const) {
             const method = (
               init?.method ?? (input instanceof Request ? input.method : "GET")
             ).toUpperCase();
-            return method === "GET" && new URL(url, location.origin).pathname === "/api/ical"
+            const path = new URL(url, location.origin).pathname;
+            if (method === "GET" && path === "/api/audit") {
+              return Promise.resolve(
+                Response.json({
+                  items: [
+                    {
+                      id: 1,
+                      actor_user_id: 1,
+                      actor_label: "user:1",
+                      subject: null,
+                      auth_source: "oidc",
+                      action: "create_time_off_entry",
+                      resource_type: "time_off_entry",
+                      resource_id: "legacy-opaque-id",
+                      request_id: null,
+                      details: { entry_type: "vacation", date: "2026-11-02" },
+                      created_at: "2026-10-15T12:00:00Z",
+                    },
+                  ],
+                  total: 1,
+                } satisfies AuditEntryListResponse),
+              );
+            }
+            return method === "GET" && path === "/api/ical"
               ? Promise.resolve(
                   Response.json({
                     configured: true,
@@ -75,28 +116,15 @@ for (const theme of ["light", "dark"] as const) {
         });
         await page.goto("/settings?section=account");
         await expect(page.locator("#account-display-name")).toBeEnabled({ timeout: 20000 });
-        await expect(page.getByRole("heading", { name: "Calendar subscription" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Danger zone" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "API tokens" })).toHaveCount(0);
+        await expectNoAccessibilityViolations(page, `account page (${label})`);
+        await capture("account");
 
-        // Actionable sections come first; the activity feed and danger zone close the page.
-        const headings = await page
-          .locator("main section > div > h2, section h2")
-          .allTextContents();
-        const order = [
-          "Account",
-          "API tokens",
-          "Calendar subscription",
-          "Integration clients",
-          "Export account data",
-          "Recent activity",
-          "Danger zone",
-        ];
-        const positions = order.map((name) => headings.findIndex((h) => h.trim() === name));
-        expect(
-          positions.every((p) => p >= 0),
-          headings.join(" | "),
-        ).toBe(true);
-        expect(positions).toEqual([...positions].sort((a, b) => a - b));
-        await page.screenshot({ path: `${SHOTS}/account-order-${label}.png`, fullPage: true });
+        await openSection("connections", "Connections");
+        await expect(page.getByRole("heading", { name: "Calendar subscription" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: /Legacy team files/ })).toBeVisible();
+        await capture("connections");
 
         // Disabled "Generate token" explains itself.
         const tokenName = page.getByLabel("Token name");
@@ -127,7 +155,19 @@ for (const theme of ["light", "dark"] as const) {
         await expectNoAccessibilityViolations(page, `revoke confirmation (${label})`);
         await dialog.getByRole("button", { name: "Cancel" }).click();
 
-        await expectNoAccessibilityViolations(page, `account page (${label})`);
+        await expectNoAccessibilityViolations(page, `connections page (${label})`);
+
+        await openSection("activity", "Recent activity");
+        await expect(page.getByText("Created · Holiday (2 Nov 2026)")).toBeVisible();
+        await expect(page.getByText("legacy-opaque-id")).toHaveCount(0);
+        await capture("activity");
+
+        await openSection("data", "Data");
+        const exports = page.getByRole("region", { name: "Exports" });
+        await expect(exports.getByText("Account data (JSON)")).toBeVisible();
+        await expect(exports.getByText("Export Local Backup")).toBeVisible();
+        await expect(exports.getByText("Time off (.hday)")).toBeVisible();
+        await capture("data");
       });
 
       test("time tracking Add Task prints why it is disabled", async ({ page }) => {

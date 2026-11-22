@@ -3,7 +3,10 @@ import { expect, test } from "@playwright/test";
 import type { WorktimeTestHooks } from "./testHooks";
 import { mkdir } from "node:fs/promises";
 
-test("pending, offline, retry, recovery and grouped account load failures", async ({ page }) => {
+test("pending, offline, retry, recovery and account and connection load failures", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
   await page.addInitScript(() => {
     localStorage.setItem(
       "oidc.user:http://localhost:9000/application/o/worktime:worktime",
@@ -99,8 +102,12 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
   await page.evaluate(() => {
     const failingFetch = window.fetch;
     let accountUnavailable = true;
+    let connectionsUnavailable = true;
     window.addEventListener("restore-test-account", () => {
       accountUnavailable = false;
+    });
+    window.addEventListener("restore-test-connections", () => {
+      connectionsUnavailable = false;
     });
     window.fetch = (input, init) => {
       if (String(input).includes("/api/sync/push"))
@@ -120,10 +127,11 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
           ),
         );
       if (
-        accountUnavailable &&
-        ["/api/me", "/api/access-tokens", "/api/ical", "/api/integration-clients"].some((path) =>
-          String(input).endsWith(path),
-        )
+        (accountUnavailable && String(input).endsWith("/api/me")) ||
+        (connectionsUnavailable &&
+          ["/api/access-tokens", "/api/ical", "/api/integration-clients"].some((path) =>
+            String(input).endsWith(path),
+          ))
       )
         return Promise.resolve(new Response(null, { status: 503 }));
       return failingFetch(input, init);
@@ -136,21 +144,21 @@ test("pending, offline, retry, recovery and grouped account load failures", asyn
   await page.getByRole("button", { name: "Back to app" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Account", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Some account sections could not be loaded" }),
-  ).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Retry", exact: true }).first()).toBeVisible();
-  await capture("account-errors");
-  await page.evaluate(() => window.dispatchEvent(new Event("restore-test-account")));
   const retries = page.getByRole("button", { name: "Retry", exact: true });
-  for (let remaining = 4; remaining > 0; remaining--) {
-    await expect(retries).toHaveCount(remaining);
+  await expect(retries).toHaveCount(1);
+  await capture("account-error");
+  await page.evaluate(() => window.dispatchEvent(new Event("restore-test-account")));
+  await retries.click();
+  await expect(page.getByLabel("Display name", { exact: true })).toBeEnabled();
+
+  await page.getByRole("combobox", { name: "Sections", exact: true }).selectOption("connections");
+  await expect(retries).toHaveCount(3);
+  await capture("connections-errors");
+  await page.evaluate(() => window.dispatchEvent(new Event("restore-test-connections")));
+  for (let remaining = 3; remaining > 0; remaining--) {
     await retries.first().click();
     await expect(retries).toHaveCount(remaining - 1);
   }
-  await expect(
-    page.getByText("Some account sections could not be loaded", { exact: false }),
-  ).toHaveCount(0);
   expect(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem("worktime_sync_outbox_sync-status-e2e") ?? "[]").length,

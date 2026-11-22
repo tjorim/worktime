@@ -2,13 +2,11 @@ import { CalendarDaysIcon, CheckIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Hint } from "@/components/ui/tooltip";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { cn } from "@/lib/utils";
 import { hasMultipleTeams } from "@/lib/schedule/scheduleUtils";
 import * as m from "@/paraglide/messages.js";
-import { SettingsHdayHelper } from "@/features/settings/SettingsHdayHelper";
 import { SettingsHint, SettingsSection } from "@/features/settings/SettingsParts";
 import { TeamSelector } from "@/components/TeamSelector";
 
@@ -86,9 +84,6 @@ export function SettingsScheduleSection({
           {myTeam === null && <SettingsHint>{m.settings_no_team_selected()}</SettingsHint>}
         </div>
       )}
-
-      <Separator className="my-4" />
-      <SettingsHdayHelper />
     </SettingsSection>
   );
 }

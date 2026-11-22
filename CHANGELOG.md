@@ -20,6 +20,10 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 - **Android:** Read release notes offline from “What’s new” in Settings.
 
+### Changed
+
+- Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
+
 ### Fixed
 
 - Clarify time-tracking form hints, weekly label charts, calendar indicators and schedule codes. Keep mobile navigation and quick actions clear of the content, and reserve start-up sync notifications for errors.

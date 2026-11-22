@@ -13,11 +13,10 @@ import { ApiError } from "@/lib/api/apiError";
 import type { IcalFeedCreated, IcalFeedStatus } from "@/api-types";
 
 interface Props {
-  onLoadError?: (failed: boolean) => void;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
+export function SettingsCalendarFeedSection({ fetchFn }: Props) {
   const toast = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [configured, setConfigured] = useState(false);
@@ -41,7 +40,6 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
         const payload = (await response.json()) as IcalFeedStatus;
         if (active) {
           setLoadFailed(false);
-          onLoadError?.(false);
           setConfigured(payload.configured);
           setTokenPreview(payload.token_preview ?? null);
           setLastFetchedAt(payload.last_used_at ?? null);
@@ -52,7 +50,6 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
         if (active) {
           setError(m.calendar_feed_error());
           setLoadFailed(true);
-          onLoadError?.(true);
         }
       })
       .finally(() => {
@@ -61,12 +58,11 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
     return () => {
       active = false;
     };
-  }, [fetchFn, loadAttempt, onLoadError]);
+  }, [fetchFn, loadAttempt]);
 
   const rotate = async () => {
     setBusy(true);
     setLoadFailed(false);
-    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "POST" });
@@ -87,7 +83,6 @@ export function SettingsCalendarFeedSection({ fetchFn, onLoadError }: Props) {
   const revoke = async () => {
     setBusy(true);
     setLoadFailed(false);
-    onLoadError?.(false);
     setError(null);
     try {
       const response = await fetchFn("/api/ical", { method: "DELETE" });

@@ -13,7 +13,8 @@ import * as m from "@/paraglide/messages.js";
 import { formatDisplayDateTime } from "@/lib/dates/dateTimeUtils";
 import {
   getAuditActionLabel,
-  getAuditResourceLabel,
+  getAuditResourceName,
+  isTimeOffAuditEntry,
   getAuditActorLabel,
 } from "@/features/settings/auditPresentation";
 
@@ -56,7 +57,15 @@ export function SettingsAuditTrailSection({
         <div className="flex flex-col gap-2">
           <SettingsList className="rounded-lg border border-border">
             {entries.map((entry) => {
-              const hasDetails = Object.keys(entry.details).length > 0;
+              const details = isTimeOffAuditEntry(entry)
+                ? Object.fromEntries(
+                    Object.entries(entry.details).filter(
+                      ([key]) =>
+                        !["entry_type", "date", "start_date", "end_date", "weekday"].includes(key),
+                    ),
+                  )
+                : entry.details;
+              const hasDetails = Object.keys(details).length > 0;
               return (
                 <SettingsItem
                   key={entry.id}
@@ -64,9 +73,7 @@ export function SettingsAuditTrailSection({
                 >
                   <div className="min-w-0 text-sm">
                     <div className="font-medium break-words">
-                      {getAuditActionLabel(entry.action)} ·{" "}
-                      {getAuditResourceLabel(entry.resource_type)}{" "}
-                      {entry.resource_display_name || entry.resource_id}
+                      {getAuditActionLabel(entry.action)} · {getAuditResourceName(entry)}
                     </div>
                     <div className="text-muted-foreground">{getAuditActorLabel(entry, users)}</div>
                     {hasDetails ? (
@@ -74,7 +81,7 @@ export function SettingsAuditTrailSection({
                         <summary className="min-h-6 pointer-coarse:min-h-11 cursor-pointer text-muted-foreground">
                           {m.audit_trail_details()}
                         </summary>
-                        <code className="text-sm break-all">{JSON.stringify(entry.details)}</code>
+                        <code className="text-sm break-all">{JSON.stringify(details)}</code>
                       </details>
                     ) : null}
                   </div>

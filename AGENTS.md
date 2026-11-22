@@ -152,7 +152,7 @@ uv run python -m app.openapi_export   # what `pnpm api:generate` runs: rewrite .
 > refresh and expiry and adds no frontend switcher.
 
 Besides OIDC sessions, non-interactive clients (currently just the Pebble companion app) authenticate with
-a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Settings > Account > API tokens).
+a personal access token (`wtpat_...`, `/api/access-tokens`, managed from Settings > Connections > API tokens).
 `get_authenticated_principal` (`backend/app/routers/auth.py`) accepts either; `require_oidc_principal` gates
 endpoints — account deletion and token management itself — that a leaked token must not be able to reach.
 

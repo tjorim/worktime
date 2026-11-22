@@ -91,7 +91,7 @@ for (const theme of ["light", "dark"]) {
         } else if (state === "network") {
           await expect(view.getByRole("link", { name: "Open helper settings" })).toHaveAttribute(
             "href",
-            "/settings?section=scheduleTeam",
+            "/settings?section=connections",
           );
         } else {
           await expect(view.locator("[data-team-grid]")).toBeVisible();

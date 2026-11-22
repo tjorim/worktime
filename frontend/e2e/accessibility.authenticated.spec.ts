@@ -12,6 +12,8 @@ const settingsSections = [
   "features",
   "timeTracking",
   "account",
+  "connections",
+  "activity",
   "data",
   "about",
 ] as const;

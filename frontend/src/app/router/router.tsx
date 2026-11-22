@@ -48,6 +48,8 @@ const settingsRoute = createRoute({
       | "features"
       | "timeTracking"
       | "account"
+      | "connections"
+      | "activity"
       | "admin"
       | "data"
       | "about";
@@ -59,6 +61,8 @@ const settingsRoute = createRoute({
       section === "features" ||
       section === "timeTracking" ||
       section === "account" ||
+      section === "connections" ||
+      section === "activity" ||
       section === "admin" ||
       section === "data" ||
       section === "about"

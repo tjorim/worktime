@@ -3,21 +3,23 @@ import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { SettingsHint, SettingsSection } from "@/features/settings/SettingsParts";
+import { SettingsHint, SettingsRow } from "@/features/settings/SettingsParts";
 import { ApiError, getErrorMessage } from "@/lib/api/apiError";
 import { logger } from "@/lib/logger";
 import * as m from "@/paraglide/messages.js";
 
-interface SettingsAccountExportSectionProps {
+interface SettingsAccountExportRowProps {
   accountId: number | null;
+  isAuthenticated: boolean;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
 /** Download the full server-side account export (`GET /api/users/{id}/export`) as a JSON file. */
-export function SettingsAccountExportSection({
+export function SettingsAccountExportRow({
   accountId,
+  isAuthenticated,
   fetchFn,
-}: SettingsAccountExportSectionProps) {
+}: SettingsAccountExportRowProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,9 +48,12 @@ export function SettingsAccountExportSection({
   };
 
   return (
-    <SettingsSection icon={DownloadIcon} title={m.account_export_title()}>
+    <SettingsRow
+      icon={DownloadIcon}
+      title={m.account_export_title()}
+      description={m.account_export_description()}
+    >
       <div className="flex flex-col gap-2">
-        <SettingsHint>{m.account_export_description()}</SettingsHint>
         {error ? <Alert variant="destructive">{error}</Alert> : null}
         <div>
           <Button
@@ -63,9 +68,13 @@ export function SettingsAccountExportSection({
           </Button>
         </div>
         {accountId === null ? (
-          <SettingsHint id="account-export-help">{m.account_export_unavailable()}</SettingsHint>
+          <SettingsHint id="account-export-help">
+            {isAuthenticated
+              ? m.account_export_unavailable()
+              : m.settings_account_export_signed_out()}
+          </SettingsHint>
         ) : null}
       </div>
-    </SettingsSection>
+    </SettingsRow>
   );
 }

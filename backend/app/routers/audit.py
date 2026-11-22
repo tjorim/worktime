@@ -13,6 +13,7 @@ from app.services.audit.db import (
     DEFAULT_AUDIT_LIMIT,
     MAX_AUDIT_LIMIT,
     AuditAuthorizationError,
+    get_time_off_audit_details,
     list_audit_entries,
 )
 
@@ -51,7 +52,13 @@ async def list_audit_entries_endpoint(
     except AuditAuthorizationError as error:
         raise api_error(status.HTTP_403_FORBIDDEN, ErrorCode.AUDIT_ACCESS_DENIED, str(error)) from error
 
-    return AuditEntryListResponse(
-        items=[AuditEntryRead.model_validate(entry, from_attributes=True) for entry in entries],
-        total=len(entries),
-    )
+    time_off_details = await get_time_off_audit_details(session, entries)
+    items = []
+    for entry in entries:
+        item = AuditEntryRead.model_validate(entry, from_attributes=True)
+        if item.resource_type in ("time_off_entry", "time_off_event") and item.actor_user_id is not None:
+            details = time_off_details.get((item.actor_user_id, item.resource_id))
+            if details is not None:
+                item.details = {**item.details, **details}
+        items.append(item)
+    return AuditEntryListResponse(items=items, total=len(items))

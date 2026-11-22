@@ -6,6 +6,7 @@ import {
   LayoutGridIcon,
   type LucideIcon,
   RotateCcwClockIcon,
+  PlugIcon,
   SlidersHorizontalIcon,
   UsersIcon,
 } from "lucide-react";
@@ -17,7 +18,7 @@ import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useAppShellContext } from "@/app/providers/AppShellContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
@@ -38,14 +39,14 @@ import { useScheduleChange } from "@/hooks/useScheduleChange";
 import { shareApp } from "@/features/settings/share";
 import { ChangelogModal } from "@/features/settings/ChangelogModal";
 import { ResetSettingsModal } from "@/features/settings/data/ResetSettingsModal";
-import { SettingsAccountExportSection } from "@/features/settings/account/SettingsAccountExportSection";
+import { SettingsAccountExportRow } from "@/features/settings/data/SettingsAccountExportRow";
 import {
   SettingsAccountDangerSection,
   SettingsAccountSection,
 } from "@/features/settings/account/SettingsAccountSection";
-import { SettingsApiTokensSection } from "@/features/settings/account/SettingsApiTokensSection";
-import { SettingsCalendarFeedSection } from "@/features/settings/account/SettingsCalendarFeedSection";
-import { SettingsIntegrationClientsSection } from "@/features/settings/account/SettingsIntegrationClientsSection";
+import { SettingsLoading } from "@/features/settings/SettingsParts";
+import { SettingsConnectionsSection } from "@/features/settings/account/SettingsConnectionsSection";
+import { SettingsHdayHelper } from "@/features/settings/SettingsHdayHelper";
 import { SettingsAuditTrailSection } from "@/features/settings/account/SettingsAuditTrailSection";
 import { SettingsAdminUsersSection } from "@/features/settings/admin/SettingsAdminUsersSection";
 import { SettingsAboutSection } from "@/features/settings/SettingsAboutSection";
@@ -59,9 +60,9 @@ import { useApiClient } from "@/hooks/useApiClient";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useOngoingSyncContext } from "@/app/providers/OngoingSyncContext";
-import { useSettingsAccount } from "@/features/settings/hooks/useSettingsAccount";
 import { useSettingsApiTokens } from "@/features/settings/hooks/useSettingsApiTokens";
 import { useSettingsIntegrationClients } from "@/features/settings/hooks/useSettingsIntegrationClients";
+import { useSettingsAccount } from "@/features/settings/hooks/useSettingsAccount";
 import { useSettingsAdminUsers } from "@/features/settings/hooks/useSettingsAdminUsers";
 import { useSettingsAuditTrail } from "@/features/settings/hooks/useSettingsAuditTrail";
 import { useSettingsSyncStatus } from "@/features/settings/hooks/useSettingsSyncStatus";
@@ -80,6 +81,8 @@ const SETTINGS_SECTIONS: Array<{
   { key: "features", icon: LayoutGridIcon, label: m.features_title },
   { key: "timeTracking", icon: RotateCcwClockIcon, label: m.time_tracking_section_title },
   { key: "account", icon: CircleUserIcon, label: m.account_section_title },
+  { key: "connections", icon: PlugIcon, label: m.settings_connections_title },
+  { key: "activity", icon: RotateCcwClockIcon, label: m.audit_trail_title },
   { key: "admin", icon: UsersIcon, label: m.account_admin_users_title, adminOnly: true },
   { key: "data", icon: DatabaseIcon, label: m.quick_actions_title },
   { key: "about", icon: InfoIcon, label: m.information_title },
@@ -89,6 +92,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/settings" });
   const { openAbout, openShortcuts } = useAppShellContext();
+  const { isAuthenticated, userId } = useAuth();
   const { showWarning } = useToast();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const requestedSection = search.section ?? "scheduleTeam";
@@ -110,8 +114,11 @@ export function SettingsPage() {
   }, [requestedSection, activeSection, isAdmin, navigate, showWarning]);
 
   const visibleSections = useMemo(
-    () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
-    [isAdmin],
+    () =>
+      SETTINGS_SECTIONS.filter(
+        (section) => !section.adminOnly || (isAdmin && section.key === activeSection),
+      ),
+    [isAdmin, activeSection],
   );
 
   const sectionMeta = useMemo(() => {
@@ -126,10 +133,7 @@ export function SettingsPage() {
           <div className="mb-1 text-sm font-semibold text-muted-foreground uppercase md:mb-2">
             {m.settings_title()}
           </div>
-          <h1 className="m-0 text-2xl font-medium md:mb-2 md:text-3xl">{sectionMeta.label()}</h1>
-          <p className="m-0 hidden text-muted-foreground md:block">
-            {m.settings_page_description()}
-          </p>
+          <h1 className="m-0 text-2xl font-medium md:text-3xl">{sectionMeta.label()}</h1>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-12 lg:gap-4">
@@ -192,6 +196,7 @@ export function SettingsPage() {
 
           <div className="min-w-0 lg:col-span-8 xl:col-span-9">
             <SettingsContent
+              key={isAuthenticated ? userId : null}
               activeSection={activeSection}
               onHide={() => void navigate({ to: "/" })}
               onShowAbout={openAbout}
@@ -219,6 +224,8 @@ export type SettingsSection =
   | "features"
   | "timeTracking"
   | "account"
+  | "connections"
+  | "activity"
   | "admin"
   | "data"
   | "about";
@@ -254,7 +261,6 @@ export function SettingsContent({
   const { canInstall, isInstalled, promptInstall } = usePwaInstall();
   const { clearAll: clearTimeOffEvents } = useEventStore();
   const fetchFn = useApiClient();
-  const [calendarLoadFailed, setCalendarLoadFailed] = useState(false);
   const { isAuthenticated, isValidating, userId, displayName, triggerLogin, logout } = useAuth();
   const {
     isSyncing,
@@ -307,26 +313,17 @@ export function SettingsContent({
     onAccountDeleted: logout,
   });
   const isAdmin = accountProfile?.is_admin ?? false;
-  const {
-    retryApiTokens,
-    apiTokens,
-    isApiTokensLoading,
-    apiTokensError,
-    isCreatingApiToken,
-    createApiTokenError,
-    createdApiToken,
-    dismissCreatedApiToken,
-    handleCreateApiToken,
-    revokingApiTokenId,
-    revokeApiTokenError,
-    handleRevokeApiToken,
-  } = useSettingsApiTokens({
+  // Keep one-time credentials and in-flight mutations alive across section changes.
+  const loadConnections = activeSection === "connections";
+  const apiTokenSettings = useSettingsApiTokens({
     isAuthenticated,
+    loadEnabled: loadConnections,
     fetchFn,
   });
   const integrationClients = useSettingsIntegrationClients({
     isAuthenticated,
     accountIdentity: userId,
+    loadEnabled: loadConnections,
     fetchFn,
   });
   const {
@@ -344,7 +341,7 @@ export function SettingsContent({
     showSuccessToast: toast.showSuccess,
   });
   const personalAuditTrail = useSettingsAuditTrail({
-    enabled: activeSection === "account" && isAuthenticated && accountProfile?.id !== undefined,
+    enabled: activeSection === "activity" && isAuthenticated && accountProfile?.id !== undefined,
     userId: accountProfile?.id,
     fetchFn,
   });
@@ -495,13 +492,6 @@ export function SettingsContent({
   const sectionRenderers: Record<SettingsSection, () => ReactNode> = {
     account: () => (
       <>
-        {isAuthenticated &&
-        (profileLoadFailed ||
-          apiTokensError ||
-          integrationClients.loadFailed ||
-          calendarLoadFailed) ? (
-          <Alert variant="warning">{m.account_load_errors()}</Alert>
-        ) : null}
         <SettingsAccountSection
           isValidating={isValidating}
           isAuthenticated={isAuthenticated}
@@ -533,55 +523,56 @@ export function SettingsContent({
           retryInSeconds={retryInSeconds}
           onTriggerPull={triggerPull}
         />
+        {isAdmin ? (
+          <div className="px-4 py-3">
+            <Link to="/settings" search={{ section: "admin" }}>
+              {m.account_admin_users_title()}
+            </Link>
+          </div>
+        ) : null}
         {isAuthenticated ? (
-          <>
-            <SettingsApiTokensSection
-              onRetry={retryApiTokens}
-              apiTokens={apiTokens}
-              isApiTokensLoading={isApiTokensLoading}
-              apiTokensError={apiTokensError}
-              isCreatingApiToken={isCreatingApiToken}
-              createApiTokenError={createApiTokenError}
-              createdApiToken={createdApiToken}
-              onDismissCreatedApiToken={dismissCreatedApiToken}
-              onCreateApiToken={handleCreateApiToken}
-              revokingApiTokenId={revokingApiTokenId}
-              revokeApiTokenError={revokeApiTokenError}
-              onRevokeApiToken={handleRevokeApiToken}
-            />
-            <SettingsCalendarFeedSection fetchFn={fetchFn} onLoadError={setCalendarLoadFailed} />
-            <SettingsIntegrationClientsSection
-              onRetry={integrationClients.loadFailed ? integrationClients.retry : undefined}
-              clients={integrationClients.clients}
-              isLoading={integrationClients.isLoading}
-              error={integrationClients.error}
-              isCreating={integrationClients.isCreating}
-              createdClient={integrationClients.createdClient}
-              busyClientId={integrationClients.busyClientId}
-              isAdmin={isAdmin}
-              onDismissCreatedClient={integrationClients.dismissCreatedClient}
-              onCreateClient={integrationClients.createClient}
-              onRotateClient={integrationClients.rotateClient}
-              onRevokeClient={integrationClients.revokeClient}
-            />
-            <SettingsAccountExportSection
-              accountId={accountProfile?.id ?? null}
-              fetchFn={fetchFn}
-            />
-            <SettingsAuditTrailSection
-              {...personalAuditTrail}
-              users={accountProfile ? [accountProfile] : []}
-              onLoadMore={() => void personalAuditTrail.loadMore()}
-            />
-            <SettingsAccountDangerSection
-              isDeletingAccount={isDeletingAccount}
-              deleteAccountError={deleteAccountError}
-              onDeleteAccount={() => void handleDeleteAccount()}
-            />
-          </>
+          <SettingsAccountDangerSection
+            isDeletingAccount={isDeletingAccount}
+            deleteAccountError={deleteAccountError}
+            onDeleteAccount={() => void handleDeleteAccount()}
+          />
         ) : null}
       </>
     ),
+    connections: () => (
+      <>
+        {isAuthenticated ? (
+          <SettingsConnectionsSection
+            isAdmin={isAdmin}
+            apiTokenSettings={apiTokenSettings}
+            integrationClients={integrationClients}
+            fetchFn={fetchFn}
+          />
+        ) : (
+          <p className="px-4 py-3 text-muted-foreground">{m.settings_connections_signed_out()}</p>
+        )}
+        <SettingsHdayHelper />
+      </>
+    ),
+    activity: () =>
+      isValidating || (isAuthenticated && !accountProfile && !profileError) ? (
+        <SettingsLoading>{m.loading()}</SettingsLoading>
+      ) : isAuthenticated && accountProfile ? (
+        <SettingsAuditTrailSection
+          {...personalAuditTrail}
+          users={[accountProfile]}
+          onLoadMore={() => void personalAuditTrail.loadMore()}
+        />
+      ) : isAuthenticated && profileError ? (
+        <div className="space-y-2 p-4">
+          <Alert variant="warning">{profileError}</Alert>
+          <Button variant="outline" size="sm" onClick={retryProfile}>
+            {m.sync_retry_in_label()}
+          </Button>
+        </div>
+      ) : (
+        <p className="px-4 py-3 text-muted-foreground">{m.settings_activity_signed_out()}</p>
+      ),
     admin: () =>
       isAdmin ? (
         <>
@@ -656,6 +647,13 @@ export function SettingsContent({
     ),
     data: () => (
       <SettingsDataSection
+        accountExport={
+          <SettingsAccountExportRow
+            accountId={accountProfile?.id ?? null}
+            isAuthenticated={isAuthenticated}
+            fetchFn={fetchFn}
+          />
+        }
         onShowBackupDialog={() => setShowBackupDialog(true)}
         onRestoreBackup={() => restoreFileInputRef.current?.click()}
         isRestoringBackup={isRestoringBackup}

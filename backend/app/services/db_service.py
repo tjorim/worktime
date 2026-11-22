@@ -754,7 +754,7 @@ async def create_or_update_work_location(
         .limit(1)
     )
     location = result.scalars().first()
-
+    created = location is None or location.deleted_at is not None
     if location is None:
         location = WorkLocation(user_id=user_id, **payload.model_dump())
     else:
@@ -767,7 +767,7 @@ async def create_or_update_work_location(
     await _audit(
         session,
         actor,
-        action="create_or_update_work_location",
+        action="create_work_location" if created else "update_work_location",
         resource_type="work_location",
         resource_id=payload.date.isoformat(),
     )

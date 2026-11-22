@@ -1252,7 +1252,7 @@ async def test_write_tools_produce_transactional_db_audit_entries(
 
     assert len(entries) == 1
     entry = entries[0]
-    assert entry.action == "create_or_update_work_location"
+    assert entry.action == "create_work_location"
     assert entry.resource_id == "2026-05-01"
     assert entry.actor_user_id == user.id
     assert entry.auth_source == "oidc"

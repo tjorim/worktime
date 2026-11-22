@@ -15,10 +15,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditEntry
+from app.models import AuditEntry, TimeOffEntry
 
 # Bounded reads: mirrors champagnefestival's DEFAULT_AUDIT_LIMIT/MAX_AUDIT_LIMIT
 # so a caller can never pull an unbounded audit trail into memory/context.
@@ -129,3 +129,30 @@ async def list_audit_entries(
     statement = statement.order_by(AuditEntry.created_at.desc(), AuditEntry.id.desc()).limit(limit)
     result = await db.execute(statement)
     return list(result.scalars().all())
+
+
+def _time_off_audit_details(entry: TimeOffEntry) -> dict[str, Any]:
+    details: dict[str, Any] = {"entry_type": entry.entry_type}
+    if entry.date is not None:
+        details["date"] = entry.date.isoformat()
+    if entry.start_date is not None and entry.end_date is not None:
+        details["start_date"] = entry.start_date.isoformat()
+        details["end_date"] = entry.end_date.isoformat()
+    if entry.weekday is not None:
+        details["weekday"] = entry.weekday
+    return details
+
+
+async def get_time_off_audit_details(
+    db: AsyncSession, entries: list[AuditEntry]
+) -> dict[tuple[int, str], dict[str, Any]]:
+    """Resolve time-off activity using current records, including soft-deleted entries."""
+    keys = {
+        (entry.actor_user_id, entry.resource_id)
+        for entry in entries
+        if entry.actor_user_id is not None and entry.resource_type in ("time_off_entry", "time_off_event")
+    }
+    if not keys:
+        return {}
+    rows = await db.scalars(select(TimeOffEntry).where(tuple_(TimeOffEntry.user_id, TimeOffEntry.entry_id).in_(keys)))
+    return {(row.user_id, row.entry_id): _time_off_audit_details(row) for row in rows}

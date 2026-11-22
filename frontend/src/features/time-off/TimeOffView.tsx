@@ -1,3 +1,4 @@
+import { useTimeOffExport } from "@/hooks/useTimeOffExport";
 import {
   ChartNoAxesColumnIncreasingIcon,
   CircleCheckIcon,
@@ -9,7 +10,6 @@ import {
   PlugIcon,
   TableIcon,
   TriangleAlertIcon,
-  UploadIcon,
   UsersIcon,
   XIcon,
 } from "lucide-react";
@@ -121,6 +121,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
   const { preferences: devicePreferences, setPreferences: setDevicePreferences } =
     useDevicePreferences();
   const toast = useToast();
+  const handleExport = useTimeOffExport();
   const hdayUsername = settings.hdayUsername?.trim() || null;
   const helperBaseUrl = resolveHdayHelperBaseUrl(hdayHelperOptions.hdayHelperUrl);
   const canUseHdayHelperSync =
@@ -802,25 +803,6 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
     }, AUTO_PUSH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [entries, canUseHdayHelperSync, handlePushToHelper]);
-
-  const handleExport = useCallback(() => {
-    if (entries.length === 0) {
-      toast.showError(m.timeoff_no_events_export());
-      return;
-    }
-
-    const blob = new Blob([rawText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "timeoff.hday";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast.showSuccess(m.timeoff_exported(), UploadIcon);
-  }, [entries, rawText, toast]);
 
   // Use custom hook for keyboard shortcuts
   useTimeOffKeyboardShortcuts(

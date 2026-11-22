@@ -10,10 +10,15 @@ export const API_TOKEN_NAME_MAX_LENGTH = 100;
 
 interface UseSettingsApiTokensParams {
   isAuthenticated: boolean;
+  loadEnabled?: boolean;
   fetchFn: (input: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsApiTokensParams) {
+export function useSettingsApiTokens({
+  isAuthenticated,
+  loadEnabled = true,
+  fetchFn,
+}: UseSettingsApiTokensParams) {
   const [apiTokens, setApiTokens] = useState<ApiToken[] | null>(null);
   const [isApiTokensLoading, setIsApiTokensLoading] = useState(false);
   const [apiTokensError, setApiTokensError] = useState<string | null>(null);
@@ -54,11 +59,11 @@ export function useSettingsApiTokens({ isAuthenticated, fetchFn }: UseSettingsAp
   }
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !loadEnabled) {
       return;
     }
     void loadApiTokens();
-  }, [isAuthenticated, loadApiTokens]);
+  }, [isAuthenticated, loadEnabled, loadApiTokens]);
 
   const handleCreateApiToken = async (name: string) => {
     const trimmedName = name.trim();

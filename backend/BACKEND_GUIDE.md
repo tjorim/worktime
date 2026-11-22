@@ -90,7 +90,7 @@ These routes manage app users and keep local users aligned with their OIDC ident
 ### Access token routes
 
 Personal access tokens (`wtpat_...`) for non-interactive clients (currently the Pebble companion
-app), managed from Settings > Account > API tokens:
+app), managed from Settings > Connections > API tokens:
 
 - `/api/access-tokens/*` — create, list, revoke
 
