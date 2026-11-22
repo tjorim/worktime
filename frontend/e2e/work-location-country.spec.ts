@@ -11,17 +11,23 @@ for (const theme of ["light", "dark"]) {
       ).toBeVisible();
       await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
       await expect(page.getByRole("link")).toHaveAttribute("href", "/settings?section=features");
-      await page.screenshot({ path: `../docs/screenshots/1694/${theme}-${width}-legacy.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1694/${theme}-${width}-legacy.png`,
+      });
       const picker = page.getByRole("combobox", { name: "Country", exact: true });
       await picker.fill("Japan");
       await expect(page.getByRole("option", { name: "Japan", exact: true })).toBeVisible();
       await expectNoAccessibilityViolations(page, "work-location country picker");
-      await page.screenshot({ path: `../docs/screenshots/1694/${theme}-${width}-picker.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1694/${theme}-${width}-picker.png`,
+      });
       await picker.press("ArrowDown");
       await picker.press("Enter");
       await expect(picker).toHaveValue("Japan");
       await expect(page.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
-      await page.screenshot({ path: `../docs/screenshots/1694/${theme}-${width}-selected.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1694/${theme}-${width}-selected.png`,
+      });
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeHidden();
     });

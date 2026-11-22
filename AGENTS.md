@@ -170,7 +170,7 @@ endpoints — account deletion and token management itself — that a leaked tok
 - All storage keys live in `frontend/src/config/storageKeys.ts`
 - Icons use named `lucide-react` imports and the decorative `components/Icon.tsx` wrapper.
   Shared icon props accept `LucideIcon` components; icon-only controls must have a text alternative.
-  The previous Bootstrap Icon mapping and fill choices are recorded in `docs/icon-migration.md`.
+  The previous Bootstrap Icon mapping and fill choices are recorded in `docs/archive/icon-migration.md`.
 - Styling is Tailwind v4 + Base UI (#1376, finished by #1384); there is no Bootstrap or Sass. Follow
   "Tailwind + Base UI" below for generation, layers, tokens and lint. Keep logic in hooks/utils, use
   classes instead of new inline styles and keep light and dark themes working.
@@ -258,7 +258,8 @@ Application UI imports use `@/components/ui/<component>`. Direct Base UI subpath
 ### Workflow
 
 - Do not commit automatically unless explicitly asked
-- Always include screenshots in PR comments when making UI changes (all visible states)
+- Attach screenshots for all visible states to the PR when making UI changes. Commit images only when
+  they are used in repository documentation or the Play Store listing.
 - Code review findings (CodeRabbit or otherwise) are triaged by validity, not by severity label or who
   authored the touched code — a "nitpick" in code from a stacked PR is not automatically out of scope,
   and a "potential issue" flagged as high-confidence still needs verifying against current code before
