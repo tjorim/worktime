@@ -9,12 +9,14 @@ for (const theme of ["light", "dark"]) {
       await page.getByLabel("Stop", { exact: true }).fill("06:30");
       await expect(page.getByText(/An earlier stop time means/)).toBeVisible();
       await page.mouse.move(0, 0);
-      await page.screenshot({ path: `../docs/screenshots/1700/${theme}-${width}-form.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1700/${theme}-${width}-form.png`,
+      });
       await page.getByRole("button", { name: "Add Task", exact: true }).click();
       await expect(page.getByText(/Stop: 06:30 \(2026-01-05\)/)).toBeVisible();
       await page.mouse.move(0, 0);
       await page.screenshot({
-        path: `../docs/screenshots/1700/${theme}-${width}-saved.png`,
+        path: `test-results/review-screenshots/1700/${theme}-${width}-saved.png`,
         fullPage: true,
       });
       if (width === 390) {
@@ -27,7 +29,9 @@ for (const theme of ["light", "dark"]) {
       await expect(dialog.getByText(/An earlier stop time means/)).toBeVisible();
       await dialog.getByLabel("Stop", { exact: true }).fill("07:00");
       await page.mouse.move(0, 0);
-      await page.screenshot({ path: `../docs/screenshots/1700/${theme}-${width}-edit.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1700/${theme}-${width}-edit.png`,
+      });
       await dialog.getByRole("button", { name: "Save Changes", exact: true }).click();
       await expect(page.getByText(/Stop: 07:00 \(2026-01-05\)/)).toBeVisible();
       await page.goto(`/e2e/fixtures/dialog-pickers.html?mode=template&theme=${theme}`);
@@ -35,7 +39,9 @@ for (const theme of ["light", "dark"]) {
       await page.getByLabel("Stop", { exact: true }).fill("06:30");
       await expect(page.getByText(/An earlier stop time means/)).toBeVisible();
       await page.mouse.move(0, 0);
-      await page.screenshot({ path: `../docs/screenshots/1700/${theme}-${width}-template.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1700/${theme}-${width}-template.png`,
+      });
     });
   }
 }

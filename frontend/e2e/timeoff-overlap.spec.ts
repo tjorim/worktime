@@ -4,7 +4,9 @@ for (const theme of ["light", "dark"]) {
     test(`overlap notices allow saving (${theme}, ${width})`, async ({ page }) => {
       await page.setViewportSize({ width, height: 1000 });
       const capture = async (state: string) =>
-        page.screenshot({ path: `../docs/screenshots/1685/${theme}-${width}-${state}.png` });
+        page.screenshot({
+          path: `test-results/review-screenshots/1685/${theme}-${width}-${state}.png`,
+        });
       await page.goto(`/e2e/fixtures/timeoff-overlap.html?theme=${theme}`);
       await expect(page.getByRole("dialog")).toBeVisible();
       await capture("empty");

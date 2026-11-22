@@ -31,7 +31,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(":focus")).toHaveAccessibleDescription(/December 8, 2026/);
       await page.keyboard.press("PageUp");
       await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 8, 2026/);
-      await page.screenshot({ path: `../docs/screenshots/1699/${theme}-${width}-grid.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1699/${theme}-${width}-grid.png`,
+      });
     });
   }
 }
