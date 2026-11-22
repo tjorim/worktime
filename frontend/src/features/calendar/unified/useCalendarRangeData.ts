@@ -47,12 +47,15 @@ function weeklyTimeOffEvents(entry: TimeOffWeeklyEntry, range: CalendarRange): C
   while (date.isBefore(end, "day") || date.isSame(end, "day")) {
     if (date.isoWeekday() === entry.weekday) {
       events.push(
-        timeOffToEvent({
-          ...entry,
-          id: `${entry.id}:${date.format("YYYY-MM-DD")}`,
-          entryKind: "date",
-          date: date.format("YYYY-MM-DD"),
-        }),
+        timeOffToEvent(
+          {
+            ...entry,
+            id: `${entry.id}:${date.format("YYYY-MM-DD")}`,
+            entryKind: "date",
+            date: date.format("YYYY-MM-DD"),
+          },
+          "weekly",
+        ),
       );
     }
     date = date.add(1, "day");

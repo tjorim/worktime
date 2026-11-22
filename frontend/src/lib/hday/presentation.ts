@@ -86,6 +86,8 @@ const EVENT_COLOR_UTILITIES = {
   "other-half": "bg-wt-event-other-half-bg text-wt-event-other-half-fg",
 } as const;
 
+export const EVENT_PALETTE_KEYS = Object.keys(EVENT_COLOR_UTILITIES);
+
 /** Tailwind event colors are written out so the scanner includes every palette variant. */
 export function getEventColorUtilities(flags?: EventFlag[], eventType?: HdayEvent["type"]): string {
   const { type, variant } = getEventPaletteKey(flags, eventType);
