@@ -20,7 +20,7 @@ from app.services.audit.db import (
     MAX_AUDIT_LIMIT,
     AuditActor,
     AuditAuthorizationError,
-    get_legacy_time_off_audit_details,
+    get_time_off_audit_details,
     list_audit_entries,
     write_audit_entry,
 )
@@ -199,7 +199,7 @@ async def test_audit_rest_endpoint_allows_admin_team_wide_read(
     assert all(item["actor_user_id"] == user_id for item in scoped.json()["items"])
 
 
-async def test_time_off_audit_keeps_snapshots_and_resolves_legacy_rows(db_session: AsyncSession) -> None:
+async def test_time_off_audit_resolves_soft_deleted_entries_without_storing_details(db_session: AsyncSession) -> None:
     user = await db_service.create_user(db_session, UserCreate(username="audit-time-off", display_name="Time Off"))
     actor = AuditActor(user_id=user.id, label=user.username, auth_source="oidc")
     entry, _ = await db_service.create_or_update_time_off_entry(
@@ -208,14 +208,6 @@ async def test_time_off_audit_keeps_snapshots_and_resolves_legacy_rows(db_sessio
         TimeOffEntryCreate(entry_kind="date", date=date(2026, 11, 2)),
         actor=actor,
     )
-    await write_audit_entry(
-        db_session,
-        actor=actor,
-        action="update_time_off_entry",
-        resource_type="time_off_entry",
-        resource_id=entry.entry_id,
-    )
-    await db_session.commit()
     await db_service.update_time_off_entry(
         db_session,
         user.id,
@@ -226,12 +218,13 @@ async def test_time_off_audit_keeps_snapshots_and_resolves_legacy_rows(db_sessio
     await db_service.delete_time_off_entry(db_session, user.id, entry.entry_id, actor=actor)
 
     entries = await list_audit_entries(db_session, requesting_user_id=user.id, is_admin=False)
-    deleted, updated, legacy, created = entries
-    assert deleted.action == "delete_time_off_entry"
-    assert updated.details == deleted.details == {"entry_type": "course", "weekday": 3}
-    assert created.details == {"entry_type": "vacation", "date": "2026-11-02"}
-    assert legacy.details == {}
-    assert await get_legacy_time_off_audit_details(db_session, entries) == {
+    assert [entry.action for entry in entries] == [
+        "delete_time_off_entry",
+        "update_time_off_entry",
+        "create_time_off_entry",
+    ]
+    assert all(audit_entry.details == {} for audit_entry in entries)
+    assert await get_time_off_audit_details(db_session, entries) == {
         (user.id, entry.entry_id): {"entry_type": "course", "weekday": 3}
     }
 

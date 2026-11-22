@@ -42,7 +42,7 @@ from app.schemas import (
     WorkLocationCreate,
     WorkLocationUpdate,
 )
-from app.services.audit.db import AuditActor, time_off_audit_details, write_audit_entry
+from app.services.audit.db import AuditActor, write_audit_entry
 from app.services.sse import notify_sync_changed
 
 
@@ -754,7 +754,6 @@ async def create_or_update_work_location(
     )
     location = result.scalars().first()
     created = location is None or location.deleted_at is not None
-
     if location is None:
         location = WorkLocation(user_id=user_id, **payload.model_dump())
     else:
@@ -1226,14 +1225,7 @@ async def create_or_update_time_off_entry(
 
     session.add(entry)
     audit_action = "create_time_off_entry" if created else "update_time_off_entry"
-    await _audit(
-        session,
-        actor,
-        action=audit_action,
-        resource_type="time_off_entry",
-        resource_id=entry_id,
-        details=time_off_audit_details(entry),
-    )
+    await _audit(session, actor, action=audit_action, resource_type="time_off_entry", resource_id=entry_id)
     try:
         await session.commit()
     except IntegrityError:
@@ -1270,12 +1262,7 @@ async def create_or_update_time_off_entry(
         # retrying, using the corrected action (a concurrent insert winning
         # means this attempt is always an update, never a create).
         await _audit(
-            session,
-            actor,
-            action="update_time_off_entry",
-            resource_type="time_off_entry",
-            resource_id=entry_id,
-            details=time_off_audit_details(entry),
+            session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id
         )
         await session.commit()
     await session.refresh(entry)
@@ -1321,14 +1308,7 @@ async def update_time_off_entry(
     # silently overwrite this edit (conflict detection compares client_updated_at).
     entry.client_updated_at = now
     session.add(entry)
-    await _audit(
-        session,
-        actor,
-        action="update_time_off_entry",
-        resource_type="time_off_entry",
-        resource_id=entry_id,
-        details=time_off_audit_details(entry),
-    )
+    await _audit(session, actor, action="update_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await session.refresh(entry)
     await notify_sync_changed(user_id)
@@ -1345,13 +1325,6 @@ async def delete_time_off_entry(
     entry.updated_at = now
     entry.client_updated_at = now
     session.add(entry)
-    await _audit(
-        session,
-        actor,
-        action="delete_time_off_entry",
-        resource_type="time_off_entry",
-        resource_id=entry_id,
-        details=time_off_audit_details(entry),
-    )
+    await _audit(session, actor, action="delete_time_off_entry", resource_type="time_off_entry", resource_id=entry_id)
     await session.commit()
     await notify_sync_changed(user_id)

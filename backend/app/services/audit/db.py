@@ -131,7 +131,7 @@ async def list_audit_entries(
     return list(result.scalars().all())
 
 
-def time_off_audit_details(entry: TimeOffEntry) -> dict[str, Any]:
+def _time_off_audit_details(entry: TimeOffEntry) -> dict[str, Any]:
     details: dict[str, Any] = {"entry_type": entry.entry_type}
     if entry.date is not None:
         details["date"] = entry.date.isoformat()
@@ -143,18 +143,16 @@ def time_off_audit_details(entry: TimeOffEntry) -> dict[str, Any]:
     return details
 
 
-async def get_legacy_time_off_audit_details(
+async def get_time_off_audit_details(
     db: AsyncSession, entries: list[AuditEntry]
 ) -> dict[tuple[int, str], dict[str, Any]]:
-    """Resolve legacy rows from the latest shape, including soft-deleted entries."""
+    """Resolve time-off activity using current records, including soft-deleted entries."""
     keys = {
         (entry.actor_user_id, entry.resource_id)
         for entry in entries
-        if entry.actor_user_id is not None
-        and entry.resource_type in ("time_off_entry", "time_off_event")
-        and "entry_type" not in entry.details
+        if entry.actor_user_id is not None and entry.resource_type in ("time_off_entry", "time_off_event")
     }
     if not keys:
         return {}
     rows = await db.scalars(select(TimeOffEntry).where(tuple_(TimeOffEntry.user_id, TimeOffEntry.entry_id).in_(keys)))
-    return {(row.user_id, row.entry_id): time_off_audit_details(row) for row in rows}
+    return {(row.user_id, row.entry_id): _time_off_audit_details(row) for row in rows}
