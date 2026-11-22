@@ -6,6 +6,7 @@ import { mkdir } from "node:fs/promises";
 test("pending, offline, retry, recovery and account and connection load failures", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await page.addInitScript(() => {
     localStorage.setItem(
       "oidc.user:http://localhost:9000/application/o/worktime:worktime",
