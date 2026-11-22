@@ -19,7 +19,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Hint } from "@/components/ui/tooltip";
 import { DetailsHeader, PopoverBody } from "@/components/ui/popover";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
-import type { HdayEvent } from "@/lib/hday/types";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorUtilities } from "@/lib/hday/presentation";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
@@ -41,38 +40,22 @@ import {
   type HalfDay,
 } from "@/features/time-off/teamCalendarGrid";
 
-interface TeamMember {
-  username: string;
-  display_name: string;
-}
-
-interface TeamMemberHdayData extends TeamMember {
-  raw: string;
-  events: HdayEvent[];
-  etag: string | null;
-}
-
-interface TeamSectionHdayData {
-  title: string | null;
-  members: TeamMemberHdayData[];
-}
-
-interface TeamHdayResponse {
-  team_id: string;
-  name: string;
-  sections: TeamSectionHdayData[];
-  members: TeamMemberHdayData[]; // Flat list for backward compatibility
-}
+import {
+  toTeamSchedule,
+  type TeamHdayResponse,
+  type TeamMemberSchedule,
+  type TeamTimeOffEntry,
+} from "@/features/time-off/teamHdayResponse";
 
 /** Full-day color class for an event: the half-day look comes from the split fill, not a lighter color. */
-function getGridColorClass(event: HdayEvent): string {
+function getGridColorClass(event: TeamTimeOffEntry): string {
   const typeFlags = event.flags?.filter((flag) => flag !== "half_am" && flag !== "half_pm");
-  return getEventColorUtilities(typeFlags, event.type);
+  return getEventColorUtilities(typeFlags, event.entryKind);
 }
 
 const HALF_DAY_GLYPH: Record<HalfDay, string> = { am: "◐", pm: "◑" };
 
-function getEventTypeName(event: HdayEvent): string {
+function getEventTypeName(event: TeamTimeOffEntry): string {
   switch (getPrimaryTypeFlag(event.flags)) {
     case "business":
       return m.team_legend_business();
@@ -90,21 +73,21 @@ function getEventTypeName(event: HdayEvent): string {
       return m.team_legend_other();
     default:
       // A weekly pattern with no type is the standing day off, not booked leave.
-      return event.type === "weekly" ? m.team_legend_weekly_off() : m.team_legend_vacation();
+      return event.entryKind === "weekly" ? m.team_legend_weekly_off() : m.team_legend_vacation();
   }
 }
 
 /** Everything a cell needs to say about one event, for the popover and the aria-label alike. */
-function describeEvent(event: HdayEvent) {
+function describeEvent(event: TeamTimeOffEntry) {
   const half = getHalfDay(event);
   const halfLabel =
     half === "am" ? m.team_legend_half_am() : half === "pm" ? m.team_legend_half_pm() : null;
   const isRecurringVariant =
-    event.type === "weekly" && getPrimaryTypeFlag(event.flags) !== "holiday";
+    event.entryKind === "weekly" && getPrimaryTypeFlag(event.flags) !== "holiday";
   const typeLabel = isRecurringVariant
     ? `${getEventTypeName(event)} (${m.team_popover_weekly()})`
     : getEventTypeName(event);
-  const title = event.title?.trim() || null;
+  const title = event.note;
   const text = [typeLabel, halfLabel ? `(${halfLabel})` : null, title ? `– ${title}` : null]
     .filter(Boolean)
     .join(" ");
@@ -204,7 +187,7 @@ export function TeamScheduleView() {
   const [teamIdInput, setTeamIdInput] = useState(() => preferences?.lastHdayTeamId ?? "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<TeamLoadError | null>(null);
-  const [teamData, setTeamData] = useState<TeamHdayResponse | null>(null);
+  const [teamData, setTeamData] = useState<ReturnType<typeof toTeamSchedule> | null>(null);
   const [autoLoadSettled, setAutoLoadSettled] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const gridScrollRef = useRef<HTMLDivElement>(null);
@@ -281,7 +264,7 @@ export function TeamScheduleView() {
 
         // Only update state if this request wasn't aborted
         if (!abortController.signal.aborted) {
-          setTeamData(data);
+          setTeamData(toTeamSchedule(data));
           // Remember only IDs that loaded, so typos never become suggestions or the
           // next visit's auto-loaded team.
           setPreferences((current) => ({
@@ -363,14 +346,14 @@ export function TeamScheduleView() {
   // Events per member per day, over the range plus one day either side so a
   // range that continues past the edge is still recognized as continuing.
   const eventsByMember = useMemo(() => {
-    const index = new Map<TeamMemberHdayData, Map<string, HdayEvent[]>>();
+    const index = new Map<TeamMemberSchedule, Map<string, TeamTimeOffEntry[]>>();
     const first = dateRange[0];
     const last = dateRange[dateRange.length - 1];
     if (!teamData || !first || !last) return index;
     const padded = [first.subtract(1, "day"), ...dateRange, last.add(1, "day")];
     for (const section of teamData.sections) {
       for (const member of section.members) {
-        index.set(member, indexEventsByDate(member.events, padded));
+        index.set(member, indexEventsByDate(member.entries, padded));
       }
     }
     return index;
@@ -415,7 +398,7 @@ export function TeamScheduleView() {
   const legendItems = getLegendItems();
   const hasNoMembers =
     !!teamData &&
-    teamData.members.length === 0 &&
+    teamData.memberCount === 0 &&
     teamData.sections.every((section) => section.members.length === 0);
   const recentTeamIds = (preferences?.recentHdayTeamIds ?? []).filter(
     (id) => id !== teamIdInput.trim(),
@@ -546,9 +529,9 @@ export function TeamScheduleView() {
           {teamData ? (
             <>
               <h6 className="mb-4">
-                {m.team_members_heading({ count: String(teamData.members.length) })}
+                {m.team_members_heading({ count: String(teamData.memberCount) })}
                 <span className="text-muted-foreground text-sm ml-2">
-                  {m.team_id_display({ id: teamData.team_id })}
+                  {m.team_id_display({ id: teamData.id })}
                 </span>
               </h6>
 
@@ -637,12 +620,12 @@ export function TeamScheduleView() {
                                   <br />
                                   <code className="text-primary-foreground">{member.username}</code>
                                   <br />
-                                  {member.events.length === 1
+                                  {member.entries.length === 1
                                     ? m.team_events_count_one({
-                                        count: String(member.events.length),
+                                        count: String(member.entries.length),
                                       })
                                     : m.team_events_count_other({
-                                        count: String(member.events.length),
+                                        count: String(member.entries.length),
                                       })}
                                   <br />
                                   {member.etag ? (
@@ -701,7 +684,7 @@ export function TeamScheduleView() {
                                       }
                                       // Cap the first and last day of a range so it reads as one
                                       // block while every cell keeps its border.
-                                      if (event.type === "range") {
+                                      if (event.entryKind === "range") {
                                         const previous = memberEvents?.get(
                                           date.subtract(1, "day").format("YYYY-MM-DD"),
                                         );

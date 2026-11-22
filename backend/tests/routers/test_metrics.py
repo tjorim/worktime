@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
+from app.core.observability import request_metrics
 from app.main import app
 
 
@@ -112,3 +113,17 @@ class TestMetricsEndpoint:
         response = client.get("/api/metrics", headers={"X-Metrics-Token": token})
         data = response.json()
         assert 0.0 <= data["error_rate"] <= 1.0
+
+
+@pytest.mark.parametrize(("path", "status"), [("/api/health", 200), ("/api/does-not-exist", 404)])
+def test_records_the_header_measurement_once(client, monkeypatch, path, status):
+    recorded = []
+    monkeypatch.setattr(request_metrics, "record", lambda elapsed_ms, code: recorded.append((elapsed_ms, code)))
+
+    response = client.get(path)
+
+    assert response.status_code == status
+    [(elapsed_ms, recorded_status)] = recorded
+    assert recorded_status == status
+    assert response.headers["X-Total-Ms"] == f"{elapsed_ms:.3f}"
+    assert response.headers["Server-Timing"].startswith(f"app;dur={elapsed_ms:.1f}, ")

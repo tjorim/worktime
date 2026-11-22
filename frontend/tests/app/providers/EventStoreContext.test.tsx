@@ -215,7 +215,7 @@ describe("EventStoreContext", () => {
     });
   });
 
-  describe("getEventsInRange", () => {
+  describe("getTimeOffInRange", () => {
     it("should return events within the date range", () => {
       const { result } = renderHook(() => useEventStore(), { wrapper });
 
@@ -226,13 +226,13 @@ describe("EventStoreContext", () => {
         ]);
       });
 
-      const rangeEvents = result.current.getEventsInRange(
+      const rangeEvents = result.current.getTimeOffInRange(
         new Date("2025-01-01"),
         new Date("2025-01-31"),
       );
 
       expect(rangeEvents).toHaveLength(1);
-      expect(rangeEvents[0]?.label).toBe("Event in range");
+      expect(rangeEvents[0]?.entry.note).toBe("Event in range");
     });
 
     it("should expand weekly entries within range", () => {
@@ -242,14 +242,14 @@ describe("EventStoreContext", () => {
         result.current.addEntries([createWeeklyEntry(1, "Every Monday")]);
       });
 
-      const rangeEvents = result.current.getEventsInRange(
+      const rangeEvents = result.current.getTimeOffInRange(
         new Date("2025-01-01"),
         new Date("2025-01-31"),
       );
 
       expect(rangeEvents).toHaveLength(4);
       rangeEvents.forEach((event) => {
-        expect(event.label).toBe("Every Monday");
+        expect(event.entry.note).toBe("Every Monday");
       });
     });
 
@@ -260,7 +260,7 @@ describe("EventStoreContext", () => {
         result.current.addEntries([createDateEntry("2025-12-25", "Christmas")]);
       });
 
-      const rangeEvents = result.current.getEventsInRange(
+      const rangeEvents = result.current.getTimeOffInRange(
         new Date("2025-01-01"),
         new Date("2025-01-31"),
       );

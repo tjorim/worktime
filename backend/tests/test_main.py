@@ -97,7 +97,7 @@ def test_mcp_capabilities_enabled_manifest_follows_contract_v1(client, monkeypat
     from types import SimpleNamespace
 
     from app import main
-    from app.mcp_server import MCP_TOOL_CAPABILITIES
+    from app.mcp.server import MCP_TOOL_CAPABILITIES
 
     monkeypatch.setattr(main, "_mcp_app", object())
     monkeypatch.setattr(main, "_mcp", SimpleNamespace(version="test"))

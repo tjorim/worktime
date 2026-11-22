@@ -15,13 +15,15 @@ The 500 for an unhandled exception is sent by Starlette's outermost
 header; the request is still logged when slow.
 
 The same module lives in Travel, Daynest, Worktime and Champagnefestival
-(tjorim/apps#246); keep the copies identical.
+(tjorim/apps#246). The optional response observer lets Worktime feed its
+metrics collector and legacy timing header from the same measurement.
 """
 
 from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
@@ -105,8 +107,14 @@ def _warn_if_slow(scope: Scope, root_path: str, status: int, elapsed_ms: float, 
 class RequestTimingMiddleware:
     """Pure ASGI, so streamed responses pass through unbuffered."""
 
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        observe_response: Callable[[float, int, MutableHeaders | None], None] | None = None,
+    ) -> None:
         self.app = app
+        self.observe_response = observe_response
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -118,6 +126,7 @@ class RequestTimingMiddleware:
         usage = _DatabaseUsage()
         token = _usage.set(usage)
         status: int | None = None
+        failed = False
 
         async def send_with_timing(message: Message) -> None:
             nonlocal status
@@ -129,13 +138,21 @@ class RequestTimingMiddleware:
                     "Server-Timing",
                     f'app;dur={elapsed_ms:.1f}, db;desc="{usage.queries} queries";dur={usage.seconds * 1000:.1f}',
                 )
+                if self.observe_response is not None:
+                    self.observe_response(elapsed_ms, status, headers)
                 message = {**message, "headers": headers.raw}
                 _warn_if_slow(scope, root_path, status, elapsed_ms, usage)
             await send(message)
 
         try:
             await self.app(scope, receive, send_with_timing)
+        except Exception:
+            failed = True
+            raise
         finally:
             _usage.reset(token)
-            if status is None:  # failed before responding; the server answers 500
-                _warn_if_slow(scope, root_path, 500, (time.perf_counter() - started) * 1000, usage)
+            if status is None:
+                elapsed_ms = (time.perf_counter() - started) * 1000
+                if failed and self.observe_response is not None:
+                    self.observe_response(elapsed_ms, 500, None)
+                _warn_if_slow(scope, root_path, 500, elapsed_ms, usage)

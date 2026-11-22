@@ -8,7 +8,15 @@ const ALLOWED_PLAIN_USE_QUERY = new Set([
   "hooks/useOpenHolidays.ts",
   "features/calendar/month/usePaydates.ts",
 ]);
-const SYNC_QUERY_KEY_ALLOWED_FILES = new Set(["lib/db/collections.ts"]);
+const SYNC_QUERY_KEY_ALLOWED_FILES = new Set([
+  "lib/db/collections.ts",
+  "lib/db/ganttTasksCollection.ts",
+  "lib/db/labelsCollection.ts",
+  "lib/db/tasksCollection.ts",
+  "lib/db/templatesCollection.ts",
+  "lib/db/timeOffCollection.ts",
+  "lib/db/workLocationsCollection.ts",
+]);
 
 function walkFiles(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true });

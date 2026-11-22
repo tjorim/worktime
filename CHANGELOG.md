@@ -28,6 +28,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Use one request-timing middleware for both timing headers and metrics, align MCP, router and calendar module names, and split sync code into smaller modules. Keep parsed .hday events at the file and helper boundaries.
 - Remove unused web translations and vacation allowance references, and check message usage in CI.
 - Index the current documentation, archive finished migrations and old plans, and save browser review screenshots to ignored test output (#1993).
 - Readiness answers `{"status": "ready"}` (200) or `{"status": "not_ready"}` (503) like the other three apps, instead of `ok`/`degraded`; the `auth` and `database` detail keys and the status codes are unchanged. One `ApiHTTPException` handler is gone because the framework HTTP handler already serves it.

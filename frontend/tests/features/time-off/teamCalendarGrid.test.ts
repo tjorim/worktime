@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { HdayEvent } from "@/lib/hday/types";
+import { toTeamTimeOffEntries } from "@/features/time-off/teamHdayResponse";
 import {
   getHalfDay,
   getScrollLeftForColumn,
@@ -45,29 +46,33 @@ const days = (from: string, count: number) =>
 
 describe("indexEventsByDate", () => {
   it("indexes range events on every day they cover, inclusive", () => {
-    const trip: HdayEvent = { type: "range", start: "2026/03/02", end: "2026/03/04" };
-    const index = indexEventsByDate([trip], days("2026-03-01", 6));
+    const [trip] = toTeamTimeOffEntries([
+      { type: "range", start: "2026/03/02", end: "2026/03/04" },
+    ]);
+    const index = indexEventsByDate([trip!], days("2026-03-01", 6));
 
     expect([...index.keys()]).toEqual(["2026-03-02", "2026-03-03", "2026-03-04"]);
     expect(index.get("2026-03-03")).toEqual([trip]);
   });
 
   it("matches weekly events on the ISO weekday", () => {
-    const monday: HdayEvent = { type: "weekly", weekday: 1 };
+    const monday = toTeamTimeOffEntries([{ type: "weekly", weekday: 1 }]);
     // 2026-03-02 is a Monday.
-    const index = indexEventsByDate([monday], days("2026-03-01", 9));
+    const index = indexEventsByDate(monday, days("2026-03-01", 9));
 
     expect([...index.keys()]).toEqual(["2026-03-02", "2026-03-09"]);
   });
 
   it("returns the original event objects in the member's event order", () => {
-    const weekly: HdayEvent = { type: "weekly", weekday: 1 };
-    const range: HdayEvent = { type: "range", start: "2026/03/02", end: "2026/03/02" };
-    const index = indexEventsByDate([weekly, range], days("2026-03-02", 1));
+    const entries = toTeamTimeOffEntries([
+      { type: "weekly", weekday: 1 },
+      { type: "range", start: "2026/03/02", end: "2026/03/02" },
+    ]);
+    const index = indexEventsByDate(entries, days("2026-03-02", 1));
 
     const found = index.get("2026-03-02")!;
-    expect(found[0]).toBe(weekly);
-    expect(found[1]).toBe(range);
+    expect(found[0]).toBe(entries[0]);
+    expect(found[1]).toBe(entries[1]);
   });
 
   it("ignores unknown events and ranges missing a bound", () => {
@@ -75,15 +80,15 @@ describe("indexEventsByDate", () => {
       { type: "unknown", raw: "???" },
       { type: "range", start: "2026/03/02" },
     ];
-    expect(indexEventsByDate(events, days("2026-03-01", 5)).size).toBe(0);
+    expect(indexEventsByDate(toTeamTimeOffEntries(events), days("2026-03-01", 5)).size).toBe(0);
   });
 });
 
 describe("getHalfDay", () => {
   it("reads the half from the flags", () => {
-    expect(getHalfDay({ type: "range", flags: ["half_am"] })).toBe("am");
-    expect(getHalfDay({ type: "range", flags: ["half_pm"] })).toBe("pm");
-    expect(getHalfDay({ type: "range", flags: ["business"] })).toBeNull();
-    expect(getHalfDay({ type: "range" })).toBeNull();
+    expect(getHalfDay({ flags: ["half_am"] })).toBe("am");
+    expect(getHalfDay({ flags: ["half_pm"] })).toBe("pm");
+    expect(getHalfDay({ flags: ["business"] })).toBeNull();
+    expect(getHalfDay({})).toBeNull();
   });
 });

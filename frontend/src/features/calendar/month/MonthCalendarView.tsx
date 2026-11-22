@@ -62,7 +62,7 @@ import {
   DEFAULT_WEEKDAY,
 } from "@/lib/time-off/timeoffConstants";
 import type { WorkLocation } from "@/types/workLocation";
-interface CalendarViewProps {
+interface MonthCalendarViewProps {
   myTeam: number | null;
   onChangeSchedule?: () => void;
   onChangeTeam?: () => void;
@@ -70,7 +70,7 @@ interface CalendarViewProps {
 }
 
 /**
- * CalendarView displays a monthly calendar showing the user's working schedule
+ * MonthCalendarView displays a monthly calendar showing the user's working schedule
  * with full event management capabilities.
  *
  * This view integrates:
@@ -90,12 +90,12 @@ interface CalendarViewProps {
  * @param props.onChangeTeam - Optional callback to open team selector
  * @param props.onOpenScheduleTab - Optional callback to open Schedule tab
  */
-export function CalendarView({
+export function MonthCalendarView({
   myTeam,
   onChangeSchedule,
   onChangeTeam,
   onOpenScheduleTab,
-}: CalendarViewProps) {
+}: MonthCalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
   const { entries, addEntries, updateEntry, deleteEntry } = useEventStore();
   const { scheduleType, settings } = useSettings();

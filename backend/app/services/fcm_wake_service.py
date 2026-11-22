@@ -1,7 +1,7 @@
 """Fans an FCM wake-ping out to every device token registered for a user.
 
 Called from the task create/update paths (app.services.db_service) and the sync
-push endpoint (app.routers.db_sync) whenever a change could affect the
+push endpoint (app.routers.sync) whenever a change could affect the
 soonest-starting planned task, so an Android device that's closed learns about
 it well before the reminder's ~10-minute lead window opens -- rather than only
 at the next foreground refresh. See app.services.fcm_service for what the

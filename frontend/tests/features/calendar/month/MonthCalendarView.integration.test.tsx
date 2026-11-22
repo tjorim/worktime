@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import { CalendarView } from "@/features/calendar/month/CalendarView";
+import { MonthCalendarView } from "@/features/calendar/month/MonthCalendarView";
 import { EventStoreProvider } from "@/app/providers/EventStoreContext";
 import { SettingsProvider } from "@/app/providers/SettingsContext";
 import { ToastProvider } from "@/app/providers/ToastContext";
@@ -32,7 +32,7 @@ const mockedUseLongWeekend = vi.mocked(useLongWeekend);
 
 /**
  * Test fixtures for multi-source data integration testing.
- * These represent typical data combinations seen in CalendarView.
+ * These represent typical data combinations seen in MonthCalendarView.
  */
 const createTestFixtures = () => {
   // Public holidays fixture - New Year's Day
@@ -130,21 +130,21 @@ const setupTimeOffEvents = (events: TimeOffEntry[]) => {
 };
 
 /**
- * Renders CalendarView with all required providers.
+ * Renders MonthCalendarView with all required providers.
  */
-const renderCalendarView = (props: { myTeam: number | null } = { myTeam: 1 }) => {
+const renderMonthCalendarView = (props: { myTeam: number | null } = { myTeam: 1 }) => {
   return render(
     <SettingsProvider>
       <ToastProvider>
         <EventStoreProvider>
-          <CalendarView {...props} />
+          <MonthCalendarView {...props} />
         </EventStoreProvider>
       </ToastProvider>
     </SettingsProvider>,
   );
 };
 
-describe("CalendarView Integration Tests", () => {
+describe("MonthCalendarView Integration Tests", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
@@ -209,7 +209,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify calendar is rendered
       expect(screen.getByText(/My Working Calendar/i)).toBeInTheDocument();
@@ -242,7 +242,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify time-off events are rendered (may appear multiple times across date range)
       expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
@@ -262,7 +262,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify school holiday is exposed through day-cell accessible description
       const schoolHolidayCells = screen.getAllByRole("gridcell", {
@@ -296,7 +296,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify both school holiday and time-off event appear (school holiday appears multiple days)
       expect(
@@ -313,7 +313,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      const { container } = renderCalendarView({ myTeam: 1 });
+      const { container } = renderMonthCalendarView({ myTeam: 1 });
 
       // Find a day cell by class name (day cells are divs, not buttons)
       const dayCells = container.querySelectorAll(".month-calendar-day");
@@ -343,7 +343,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence since it spans multiple days)
       const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
@@ -373,7 +373,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Find the vacation event badge (get first occurrence)
       const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
@@ -392,7 +392,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      const { container } = renderCalendarView({ myTeam: 1 });
+      const { container } = renderMonthCalendarView({ myTeam: 1 });
 
       // Find a day cell
       const dayCells = container.querySelectorAll(".month-calendar-day");
@@ -416,7 +416,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-02-15T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify we're in February
       expect(screen.getByText(/February 2025/i)).toBeInTheDocument();
@@ -435,7 +435,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify we're in January
       expect(screen.getByText(/January 2025/i)).toBeInTheDocument();
@@ -454,7 +454,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Navigate away from current month
       const nextButton = screen.getByRole("button", { name: /Next month/i });
@@ -475,7 +475,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Navigate to previous month (should go to December 2024) using fireEvent
       const prevButton = screen.getByRole("button", { name: /Previous month/i });
@@ -495,7 +495,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify time-off events are NOT displayed
       expect(screen.queryByRole("button", { name: /Vacation/i })).not.toBeInTheDocument();
@@ -510,7 +510,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify time-off events ARE displayed (may appear multiple times)
       expect(screen.getAllByRole("button", { name: /Vacation/i }).length).toBeGreaterThan(0);
@@ -523,7 +523,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Verify modal is not present
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -535,7 +535,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Open the legend popover
       const legendButton = screen.getByRole("button", { name: /Legend/i });
@@ -552,7 +552,7 @@ describe("CalendarView Integration Tests", () => {
     it("shows empty state when no schedule is selected", () => {
       setupUserState({ myTeam: null, scheduleType: null, enableTimeOff: false });
 
-      renderCalendarView({ myTeam: null });
+      renderMonthCalendarView({ myTeam: null });
 
       // Verify empty state message
       expect(screen.getByText(/Welcome to Your Working Calendar/i)).toBeInTheDocument();
@@ -562,7 +562,7 @@ describe("CalendarView Integration Tests", () => {
     it("shows empty state when schedule is selected but no team", () => {
       setupUserState({ myTeam: null, scheduleType: "5-shift", enableTimeOff: false });
 
-      renderCalendarView({ myTeam: null });
+      renderMonthCalendarView({ myTeam: null });
 
       // Verify empty state message for team selection
       expect(screen.getByText(/select your team/i)).toBeInTheDocument();
@@ -574,7 +574,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: null });
+      renderMonthCalendarView({ myTeam: null });
 
       // 9-5 schedule doesn't require team selection - should show calendar
       expect(screen.queryByText(/Welcome to Your Working Calendar/i)).not.toBeInTheDocument();
@@ -608,7 +608,7 @@ describe("CalendarView Integration Tests", () => {
     });
 
     it("completes add event workflow successfully", async () => {
-      const { container } = renderCalendarView({ myTeam: 1 });
+      const { container } = renderMonthCalendarView({ myTeam: 1 });
 
       openAddEventModalForDay(container, "20");
 
@@ -630,7 +630,7 @@ describe("CalendarView Integration Tests", () => {
     });
 
     it("validates date input when adding events", async () => {
-      const { container } = renderCalendarView({ myTeam: 1 });
+      const { container } = renderMonthCalendarView({ myTeam: 1 });
 
       openAddEventModalForDay(container, "20");
 
@@ -655,7 +655,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       // Click on an event to view it (get first occurrence) using fireEvent
       const vacationBadges = screen.getAllByRole("button", { name: /Vacation/i });
@@ -685,7 +685,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.click(vacationBadge!);
@@ -712,7 +712,7 @@ describe("CalendarView Integration Tests", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
 
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
 
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.click(vacationBadge!);
@@ -761,7 +761,7 @@ describe("CalendarView Integration Tests", () => {
       setupTimeOffEvents(fixtures.timeOffEvents);
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2025-01-10T12:00:00Z"));
-      renderCalendarView({ myTeam: 1 });
+      renderMonthCalendarView({ myTeam: 1 });
     });
 
     it("shows confirmation dialog when deleting event", async () => {

@@ -8,7 +8,7 @@ Every endpoint here requires ``require_oidc_principal``: an interactive
 Keycloak user session, never a personal access token or an integration
 client itself. This is a structural, not just policy, guarantee against
 privilege escalation — an integration credential is verified exclusively by
-FastMCP's ``TokenVerifier`` machinery (``app.mcp_server``) and never reaches
+FastMCP's ``TokenVerifier`` machinery (``app.mcp.server``) and never reaches
 ``app.routers.auth`` at all, so it has no path to call these
 management endpoints and mint or escalate another credential.
 """

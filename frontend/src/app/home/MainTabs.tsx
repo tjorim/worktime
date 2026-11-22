@@ -27,14 +27,14 @@ const ScheduleTabView = lazy(() =>
     default: module.ScheduleTabView,
   })),
 );
-const CalendarView = lazy(() =>
-  import("@/features/calendar/month/CalendarView").then((module) => ({
-    default: module.CalendarView,
+const MonthCalendarView = lazy(() =>
+  import("@/features/calendar/month/MonthCalendarView").then((module) => ({
+    default: module.MonthCalendarView,
   })),
 );
 const UnifiedCalendarView = lazy(() =>
-  import("@/features/calendar/unified/CalendarView").then((module) => ({
-    default: module.CalendarView,
+  import("@/features/calendar/unified/UnifiedCalendarView").then((module) => ({
+    default: module.UnifiedCalendarView,
   })),
 );
 const TimeOffView = lazy(() =>
@@ -226,7 +226,7 @@ export function MainTabs({
           <TabsContent value="calendar" keepMounted>
             {activeKey === "calendar" && (
               <Suspense fallback={loadingFallback}>
-                <CalendarView
+                <MonthCalendarView
                   myTeam={myTeam}
                   onChangeSchedule={onChangeSchedule}
                   onChangeTeam={onChangeTeam}

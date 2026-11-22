@@ -1,6 +1,6 @@
 """Shared MCP call context: principal type, error types, and cross-cutting helpers.
 
-Kept separate from ``app.mcp_server`` (the assembler) so the domain modules
+Kept separate from ``app.mcp.server`` (the assembler) so the domain modules
 in this package can import it without a circular dependency on the
 assembler, which in turn imports the domain modules.
 """
@@ -27,7 +27,7 @@ from app.services.audit.db import AuditActor
 from app.services.db_service import ConflictError, NotFoundError, ValidationError
 
 if TYPE_CHECKING:
-    from app.mcp_server import WorktimeMcpBackend
+    from app.mcp.server import WorktimeMcpBackend
 
 logger = logging.getLogger(__name__)
 

@@ -84,7 +84,7 @@ and its tabs), `layout/` (app layout, header, about and keyboard-shortcut dialog
 - A design-system primitive (a Base UI / shadcn wrapper): `components/ui/`, recorded in `ui-maintenance.json`.
 - A hook or helper only one feature uses: that feature's folder. Shared: `hooks/` or `lib/<topic>/`.
 - An API call or query hook: next to the feature that owns it; shared ones go to `hooks/` or `lib/api/`. Sync-managed
-  data goes through `lib/db/collections.ts` (see `lib/db/README.md`).
+  data goes through the domain collections exported by `lib/db/collections.ts` (see `lib/db/README.md`).
 - A provider, router change or layout piece: `app/`.
 - MSW handlers and fixtures: `mocks/`. Constants and runtime configuration: `config/`. Storage keys: `config/storageKeys.ts`.
 - A test: `frontend/tests/` at the mirrored path; a helper used by several tests: `tests/utils/`.
@@ -93,21 +93,20 @@ and its tabs), `layout/` (app layout, header, about and keyboard-shortcut dialog
 
 ```
 main.py                 app assembly: middleware, router registration, lifespan; nothing else (`app.main:app`)
-mcp_server.py           the FastMCP server assembly (`create_mcp_server`, `create_mcp_http_app`), documented in docs/integrations
 openapi_export.py       writes frontend/openapi.json (`uv run python -m app.openapi_export`)
 version.py              APP_VERSION, read from the root VERSION file
 routers/                the HTTP layer, one module per domain; thin: validate, call a service, return a response model
 services/               business logic, one module per domain
   audit/                the DB audit trail (`db.py`) and the rotated audit file logger (`logger.py`)
   cache/                the in-memory holiday cache (`FileCache`, `HolidayCacheEntry`); see its README.md
-  sse.py                the sync event manager (SSE fan-out, Postgres LISTEN/NOTIFY); used by `db_service` and `routers/db_sync`
+  sse.py                the sync event manager (SSE fan-out, Postgres LISTEN/NOTIFY); used by `db_service` and `routers/sync`
 models/                 SQLAlchemy models, one module per domain (`base.py` has Base, the timestamp mixin and the UTC clock)
 schemas/                Pydantic request and response models, one module per domain (`base.py` has ResponseModel,
                         RequestModel, ListResponse); `read_models.py` holds the read-model responses
 core/                   settings (`config.py`), CORS, OIDC/JWT validation (`oidc.py`), errors, observability, request limits,
                         pagination, `datetime`/`timing` helpers
 db/                     engine and session factory, SQLite compatibility, `init_db` (auto-migrate)
-mcp/                    MCP tools and resources, one module per domain, assembled by `mcp_server.py`
+mcp/                    MCP tools and resources, one module per domain, assembled by `mcp/server.py`
 middleware/             ASGI middleware: rate limit, request id, `X-Total-Ms` timing, `Server-Timing` and slow-request log
 ```
 
@@ -120,10 +119,9 @@ Rules:
 - `schemas/__init__.py` re-exports every schema name, so `from app.schemas import TaskRead` and
   `from app.schemas.tasks import TaskRead` are both valid; prefer the submodule in new code. Schema names become OpenAPI
   component names, so a schema class is never renamed or moved to another module under a different name.
-- Import across packages with absolute `app.` paths. Nothing lives loose in `app/` except the four modules above.
-- The two timing middlewares are not duplicates: `middleware/timing.py` sets `X-Total-Ms` and feeds the `/api/metrics`
-  collector, `middleware/request_timing.py` sets `Server-Timing` and logs slow requests by route template. Both are
-  registered in `main.py`.
+- Import across packages with absolute `app.` paths. Nothing lives loose in `app/` except the three modules above.
+- `middleware/request_timing.py` measures time to response headers, sets `Server-Timing`, and logs slow requests by
+  route template. Worktime's response observer uses the same measurement for `X-Total-Ms` and `/api/metrics`.
 - `core/statistics.py` has no production importer (only `tests/core/test_statistics.py`); it is kept rather than deleted.
 
 Tests live in `backend/tests/` and mirror `app/` (`tests/routers/`, `tests/services/`, `tests/core/`, `tests/db/`,

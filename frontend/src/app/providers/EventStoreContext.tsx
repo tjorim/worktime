@@ -9,13 +9,11 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
-import type { CalendarEvent } from "@/lib/events/types";
-import { entriesToCalendarEvents, filterEventsInRange } from "@/lib/events/converters";
+import { getTimeOffOccurrences, type TimeOffOccurrence } from "@/lib/time-off/occurrences";
 import { hdayToTimeOffEntries, timeOffEntriesToHday } from "@/lib/time-off/codecs";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import type { TimeOffImportResult } from "@/lib/time-off/types";
 import { getTimeOffEntryIdentityKey, getTimeOffEntrySortKey } from "@/lib/time-off/types";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   hasSyncCollectionAuth,
   pushTimeOffImport,
@@ -28,7 +26,7 @@ import { logger } from "@/lib/logger";
 interface EventStoreContextType {
   rawText: string;
   entries: TimeOffEntry[];
-  getEventsInRange: (startDate: Date, endDate: Date) => CalendarEvent[];
+  getTimeOffInRange: (startDate: Date, endDate: Date) => TimeOffOccurrence[];
   addEntries: (entries: TimeOffEntry[]) => void;
   replaceEntries: (entries: TimeOffEntry[]) => void;
   updateEntry: (id: string, entry: TimeOffEntry) => void;
@@ -96,12 +94,8 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     }
   }, [sortedEntries]);
 
-  const getEventsInRange = useCallback((startDate: Date, endDate: Date): CalendarEvent[] => {
-    const startStr = dayjs(startDate).format("YYYY-MM-DD");
-    const endStr = dayjs(endDate).format("YYYY-MM-DD");
-    // Use ref to avoid recreating the callback on every entry change
-    const calendarEvents = entriesToCalendarEvents(sortedEntriesRef.current, startDate, endDate);
-    return filterEventsInRange(calendarEvents, startStr, endStr);
+  const getTimeOffInRange = useCallback((startDate: Date, endDate: Date): TimeOffOccurrence[] => {
+    return getTimeOffOccurrences(sortedEntriesRef.current, startDate, endDate);
   }, []);
 
   const addEntries = useCallback((newEntries: TimeOffEntry[]) => {
@@ -263,7 +257,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     () => ({
       rawText,
       entries: sortedEntries,
-      getEventsInRange,
+      getTimeOffInRange,
       addEntries,
       replaceEntries,
       updateEntry,
@@ -276,7 +270,7 @@ export function EventStoreProvider({ children }: EventStoreProviderProps) {
     [
       rawText,
       sortedEntries,
-      getEventsInRange,
+      getTimeOffInRange,
       addEntries,
       replaceEntries,
       updateEntry,

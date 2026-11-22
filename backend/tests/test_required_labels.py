@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.mcp_server import WorktimeMcpBackend, create_mcp_server
+from app.mcp.server import WorktimeMcpBackend, create_mcp_server
 
 
 def setup_owner(db_client, auth_headers, create_user_factory):

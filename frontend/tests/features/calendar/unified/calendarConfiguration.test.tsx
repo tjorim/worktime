@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import type { CalendarConfig } from "@schedule-x/calendar";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Temporal } from "temporal-polyfill";
-import { CalendarView } from "@/features/calendar/unified/CalendarView";
+import { UnifiedCalendarView } from "@/features/calendar/unified/UnifiedCalendarView";
 import { USER_STATE_STORAGE_KEY } from "@/config/storageKeys";
 import { setLocale } from "@/paraglide/runtime.js";
 import { TestProviders } from "@tests/utils/testProviders";
@@ -34,7 +34,7 @@ describe("unified calendar configuration", () => {
       localStorage.setItem(USER_STATE_STORAGE_KEY, JSON.stringify({ settings: { timeFormat } }));
       render(
         <TestProviders>
-          <CalendarView />
+          <UnifiedCalendarView />
         </TestProviders>,
       );
       expect(captureConfig).toHaveBeenLastCalledWith(

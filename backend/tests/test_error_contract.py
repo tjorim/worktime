@@ -11,6 +11,7 @@ from collections.abc import AsyncGenerator, Callable
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.observability import request_metrics
 from app.db.engine import get_session
 from app.main import app
 
@@ -124,7 +125,10 @@ def test_failures_never_carry_a_stack_trace_or_a_secret(
 
 
 def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
-    db_client: TestClient, auth_headers: Callable[..., dict[str, str]], caplog: pytest.LogCaptureFixture
+    db_client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Starlette's ServerErrorMiddleware sends this response after RequestIdMiddleware has unwound, so the handler
     # registered for ``Exception`` has to put the id on it.
@@ -132,6 +136,8 @@ def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
         raise RuntimeError("secret-token postgresql://user:password@db/worktime")
         yield  # pragma: no cover
 
+    recorded_statuses = []
+    monkeypatch.setattr(request_metrics, "record", lambda _elapsed_ms, status: recorded_statuses.append(status))
     app.dependency_overrides[get_session] = failing  # db_client restores its own override on teardown
     with caplog.at_level(logging.ERROR, logger="app.core.errors"):
         response = TestClient(app, raise_server_exceptions=False).get(
@@ -142,6 +148,7 @@ def test_an_unhandled_exception_answers_the_json_500_with_a_request_id(
     assert response.headers["content-type"] == "application/json"
     assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
     assert response.headers["X-Request-ID"] == "trace-me-1"
+    assert recorded_statuses == [500]
     for secret in ("secret-token", "password", "postgresql"):
         assert secret not in response.text
     for marker in TRACE_MARKERS:

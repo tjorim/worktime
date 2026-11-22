@@ -17,7 +17,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.mcp_server import WorktimeMcpBackend, create_mcp_http_app, create_mcp_server
+from app.mcp.server import WorktimeMcpBackend, create_mcp_http_app, create_mcp_server
 from app.models import AuditEntry
 from app.schemas import UserCreate
 from app.services import db_service, integration_client_service
@@ -40,7 +40,7 @@ async def _audit_count(factory: async_sessionmaker[AsyncSession]) -> int:
 
 
 async def _call(mcp, user_id: int, name: str, arguments: dict, *, through_proxy: bool) -> ToolError:
-    with patch("app.mcp_server.get_access_token", return_value=_token_for_user(user_id)):
+    with patch("app.mcp.server.get_access_token", return_value=_token_for_user(user_id)):
         async with Client(mcp) as client:
             with pytest.raises(ToolError) as excinfo:
                 if through_proxy:
@@ -160,8 +160,8 @@ async def test_multiauth_resolves_keycloak_and_integration_principals_over_state
         )
 
     monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", ISSUER)
-    monkeypatch.setattr("app.mcp_server.settings.OIDC_AUDIENCE", "worktime")
-    with patch("app.mcp_server.KeycloakAuthProvider", stand_in_keycloak):
+    monkeypatch.setattr("app.mcp.server.settings.OIDC_AUDIENCE", "worktime")
+    with patch("app.mcp.server.KeycloakAuthProvider", stand_in_keycloak):
         _server, app = create_mcp_http_app(factory, path="/", stateless_http=True)
     keycloak_token = KEYS.create_token(
         subject="keycloak-subject-1",

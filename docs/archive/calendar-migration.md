@@ -2,8 +2,8 @@
 
 ## Decision (revised)
 
-`frontend/src/features/calendar/month/CalendarView.tsx` — the shift-roster month grid — is the default
-`calendar` tab. `frontend/src/features/calendar/unified/CalendarView.tsx` (the Schedule-X-powered
+`frontend/src/features/calendar/month/MonthCalendarView.tsx` — the shift-roster month grid — is the default
+`calendar` tab. `frontend/src/features/calendar/unified/UnifiedCalendarView.tsx` (the Schedule-X-powered
 view combining shifts, time off, and time-tracking tasks) is a permanent, user-facing opt-in
 feature: the `unified-calendar` tab, gated by the `enableUnifiedCalendar` setting in
 Settings → Features. Both are intended to stay; this is not an in-flight migration toward

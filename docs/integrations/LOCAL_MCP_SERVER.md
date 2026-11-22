@@ -1,6 +1,6 @@
 # Local Worktime MCP Server
 
-Worktime ships a FastMCP v4 server in `backend/app/mcp_server.py` — split into
+Worktime ships a FastMCP v4 server in `backend/app/mcp/server.py` — split into
 a thin assembler (auth, tool registration) plus focused domain modules under
 `backend/app/mcp/` (identity, schedule, time_tracking, work_location,
 time_off, gantt) — exposing both read tools and personal write tools scoped
@@ -58,7 +58,7 @@ that carries the `worktime:mcp` scope.
 ## Capability discovery
 
 `GET /api/mcp/capabilities` returns the authoritative, drift-proof list of
-registered tools (sourced directly from `app.mcp_server.MCP_TOOL_CAPABILITIES`,
+registered tools (sourced directly from `app.mcp.server.MCP_TOOL_CAPABILITIES`,
 the same dict used to register tools). Use it instead of trusting this table if
 the two ever appear to disagree — this doc can drift; that endpoint cannot.
 

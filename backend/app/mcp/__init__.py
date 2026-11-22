@@ -1,6 +1,6 @@
 """Domain modules for the Worktime FastMCP server.
 
-``app.mcp_server`` is the thin assembler (imports, auth-provider building,
+``app.mcp.server`` is the thin assembler (imports, auth-provider building,
 ``WorktimeMcpContext``/error types re-exported from ``app.mcp.context``,
 tool registration). Each module here holds the actual tool logic for one
 domain, as plain async functions the assembler's ``WorktimeMcpBackend``

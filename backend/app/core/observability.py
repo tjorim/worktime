@@ -9,13 +9,15 @@ import time
 from collections import deque
 from threading import Lock
 
+from starlette.datastructures import MutableHeaders
+
 
 class InMemoryRequestMetrics:
     """Thread-safe, rolling-window request metrics collector.
 
     Tracks request counts, error rates, and latency percentiles over a
     configurable sliding time window.  The singleton ``request_metrics`` is
-    imported by :class:`~app.middleware.timing.TimingMiddleware` and the
+    imported by :class:`~app.middleware.request_timing.RequestTimingMiddleware` and the
     metrics router.
 
     Args:
@@ -99,3 +101,10 @@ class InMemoryRequestMetrics:
 
 # Module-level singleton shared between TimingMiddleware and the metrics router.
 request_metrics = InMemoryRequestMetrics()
+
+
+def observe_request_timing(elapsed_ms: float, status: int, headers: MutableHeaders | None) -> None:
+    """Feed request metrics and preserve the legacy duration header."""
+    if headers is not None:
+        headers["X-Total-Ms"] = f"{elapsed_ms:.3f}"
+    request_metrics.record(elapsed_ms, status)
