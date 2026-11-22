@@ -39,7 +39,7 @@ import { getPreferenceOwner, withPreferenceLock } from "@/lib/storage/preference
 import { logger } from "@/lib/logger";
 import type { StoredTimeTrackingTask, TimeTrackingTemplate } from "@/lib/time-tracking/types";
 import type { Label } from "@/lib/time-tracking/constants";
-import { isValidRawGanttTask } from "@/types/gantt";
+import { GANTT_VIEW_MODES, isValidRawGanttTask } from "@/types/gantt";
 import { isLabelInput } from "@/lib/time-tracking/constants";
 import { isValidTimeString } from "@/lib/time-tracking/timeUtils";
 import { isValidEntryType, isValidFlag } from "@/lib/time-off/types";
@@ -385,7 +385,7 @@ export function getAppBackupValidationError(
     const state = parsed.userState;
     const settings = isRecord(state.settings) ? state.settings : {};
     const lastUsed = isRecord(state.lastUsed) ? state.lastUsed : {};
-    const enums: Array<[Record<string, unknown>, string, string[]]> = [
+    const enums: Array<[Record<string, unknown>, string, readonly string[]]> = [
       [settings, "timeFormat", ["12h", "24h"]],
       [settings, "theme", ["light", "dark", "auto"]],
       [settings, "notifications", ["on", "off"]],
@@ -397,7 +397,7 @@ export function getAppBackupValidationError(
       [lastUsed, "scheduleView", ["schedule", "transfer"]],
       [lastUsed, "timeOffView", ["table", "stats", "team"]],
       [lastUsed, "timeTrackingView", ["daily", "weekly"]],
-      [lastUsed, "ganttViewMode", ["Day", "Week", "Month", "Year"]],
+      [lastUsed, "ganttViewMode", GANTT_VIEW_MODES],
       [lastUsed, "ganttView", ["chart", "table"]],
     ];
     if (

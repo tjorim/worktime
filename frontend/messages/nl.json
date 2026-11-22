@@ -900,6 +900,7 @@
   "gantt_delete_task_unlink_count_one": "Hierdoor wordt ook {count} tijdregistratie-item ontkoppeld.",
   "gantt_delete_task_unlink_count_other": "Hierdoor worden ook {count} tijdregistratie-items ontkoppeld.",
   "gantt_delete_label": "Verwijderen",
+  "gantt_zoom": "Zoomniveau van tijdlijn",
   "gantt_toggle_view_aria": "Gantt-weergave",
   "gantt_chart_view": "Grafiek",
   "gantt_table_view": "Tabel",

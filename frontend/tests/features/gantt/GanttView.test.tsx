@@ -45,21 +45,21 @@ vi.mock("@/hooks/usePublicHolidays", () => ({
 vi.mock("@/features/gantt/GanttChart.tsx", () => ({
   GanttChart: ({
     tasks,
-    initialViewMode,
+    viewMode,
     holidays,
     timeOffDates,
     onTaskClick,
     onViewModeChange,
   }: {
     tasks: Array<{ id: string; name: string }>;
-    initialViewMode?: "Day" | "Week" | "Month" | "Year";
+    viewMode?: "Day" | "Week" | "Month" | "Year";
     holidays?: string[];
     timeOffDates?: string[];
     onTaskClick: (taskId: string) => void;
     onViewModeChange?: (mode: "Day" | "Week" | "Month" | "Year") => void;
   }) => (
     <div>
-      <div data-testid="mock-view-mode">{initialViewMode}</div>
+      <div data-testid="mock-view-mode">{viewMode}</div>
       <div data-testid="mock-holidays">{(holidays ?? []).join(",")}</div>
       <div data-testid="mock-time-off-dates">{(timeOffDates ?? []).join(",")}</div>
       <button

@@ -19,6 +19,7 @@ import {
   withPreferenceLock,
 } from "@/lib/storage/preferenceStorage";
 import { logger } from "@/lib/logger";
+import { GANTT_VIEW_MODES, type GanttViewMode } from "@/types/gantt";
 
 export type TimeFormat = "12h" | "24h";
 export type Theme = "light" | "dark" | "auto";
@@ -33,7 +34,6 @@ export type TabKey =
 export type ScheduleViewKey = "schedule" | "transfer";
 export type TimeOffViewKey = "table" | "stats" | "team";
 export type TimeTrackingViewKey = "daily" | "weekly";
-export type GanttViewMode = "Day" | "Week" | "Month" | "Year";
 export type GanttViewKey = "chart" | "table";
 
 export interface LastUsed {
@@ -157,7 +157,7 @@ const validTabKeys = new Set<TabKey>([
 const validScheduleViewKeys = new Set<ScheduleViewKey>(["schedule", "transfer"]);
 const validTimeOffViewKeys = new Set<TimeOffViewKey>(["table", "stats", "team"]);
 const validTimeTrackingViewKeys = new Set<TimeTrackingViewKey>(["daily", "weekly"]);
-const validGanttViewModes = new Set<GanttViewMode>(["Day", "Week", "Month", "Year"]);
+const validGanttViewModes = new Set(GANTT_VIEW_MODES);
 const validGanttViewKeys = new Set<GanttViewKey>(["chart", "table"]);
 
 interface WorktimeUserState {

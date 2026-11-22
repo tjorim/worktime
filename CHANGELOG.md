@@ -22,6 +22,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- The Gantt timeline opens just before the earliest unfinished task, restores the saved zoom and explains weekend, public holiday and time-off shading. Bar labels update when tasks are renamed.
+
 - Release notes hide internal and Android-only changes from the web app and translate all standard category headings.
 
 ### Internal

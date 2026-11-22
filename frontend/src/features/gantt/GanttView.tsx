@@ -150,7 +150,7 @@ export function GanttView({ onNavigateToEntry }: GanttViewProps = {}) {
       {view === "chart" ? (
         <GanttChart
           tasks={tasks}
-          initialViewMode={lastUsed.ganttViewMode}
+          viewMode={lastUsed.ganttViewMode}
           holidays={holidayDates}
           timeOffDates={timeOffDates}
           loggedMinutesByTaskId={loggedMinutesByTaskId}

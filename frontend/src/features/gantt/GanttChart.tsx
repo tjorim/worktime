@@ -3,9 +3,8 @@ import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
-import type { GanttTask } from "@/types/gantt";
+import type { GanttTask, GanttViewMode } from "@/types/gantt";
 import { EmptyState } from "@/components/EmptyState";
-import type { GanttViewMode } from "@/app/providers/SettingsContext";
 import { formatLoggedDuration } from "@/features/gantt/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
@@ -26,9 +25,14 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => htmlEscapeMap[char] ?? char);
 }
 
+function toVendorTask<T extends GanttTask>(task: T): T {
+  // Frappe mutates the task and inserts its name as SVG markup.
+  return { ...task, name: escapeHtml(task.name) };
+}
+
 interface GanttChartProps {
   tasks: GanttTask[];
-  initialViewMode?: GanttViewMode;
+  viewMode?: GanttViewMode;
   holidays?: string[];
   timeOffDates?: string[];
   /** Total logged time per task, in minutes. Shown as an extra detail in the hover popup. */
@@ -59,7 +63,7 @@ function getTaskId(task: unknown): string | null {
 
 export function GanttChart({
   tasks,
-  initialViewMode = "Day",
+  viewMode = "Day",
   holidays = EMPTY_ARRAY,
   timeOffDates = EMPTY_ARRAY,
   loggedMinutesByTaskId = EMPTY_MAP,
@@ -85,7 +89,8 @@ export function GanttChart({
   type ColoredGanttTask = (typeof coloredTasks)[number];
   const tasksRef = useRef(coloredTasks);
   const prevTasksRef = useRef<ColoredGanttTask[]>([]);
-  const initialViewModeRef = useRef(initialViewMode);
+  const viewModeRef = useRef(viewMode);
+  const renderedViewModeRef = useRef(viewMode);
   const loggedMinutesByTaskIdRef = useRef(loggedMinutesByTaskId);
   const onTaskClickRef = useRef(onTaskClick);
   const onDateChangeRef = useRef(onDateChange);
@@ -94,7 +99,7 @@ export function GanttChart({
 
   useEffect(() => {
     tasksRef.current = coloredTasks;
-    initialViewModeRef.current = initialViewMode;
+    viewModeRef.current = viewMode;
     loggedMinutesByTaskIdRef.current = loggedMinutesByTaskId;
     onTaskClickRef.current = onTaskClick;
     onDateChangeRef.current = onDateChange;
@@ -131,27 +136,41 @@ export function GanttChart({
         return;
       }
 
-      const currentHolidays = holidays;
       const holidaysObj: Record<string, string | string[]> = {
-        "var(--wt-theme-secondary)": "weekend",
+        "url(#diagonalHatch)": "weekend",
       };
-      if (currentHolidays.length > 0) {
-        holidaysObj["var(--wt-theme-warning-bg)"] = currentHolidays;
+      if (holidays.length > 0) {
+        holidaysObj["var(--wt-theme-warning-bg)"] = holidays;
       }
       if (timeOffDates.length > 0) {
         holidaysObj["var(--wt-gantt-time-off-bg)"] = timeOffDates;
       }
 
-      ganttRef.current = new Gantt(container, tasksRef.current, {
-        view_mode: initialViewModeRef.current,
+      const firstUnfinishedStart = tasksRef.current.reduce<string | undefined>(
+        (first, task) =>
+          task.progress < 100 && (!first || task.start < first) ? task.start : first,
+        undefined,
+      );
+      const initialMode = viewModeRef.current;
+      ganttRef.current = new Gantt(container, tasksRef.current.map(toVendorTask), {
+        view_mode: initialMode,
+        scroll_to: firstUnfinishedStart
+          ? dayjs(firstUnfinishedStart).subtract(1, "day").format("YYYY-MM-DD")
+          : "today",
         view_mode_select: true,
         today_button: true,
-        ignore: "weekend",
+        // Frappe counts an ignored date as one whole column when sizing and dragging bars.
+        // On other zoom levels use its day-sized holiday shading for weekends.
+        ignore: (date) =>
+          (ganttRef.current?.options.view_mode ?? initialMode) === "Day" &&
+          (date.getDay() === 0 || date.getDay() === 6),
         holidays: holidaysObj,
         language: getLocale(),
         popup_on: "hover",
         popup: (ctx) => {
-          ctx.set_title(escapeHtml(ctx.task.name));
+          const taskId = getTaskId(ctx.task);
+          const task = tasksRef.current.find((candidate) => candidate.id === taskId);
+          ctx.set_title(escapeHtml(task?.name ?? ""));
           ctx.set_subtitle(escapeHtml(ctx.task.notes ?? ""));
           const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
           const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
@@ -162,7 +181,6 @@ export function GanttChart({
               : "";
           const progress =
             typeof ctx.task.progress === "number" ? `${Math.floor(ctx.task.progress)}%` : "";
-          const taskId = getTaskId(ctx.task);
           const loggedMinutes = taskId ? loggedMinutesByTaskIdRef.current.get(taskId) : undefined;
           const logged =
             loggedMinutes != null && loggedMinutes > 0
@@ -202,10 +220,11 @@ export function GanttChart({
         },
         on_view_change: (mode) => {
           // Frappe recreates this unlabeled select on each render and refresh.
-          container
-            .querySelector(".viewmode-select")
-            ?.setAttribute("aria-label", m.gantt_toggle_view_aria());
-          onViewModeChangeRef.current?.(mode as GanttViewMode);
+          container.querySelector(".viewmode-select")?.setAttribute("aria-label", m.gantt_zoom());
+          renderedViewModeRef.current = mode.name;
+          if (mode.name !== viewModeRef.current) {
+            onViewModeChangeRef.current?.(mode.name);
+          }
         },
       });
     };
@@ -219,6 +238,12 @@ export function GanttChart({
     };
   }, [hasAnyTasks, holidaysKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- date arrays are intentionally omitted; holidaysKey is their stable, content-derived key and is sufficient to trigger re-initialization
 
+  useEffect(() => {
+    if (ganttRef.current && renderedViewModeRef.current !== viewMode) {
+      ganttRef.current.change_view_mode(viewMode);
+    }
+  }, [viewMode]);
+
   // Effect 2 — refresh on task changes, deps: [coloredTasks]
   useEffect(() => {
     const prev = prevTasksRef.current;
@@ -230,7 +255,7 @@ export function GanttChart({
 
     // Full refresh if task count changed (add/remove)
     if (coloredTasks.length !== prev.length) {
-      ganttRef.current.refresh(coloredTasks);
+      ganttRef.current.refresh(coloredTasks.map(toVendorTask));
       return;
     }
 
@@ -242,7 +267,17 @@ export function GanttChart({
     });
 
     if (idsReordered) {
-      ganttRef.current.refresh(coloredTasks);
+      ganttRef.current.refresh(coloredTasks.map(toVendorTask));
+      return;
+    }
+
+    if (
+      coloredTasks.some((task) => {
+        const previous = prevById.get(task.id);
+        return task.name !== previous?.name || task.dependencies !== previous?.dependencies;
+      })
+    ) {
+      ganttRef.current.refresh(coloredTasks.map(toVendorTask));
       return;
     }
 
@@ -271,7 +306,7 @@ export function GanttChart({
     }
 
     if (changed.length > 0) {
-      ganttRef.current.refresh(coloredTasks);
+      ganttRef.current.refresh(coloredTasks.map(toVendorTask));
     }
   }, [coloredTasks]);
 
@@ -286,12 +321,42 @@ export function GanttChart({
   }
 
   return (
-    <div
-      data-slot="gantt-scroll"
-      className="overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-background"
-      data-testid="gantt-scroll-container"
-    >
-      <div ref={containerRef} />
+    <div className="flex flex-col gap-2">
+      <div
+        data-slot="gantt-scroll"
+        className="overflow-x-auto overflow-y-hidden rounded-lg border border-border bg-background"
+        data-testid="gantt-scroll-container"
+      >
+        <div ref={containerRef} />
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-sm text-muted-foreground">
+        <li className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            data-slot="gantt-weekend-swatch"
+            className="size-4 rounded-sm border border-border"
+          />
+          {m.event_type_weekend()}
+        </li>
+        {holidays.length > 0 && (
+          <li className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="size-4 rounded-sm border border-border bg-wt-warning-bg"
+            />
+            {m.calendar_public_holiday()}
+          </li>
+        )}
+        {timeOffDates.length > 0 && (
+          <li className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="size-4 rounded-sm border border-border bg-wt-gantt-time-off-bg"
+            />
+            {m.calendar_time_off()}
+          </li>
+        )}
+      </ul>
     </div>
   );
 }

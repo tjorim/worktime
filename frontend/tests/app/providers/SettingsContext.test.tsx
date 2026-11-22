@@ -596,9 +596,9 @@ describe("SettingsContext unified user state", () => {
       expect(result.current.lastUsed.ganttViewMode).toBe("Week");
 
       await act(async () => {
-        result.current.updateLastGanttViewMode("Month");
+        result.current.updateLastGanttViewMode("Half Day");
       });
-      expect(result.current.lastUsed.ganttViewMode).toBe("Month");
+      expect(result.current.lastUsed.ganttViewMode).toBe("Half Day");
     });
 
     it("updates lastUsed.ganttView via updateLastGanttView", async () => {
