@@ -1,4 +1,12 @@
-import { PlusIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  BanknoteIcon,
+  BookOpenIcon,
+  PartyPopperIcon,
+  PlusIcon,
+  SchoolIcon,
+  TriangleAlertIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import {
@@ -74,27 +82,6 @@ function getSymbolLabel(symbol: string): string {
   return labels[symbol]?.() ?? symbol;
 }
 
-/**
- * Determines which visual indicator icons to display for a day based on event flags.
- * Currently supports:
- * - 📘 Course/training indicator for events with "course" flag
- *
- * @param events - Array of DayEvent objects for the day
- * @returns Array of emoji strings to display as indicators
- */
-const getIndicatorIcons = (events: DayEvent[]) => {
-  const icons = new Set<string>();
-
-  events.forEach((dayEvent) => {
-    const flags = getEntryFlagsForDisplay(dayEvent.entry);
-    if (flags.includes("course")) {
-      icons.add("📘");
-    }
-  });
-
-  return Array.from(icons);
-};
-
 const getIndicatorDetails = (
   publicHoliday?: PublicHolidayInfo,
   paydayInfo?: PaydayInfo,
@@ -103,25 +90,25 @@ const getIndicatorDetails = (
   return [
     publicHoliday && {
       key: "public-holiday",
-      emoji: "🎉",
+      icon: PartyPopperIcon,
       title: publicHoliday.localName,
       label: publicHoliday.name,
     },
     schoolHoliday && {
       key: "school-holiday",
-      emoji: "🏫",
+      icon: SchoolIcon,
       title: schoolHoliday.localName,
       label: schoolHoliday.name,
     },
     paydayInfo && {
       key: "payday",
-      emoji: "💶",
+      icon: BanknoteIcon,
       title: paydayInfo.name,
       label: paydayInfo.name,
     },
   ].filter(Boolean) as Array<{
     key: string;
-    emoji: string;
+    icon: LucideIcon;
     title: string;
     label: string;
   }>;
@@ -179,7 +166,7 @@ function openMenuFromElement(el: HTMLElement, handler: (x: number, y: number) =>
  * - role="gridcell" for ARIA grid semantics
  * - Roving tabindex (0 for focused cell, -1 for others)
  * - Accessible descriptions with full date and holiday information
- * - Color indicators supplemented with emoji symbols
+ * - Color indicators supplemented with labelled icons
  * - Semantic button elements for all interactive areas
  */
 export function DayCell({
@@ -213,7 +200,8 @@ export function DayCell({
     () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
     [locale],
   );
-  const indicators = getIndicatorIcons(events);
+  const hasCourse = events.some(({ entry }) => getEntryFlagsForDisplay(entry).includes("course"));
+  const courseLabel = m.calendar_legend_course_training();
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
   const descriptionParts = [longDateFormatter.format(date.toDate())];
@@ -232,6 +220,7 @@ export function DayCell({
   if (schoolHoliday) {
     descriptionParts.push(m.daycell_school_holiday_label({ holiday: schoolHoliday.name }));
   }
+  if (hasCourse) descriptionParts.push(courseLabel);
   if (paydayInfo) {
     descriptionParts.push(paydayInfo.name);
   }
@@ -447,18 +436,18 @@ export function DayCell({
       <div className="month-calendar-day-header">
         <span className="month-calendar-day-number">{date.date()}</span>
         <span className="month-calendar-day-indicators" aria-hidden="true">
-          {indicators.map((indicator) => (
-            <span key={indicator} className="month-calendar-day-indicator">
-              {indicator}
+          {hasCourse && (
+            <span className="month-calendar-day-indicator" title={courseLabel}>
+              <Icon icon={BookOpenIcon} />
             </span>
-          ))}
+          )}
           {holidayIndicators.map((indicator) => (
             <span
               key={indicator.key}
               className="month-calendar-day-indicator"
               title={indicator.title}
             >
-              {indicator.emoji}
+              <Icon icon={indicator.icon} />
             </span>
           ))}
           {workLocation && (

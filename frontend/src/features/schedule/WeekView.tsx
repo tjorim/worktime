@@ -1,4 +1,4 @@
-import { CalendarIcon, CalendarPlusIcon, KeyboardIcon, UsersIcon } from "lucide-react";
+import { CalendarPlusIcon, KeyboardIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { useCallback, useMemo } from "react";
@@ -147,11 +147,15 @@ export function WeekView({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-2">
-          <span className="font-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-2" />
-            {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
-          </span>
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <div className="font-semibold">
+            {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
+            {isCurrentWeek && (
+              <Badge variant="success" className="ml-2" aria-label={m.this_week()}>
+                {m.this_week()}
+              </Badge>
+            )}
+          </div>
           <WeekNavigationButtonGroup
             isCurrent={isCurrentWeek}
             onPrevious={handlePrevious}
@@ -162,46 +166,12 @@ export function WeekView({
             onSelectorChange={handleDateChange}
           />
         </div>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-          <div className="text-muted-foreground text-sm">
-            {m.week_label({ week: String(selectedWeekNumber), year: String(selectedWeekYear) })}
-            {isCurrentWeek && (
-              <Badge variant="success" className="ml-2" aria-label={m.this_week()}>
-                {m.this_week()}
-              </Badge>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground hidden lg:block">
-            <Icon icon={KeyboardIcon} className="mr-1" />
-            {m.week_view_keyboard_hint()}
-          </div>
+        <div className="text-sm text-muted-foreground hidden lg:block">
+          <Icon icon={KeyboardIcon} className="mr-1" />
+          {m.week_view_keyboard_hint()}
         </div>
       </CardHeader>
       <CardContent>
-        {myTeam && hasTeams && (
-          <div className="mb-4">
-            <strong>
-              <Icon icon={UsersIcon} className="mr-1" />
-              {m.week_view_team_schedule_heading({ team: String(myTeam) })}
-            </strong>
-            <div className="text-muted-foreground text-sm">
-              {m.week_number({ week: String(selectedWeekNumber) })}
-            </div>
-          </div>
-        )}
-
-        {!hasTeams && (
-          <div className="mb-4">
-            <strong>
-              <Icon icon={CalendarIcon} className="mr-1" />
-              {m.week_view_your_schedule_heading()}
-            </strong>
-            <div className="text-muted-foreground text-sm">
-              {m.week_number({ week: String(selectedWeekNumber) })}
-            </div>
-          </div>
-        )}
-
         <div className="overflow-x-auto">
           <Table
             className="[&_th]:text-center [&_td]:text-center [&_th]:p-2 [&_td]:p-2 [&_td]:align-middle "

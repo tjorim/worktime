@@ -1,4 +1,4 @@
-import { InfoIcon } from "lucide-react";
+import { BanknoteIcon, BookOpenIcon, InfoIcon, PartyPopperIcon, SchoolIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ type CalendarLegendProps = {
  * Shows:
  * - Shift type colors with labels (when a schedule is active)
  * - Event type color dots with labels
- * - Day indicator emojis with explanations
+ * - Day indicator icons with explanations
  */
 export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegendProps) {
   const eventTypeLegend = [
@@ -34,10 +34,10 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
   ];
 
   const indicatorLegend = [
-    { emoji: "🎉", label: m.calendar_public_holiday() },
-    { emoji: "🏫", label: m.calendar_legend_school_holiday() },
-    { emoji: "💶", label: m.calendar_legend_payday() },
-    { emoji: "📘", label: m.calendar_legend_course_training() },
+    { icon: PartyPopperIcon, label: m.calendar_public_holiday() },
+    { icon: SchoolIcon, label: m.calendar_legend_school_holiday() },
+    { icon: BanknoteIcon, label: m.calendar_legend_payday() },
+    { icon: BookOpenIcon, label: m.calendar_legend_course_training() },
   ];
 
   const legendPopover = (
@@ -70,9 +70,9 @@ export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegend
         <div>
           <strong className="text-sm">{m.calendar_legend_day_indicators_heading()}</strong>
           <div className="flex flex-wrap gap-2 mt-1">
-            {indicatorLegend.map(({ emoji, label }) => (
-              <span key={emoji} className="inline-flex items-center gap-1">
-                <span className="text-sm">{emoji}</span>
+            {indicatorLegend.map(({ icon, label }) => (
+              <span key={label} className="inline-flex items-center gap-1">
+                <Icon icon={icon} />
                 <small>{label}</small>
               </span>
             ))}

@@ -5,6 +5,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClipboardListIcon,
+  InfoIcon,
   UsersIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TeamCarousel } from "@/features/schedule/TeamCarousel";
 
+import { DetailsPopover, PopoverHeader, PopoverBody } from "@/components/ui/popover";
 import { Hint } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
@@ -127,7 +129,9 @@ function TeamCard({
             </div>
           }
         >
-          <span className="cursor-help underline decoration-dotted">{shiftResult.code}</span>
+          <span className="cursor-help underline decoration-dotted">
+            {m.personalized_status_full_code({ code: shiftResult.code })}
+          </span>
         </Hint>
       </div>
     </>
@@ -221,10 +225,26 @@ export function TodayView({
     <Card>
       <CardHeader>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 mb-2">
-          <span className="font-semibold">
-            <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-2" />
-            {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="font-semibold">
+              <Icon icon={hasTeams ? UsersIcon : CalendarIcon} className="mr-2" />
+              {hasTeams ? m.week_view_all_teams() : m.week_view_schedule_label()}
+            </span>
+            {viewingScheduleType && (
+              <DetailsPopover
+                content={
+                  <>
+                    <PopoverHeader>{m.shift_full_code_title()}</PopoverHeader>
+                    <PopoverBody>{m.shift_code_format()}</PopoverBody>
+                  </>
+                }
+              >
+                <Button variant="ghost" size="icon-sm" aria-label={m.shift_full_code_title()}>
+                  <Icon icon={InfoIcon} />
+                </Button>
+              </DetailsPopover>
+            )}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <label htmlFor={scheduleSelectId} className="mb-0 text-sm text-muted-foreground">
               <Icon icon={ClipboardListIcon} className="mr-1" />

@@ -1,14 +1,13 @@
 import { CircleIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 import { Field, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-import { Hint } from "@/components/ui/tooltip";
 import { Grid, GridItem } from "@/components/ui/grid";
-import type { CSSProperties, ReactElement } from "react";
+import type { CSSProperties } from "react";
 import { SearchSelect } from "@/components/SearchSelect";
 import {
   isHexColor,
@@ -95,25 +94,12 @@ export function TaskEntryForm({
   const startReason =
     showTimerControls && !isTimerRunning && !canStartNow ? startDisabledReason : undefined;
 
-  const renderDisabledTooltipButton = (
-    buttonKey: string,
-    reason: string | undefined,
-    button: ReactElement,
-  ) => {
-    if (!reason) {
-      return button;
-    }
-
-    // The same reason is also printed below the form, so it is visible without hovering; the
-    // focusable wrapper points at that persistent text instead of the transient tooltip.
-    return (
-      <Hint content={reason}>
-        <span className="w-full inline-block" tabIndex={0} aria-describedby={`${buttonKey}-reason`}>
-          {button}
-        </span>
-      </Hint>
-    );
-  };
+  const hasSeparateStartReason = startReason !== undefined && startReason !== addReason;
+  const formId = useId();
+  const taskHelpId = `${formId}-task-help`;
+  const overnightHelpId = `${formId}-overnight-help`;
+  const addReasonId = `${formId}-add-reason`;
+  const startReasonId = `${formId}-start-reason`;
 
   return (
     <>
@@ -160,15 +146,8 @@ export function TaskEntryForm({
             {m.tt_stop_timer()} · {timerElapsed}
           </Button>
         </div>
-      ) : showTimerControls ? (
-        <p className="text-sm text-muted-foreground mb-2">{m.tt_quick_timer_desc()}</p>
       ) : null}
-      {showTimerControls && (
-        <p id="timeTrackerTaskHelp" className="text-sm text-muted-foreground mb-2">
-          {m.tt_task_name_hint({ name: m.tt_default_task_name() })}
-        </p>
-      )}
-      <Grid className="gap-4 items-end">
+      <Grid className="gap-4 items-start">
         <GridItem desktopSpan={primaryFieldWidth}>
           <Field>
             <FieldLabel htmlFor="timeTrackerTask">{m.form_task()}</FieldLabel>
@@ -176,9 +155,14 @@ export function TaskEntryForm({
               id="timeTrackerTask"
               value={text}
               onChange={(e) => onTextChange(e.target.value)}
-              aria-required="true"
-              aria-describedby={showTimerControls ? "timeTrackerTaskHelp" : undefined}
+              aria-required={!showTimerControls}
+              aria-describedby={showTimerControls ? taskHelpId : undefined}
             />
+            {showTimerControls && (
+              <FieldDescription id={taskHelpId}>
+                {m.tt_task_name_hint({ name: m.tt_default_task_name() })}
+              </FieldDescription>
+            )}
           </Field>
         </GridItem>
         <GridItem desktopSpan={primaryFieldWidth}>
@@ -241,59 +225,56 @@ export function TaskEntryForm({
           <Field>
             <FieldLabel htmlFor="timeTrackerStop">{m.form_stop()}</FieldLabel>
             <Input
-              aria-describedby="timeTrackerOvernight"
+              aria-describedby={overnightHelpId}
               id="timeTrackerStop"
               type="time"
               value={stop}
               onChange={(e) => onStopChange(e.target.value)}
               aria-required="true"
             />
+            <FieldDescription id={overnightHelpId}>{m.tt_overnight_hint()}</FieldDescription>
           </Field>
         </GridItem>
         <GridItem desktopSpan={2}>
           <div className="grid gap-2">
-            {showTimerControls &&
-              !isTimerRunning &&
-              renderDisabledTooltipButton(
-                "start-now",
-                startReason,
+            {showTimerControls && !isTimerRunning && (
+              <div className="grid gap-1">
                 <Button
-                  variant="default"
                   className="w-full"
                   onClick={onStartNow}
                   disabled={!canStartNow}
+                  aria-describedby={
+                    hasSeparateStartReason ? startReasonId : startReason && addReasonId
+                  }
                 >
                   {m.tt_start_now()}
-                  <> · {m.tt_idle_status()}</>
-                </Button>,
-              )}
-            {renderDisabledTooltipButton(
-              "add-task",
-              addReason,
-              <Button className="w-full" onClick={onSubmit} disabled={!canSubmit}>
-                {m.tt_add_task()}
-              </Button>,
+                </Button>
+                {hasSeparateStartReason && (
+                  <p id={startReasonId} className="text-sm text-muted-foreground">
+                    {startReason}
+                  </p>
+                )}
+              </div>
             )}
+            <div className="grid gap-1">
+              <Button
+                variant={showTimerControls && !isTimerRunning ? "outline" : "default"}
+                className="w-full"
+                onClick={onSubmit}
+                disabled={!canSubmit}
+                aria-describedby={addReason ? addReasonId : undefined}
+              >
+                {m.tt_add_task()}
+              </Button>
+              {addReason && (
+                <p id={addReasonId} className="text-sm text-muted-foreground">
+                  {addReason}
+                </p>
+              )}
+            </div>
           </div>
         </GridItem>
       </Grid>
-      {startReason || addReason ? (
-        <div className="mt-2 flex flex-col gap-1">
-          {startReason ? (
-            <FieldDescription id="start-now-reason">
-              {m.tt_disabled_reason_for({ action: m.tt_start_now(), reason: startReason })}
-            </FieldDescription>
-          ) : null}
-          {addReason ? (
-            <FieldDescription id="add-task-reason">
-              {m.tt_disabled_reason_for({ action: m.tt_add_task(), reason: addReason })}
-            </FieldDescription>
-          ) : null}
-        </div>
-      ) : null}
-      <FieldDescription id="timeTrackerOvernight" className="mt-2">
-        {m.tt_overnight_hint()}
-      </FieldDescription>
     </>
   );
 }

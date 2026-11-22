@@ -265,6 +265,8 @@ export function PersonalizedStatusContent({
                     {shiftTooltipDetails}
                     <br />
                     <em>{m.personalized_status_full_code({ code: currentShift.code })}</em>
+                    <br />
+                    {m.shift_code_format()}
                   </div>
                 }
               >

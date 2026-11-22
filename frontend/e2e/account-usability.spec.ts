@@ -136,7 +136,7 @@ for (const theme of ["light", "dark"] as const) {
         await page.goto("/");
         const add = page.getByRole("button", { name: "Add Task", exact: true });
         await expect(add).toBeDisabled({ timeout: 30_000 });
-        await expect(page.getByText("Add Task: Enter a task name first.")).toBeVisible();
+        await expect(page.getByText("Enter a task name first.")).toBeVisible();
         await page.screenshot({ path: `${SHOTS}/add-task-reason-${label}.png` });
         await expectNoAccessibilityViolations(page, `add task reason (${label})`);
       });

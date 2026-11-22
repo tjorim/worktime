@@ -152,7 +152,7 @@ export function MobileQuickActions({
   return (
     <>
       <Button
-        className="mobile-quick-actions md:hidden rounded-full shadow-lg size-13"
+        className="md:hidden shrink-0 rounded-full size-11"
         aria-label={m.mobile_quick_actions_open()}
         aria-haspopup="dialog"
         aria-expanded={show}

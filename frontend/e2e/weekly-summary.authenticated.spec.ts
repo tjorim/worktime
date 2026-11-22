@@ -32,7 +32,7 @@ test.describe("Weekly time-tracking summary (authenticated)", () => {
     await page.goto("/");
 
     // The per-day category chart is folded away until asked for.
-    const trigger = page.getByRole("button", { name: "Hours by Category" });
+    const trigger = page.getByRole("button", { name: "Daily Hours by Label" });
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await trigger.click();
     const section = page

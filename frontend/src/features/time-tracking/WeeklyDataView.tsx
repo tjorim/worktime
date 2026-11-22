@@ -190,11 +190,7 @@ export function WeeklyDataView({
           label={m.tt_days_tracked()}
           value={String(dailyHourTotals.filter((h) => h > 0).length)}
         />
-        <MetricCard
-          label={m.tt_top_category()}
-          value={labelPercentages[0]?.label ?? "-"}
-          truncate
-        />
+        <MetricCard label={m.tt_top_label()} value={labelPercentages[0]?.label ?? "-"} truncate />
       </div>
 
       <WeeklyHoursChart
@@ -208,7 +204,7 @@ export function WeeklyDataView({
         <div className="mb-4">
           <h6 className={SECTION_HEADING}>
             <Icon icon={ChartPieIcon} className="mr-2" />
-            {m.tt_category_breakdown()}
+            {m.tt_label_breakdown()}
           </h6>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {labelPercentages.map((item) => {
@@ -242,6 +238,21 @@ export function WeeklyDataView({
               );
             })}
           </div>
+          <Accordion className="mt-3 border-t border-border">
+            <WeeklyDetail
+              value="label-chart"
+              icon={ChartColumnStackedIcon}
+              title={m.tt_label_chart_heading()}
+            >
+              <WeeklyLabelChart
+                showHeading={false}
+                weekDays={weekDays}
+                dailyTotals={dailyTotals}
+                labelPercentages={labelPercentages}
+                targetDaily={targetDaily}
+              />
+            </WeeklyDetail>
+          </Accordion>
         </div>
       )}
 
@@ -443,22 +454,6 @@ export function WeeklyDataView({
             </TableFooter>
           </Table>
         </WeeklyDetail>
-
-        {labelPercentages.length > 0 && (
-          <WeeklyDetail
-            value="label-chart"
-            icon={ChartColumnStackedIcon}
-            title={m.tt_label_chart_heading()}
-          >
-            <WeeklyLabelChart
-              showHeading={false}
-              weekDays={weekDays}
-              dailyTotals={dailyTotals}
-              labelPercentages={labelPercentages}
-              targetDaily={targetDaily}
-            />
-          </WeeklyDetail>
-        )}
       </Accordion>
     </>
   );

@@ -71,6 +71,7 @@ export function KeyboardShortcutsModal({
           </DialogTitle>
         </DialogHeader>
         <div className="min-h-0 overflow-y-auto p-4">
+          <p className="mb-4 text-sm text-muted-foreground">{m.calendar_keyboard_hint()}</p>
           {categories.map(({ category, items }) => (
             <div key={category} className="mb-4">
               <h6 className="text-muted-foreground mb-2">{category}</h6>

@@ -202,7 +202,7 @@ describe("TimeTrackingDailyView", () => {
       renderView();
       const field = screen.getByLabelText(/^Task$/i);
       expect(field).toHaveAccessibleDescription(
-        "Optional for Start Now, which names it “Untitled task”. Required for completed tasks.",
+        "Required for completed tasks. Start Now uses “Untitled task” if left blank.",
       );
     });
 
@@ -245,14 +245,14 @@ describe("TimeTrackingDailyView", () => {
   });
 
   describe("Quick Timer", () => {
-    it("puts the idle state and single helper sentence on the form without a wrapper card", () => {
+    it("labels the timer action Start Now without an idle suffix", () => {
       renderView();
 
       expect(screen.queryByText("Quick Timer")).not.toBeInTheDocument();
       expect(
-        screen.getByText("Start a task now and stop it when you're done."),
-      ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Start Now · Idle/i })).toBeInTheDocument();
+        screen.queryByText("Start a task now and stop it when you're done."),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Start Now$/ })).toBeInTheDocument();
       expect(
         screen.queryByText("Idle", { selector: "[data-slot=badge], [data-slot=running-status]" }),
       ).not.toBeInTheDocument();
@@ -825,7 +825,7 @@ describe("TimeTrackingDailyView", () => {
     it("should mark required fields appropriately", () => {
       renderView();
 
-      expect(screen.getByLabelText(/^Task$/i)).toHaveAttribute("aria-required", "true");
+      expect(screen.getByLabelText(/^Task$/i)).toHaveAttribute("aria-required", "false");
       expect(screen.getByLabelText(/^Start$/i)).toHaveAttribute("aria-required", "true");
       expect(screen.getByLabelText(/^Stop$/i)).toHaveAttribute("aria-required", "true");
     });
