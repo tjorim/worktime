@@ -9,7 +9,7 @@ The stable-identity and retry rules are specified separately in
 ## Resolving a first-sync conflict
 
 When both sides hold entities, the user picks one of three options
-(`FirstSyncConflictDialog`, screenshot in `docs/screenshots/sync-conflict-dialogs.png`):
+(`FirstSyncConflictDialog`, [screenshot](screenshots/sync-conflict-dialogs.png)):
 
 | Option | Effect | Destructive? |
 |---|---|---|

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { expectNoAccessibilityViolations } from "./axe";
 
-const SHOTS = "../docs/screenshots/1684";
+const SHOTS = "test-results/review-screenshots/1684";
 
 async function seed(page: Page, theme: string, lastUsed: Record<string, unknown> = {}) {
   await page.addInitScript(

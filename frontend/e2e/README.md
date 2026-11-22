@@ -103,3 +103,10 @@ and does not infer which endpoint a developer intended a fixture to represent.
 The obsolete `/api/time-tracking/state` and `/api/time-off/requests` mocks and
 mock-only scenarios were removed: the app has no callers or backend routes for
 them. Tracking and time off use local collections and the real sync handlers.
+
+## Review screenshots
+
+Specs that capture screenshots for review write them to
+`frontend/test-results/review-screenshots/`. Attach relevant captures to the
+pull request. Playwright clears its test output directory at the start of each
+run.

@@ -9,7 +9,9 @@ for (const theme of ["light", "dark"]) {
       await expect(page.getByText("A task cannot depend on itself.")).toBeVisible();
       await expect(page.getByText("These dependencies create a cycle.").first()).toBeVisible();
       await page.getByText("Choose dependencies that still exist.").scrollIntoViewIfNeeded();
-      await page.screenshot({ path: `../docs/screenshots/1701/table-${theme}-${width}.png` });
+      await page.screenshot({
+        path: `test-results/review-screenshots/1701/table-${theme}-${width}.png`,
+      });
     });
     for (const [reason, message] of [
       ["unknown", "Choose dependencies that still exist."],
@@ -22,7 +24,9 @@ for (const theme of ["light", "dark"]) {
         await expect(page.getByRole("alert")).toHaveText(message);
         await page.getByRole("button", { name: "Save Changes", exact: true }).click();
         await expect(page.getByText("Saved", { exact: true })).toHaveCount(0);
-        await page.screenshot({ path: `../docs/screenshots/1701/${reason}-${theme}-${width}.png` });
+        await page.screenshot({
+          path: `test-results/review-screenshots/1701/${reason}-${theme}-${width}.png`,
+        });
       });
     }
   }
