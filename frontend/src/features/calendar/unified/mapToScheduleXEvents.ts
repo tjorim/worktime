@@ -6,16 +6,18 @@ import type { TimeOffDateEntry, TimeOffRangeEntry } from "@/lib/time-off/types";
 import { SHIFT_CODES, type ShiftCode } from "@/lib/schedule/rosters";
 import type { Shift, ShiftResult } from "@/lib/schedule/shiftCalculations";
 
-export const CALENDAR_COLORS = {
-  "time-off": "#198754",
-} as const;
+import {
+  EVENT_PALETTE_KEYS,
+  getEventColorClass,
+  getEventTypeLabel,
+  getTimeLocationSymbol,
+} from "@/lib/hday/presentation";
+import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 
 /**
  * Mirrors the --wt-shift-* custom properties in styles/tokens.css so the
  * Unified Calendar's shift blocks match the shift color language used
- * everywhere else (month calendar, shift timeline, schedule table). Schedule-X
- * bakes light/dark colors into its own theme config rather than resolving CSS
- * custom properties at render time, so these must be kept in sync by hand.
+ * everywhere else (month calendar, shift timeline, schedule table).
  */
 const SHIFT_CALENDAR_COLORS: Record<
   ShiftCode,
@@ -59,7 +61,18 @@ export function buildCalendarConfig(labels: Label[]): Record<string, CalendarTyp
     ...Object.fromEntries(
       SHIFT_CODES.map((code) => [shiftCalendarId(code), createShiftCalendarColors(code)]),
     ),
-    "time-off": createCalendarColors(CALENDAR_COLORS["time-off"]),
+    ...Object.fromEntries(
+      EVENT_PALETTE_KEYS.map((key) => {
+        const colorName = `event-${key}`;
+        const background = `var(--wt-event-${key}-bg)`;
+        const colors = {
+          main: background,
+          container: background,
+          onContainer: `var(--wt-event-${key}-fg)`,
+        };
+        return [colorName, { colorName, lightColors: colors, darkColors: colors }];
+      }),
+    ),
     ...Object.fromEntries(labels.map((label) => [label.id, createCalendarColors(label.color)])),
   };
 }
@@ -111,19 +124,26 @@ export function shiftToEvent(datedShift: DatedShift, team: number): CalendarEven
 }
 
 /** Map a concrete date or range time-off entry to an all-day Schedule-X event. */
-export function timeOffToEvent(entry: MappableTimeOffEntry): CalendarEvent {
+export function timeOffToEvent(
+  entry: MappableTimeOffEntry,
+  occurrenceType?: "weekly",
+): CalendarEvent {
   const start = entry.entryKind === "date" ? entry.date : entry.start;
   const end = entry.entryKind === "date" ? entry.date : entry.end;
 
+  const flags = getEntryFlagsForDisplay(entry);
+  const typeLabel = getEventTypeLabel(flags);
+  const symbol = getTimeLocationSymbol(flags);
+  const label = symbol ? `${symbol} ${typeLabel}` : typeLabel;
+
   return {
     id: `time-off:${entry.id}`,
-    title: entry.note ?? entry.entryType,
+    title: entry.note ? `${label} – ${entry.note}` : label,
     start: Temporal.PlainDate.from(start),
-    end: Temporal.PlainDate.from(end).add({ days: 1 }),
-    calendarId: "time-off",
+    end: Temporal.PlainDate.from(end),
+    calendarId: getEventColorClass(flags, occurrenceType),
     entryId: entry.id,
-    entryFlag: entry.entryFlag,
-    entryType: entry.entryType,
+    entryTypeLabel: typeLabel,
     _options: { disableDND: true, disableResize: true },
   };
 }

@@ -22,6 +22,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- Unified Calendar shows time off on the correct dates, with translated type names, notes, flags and colours that match the other calendars.
+
 - Release notes hide internal and Android-only changes from the web app and translate all standard category headings.
 
 ### Internal
