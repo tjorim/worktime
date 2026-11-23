@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { SettingsHint, SettingsLoading, SettingsSection } from "@/features/settings/SettingsParts";
-import { AdminUsersTable } from "./AdminUsersTable";
+import { AdminUsersTable, type AdminUserRow } from "@/features/settings/admin/AdminUsersTable";
+import { RenameUserDialog } from "@/features/settings/admin/RenameUserDialog";
 import * as m from "@/paraglide/messages.js";
 
 interface SettingsAdminUsersSectionProps {
@@ -19,6 +20,7 @@ interface SettingsAdminUsersSectionProps {
   adminUsersError: string | null;
   adminUsersDeleteError: string | null;
   deletingAdminUserId: number | null;
+  onRenameAdminUser: (userId: number, username: string) => Promise<string | null>;
   onDeleteAdminUser: (userId: number) => void;
 }
 
@@ -29,8 +31,10 @@ export function SettingsAdminUsersSection({
   adminUsersError,
   adminUsersDeleteError,
   deletingAdminUserId,
+  onRenameAdminUser,
   onDeleteAdminUser,
 }: SettingsAdminUsersSectionProps) {
+  const [renameUser, setRenameUser] = useState<AdminUserRow | null>(null);
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState<number | null>(null);
   const pendingDeleteUser = adminUsers.find((user) => user.id === pendingDeleteUserId) ?? null;
 
@@ -53,10 +57,18 @@ export function SettingsAdminUsersSection({
               users={adminUsers}
               currentAccountId={currentAccountId}
               deletingAdminUserId={deletingAdminUserId}
+              onRequestRename={setRenameUser}
               onRequestDelete={setPendingDeleteUserId}
             />
           )}
         </div>
+      )}
+      {renameUser && (
+        <RenameUserDialog
+          user={renameUser}
+          onSave={onRenameAdminUser}
+          onClose={() => setRenameUser(null)}
+        />
       )}
       <ConfirmationDialog
         isOpen={pendingDeleteUser !== null}

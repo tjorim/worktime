@@ -28,6 +28,7 @@ export function useSettingsAuditTrail({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [revision, setRevision] = useState(0);
   const requestGenerationRef = useRef(0);
 
   const fetchPage = useCallback(
@@ -107,7 +108,7 @@ export function useSettingsAuditTrail({
     return () => {
       isCancelled = true;
     };
-  }, [enabled, fetchPage]);
+  }, [enabled, fetchPage, revision]);
 
   const loadMore = async () => {
     const beforeId = entries.at(-1)?.id;
@@ -132,5 +133,13 @@ export function useSettingsAuditTrail({
     }
   };
 
-  return { entries, isLoading, isLoadingMore, error, hasMore, loadMore };
+  return {
+    reload: () => setRevision((value) => value + 1),
+    entries,
+    isLoading,
+    isLoadingMore,
+    error,
+    hasMore,
+    loadMore,
+  };
 }

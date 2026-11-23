@@ -258,13 +258,14 @@ async def _find_available_username(db_session, base_username: str, subject: str)
     from sqlalchemy import select
 
     from app.models import User
+    from app.services.user_validation import RESERVED_USERNAMES
 
     candidate = base_username
     attempt = 0
 
     while attempt < _MAX_USERNAME_ATTEMPTS:
         result = await db_session.execute(select(User).where(User.username == candidate))
-        if result.scalar_one_or_none() is None:
+        if result.scalar_one_or_none() is None and candidate.lower() not in RESERVED_USERNAMES:
             return candidate
 
         attempt += 1

@@ -92,3 +92,41 @@ def test_real_dev_users_roles_and_isolation(db_client, monkeypatch):
         assert db_client.get("/api/me", headers={"Authorization": "Bearer unknown"}).status_code == 401
     finally:
         app.dependency_overrides[get_bearer_principal] = override
+
+
+def test_admin_only_username_changes_and_audit(db_client, monkeypatch):
+    monkeypatch.setattr(oidc_config.settings, "ENVIRONMENT", "development")
+    monkeypatch.setattr(oidc_config.settings, "DEV_AUTH_BYPASS_TOKEN", "admin-secret")
+    monkeypatch.setattr(oidc_config.settings, "DEV_AUTH_MEMBER_TOKEN", "member-secret")
+    with monkeypatch.context() as patch:
+        patch.delitem(app.dependency_overrides, get_bearer_principal)
+        admin = {"Authorization": "Bearer admin-secret"}
+        member = {"Authorization": "Bearer member-secret"}
+        profile = db_client.get("/api/me", headers=member).json()
+        endpoint = f"/api/users/{profile['id']}"
+
+        response = db_client.put(endpoint, json={"username": "new-name", "display_name": "Blocked"}, headers=member)
+        assert response.status_code == 403
+        assert response.json()["code"] == "username_change_forbidden"
+        for reserved in [" ADMIN ", "ROOT", "administrator", "system", "support"]:
+            response = db_client.put(endpoint, json={"username": reserved}, headers=member)
+            assert response.status_code == 400
+            assert response.json()["code"] == "username_reserved"
+        updated = db_client.put(endpoint, json={"display_name": "New display name"}, headers=member)
+        assert updated.status_code == 200
+        assert updated.json()["display_name"] == "New display name"
+        assert updated.json()["username"] == "devmember"
+        assert db_client.get("/api/audit", headers=member).json()["items"] == []
+
+        renamed = db_client.put(endpoint, json={"username": "support"}, headers=admin)
+        assert renamed.status_code == 200
+        assert db_client.get("/api/me", headers=member).json()["username"] == "support"
+
+        admin_id = db_client.get("/api/me", headers=admin).json()["id"]
+        for headers in (admin, member):
+            items = db_client.get("/api/audit", headers=headers).json()["items"]
+            assert len(items) == 1
+            assert items[0]["action"] == "rename_user"
+            assert items[0]["actor_user_id"] == admin_id
+            assert items[0]["resource_id"] == str(profile["id"])
+            assert items[0]["details"] == {"old_username": "devmember", "new_username": "support"}

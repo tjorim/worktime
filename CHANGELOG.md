@@ -23,6 +23,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Changed
 
 - Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.
+- Administrators can rename users in Settings. Recent activity shows the previous and new username, and members can still edit their own display name.
 
 - Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
 - Dates and durations across the web app follow the selected language, with UK date order in English and consistent hour and minute units.
@@ -41,6 +42,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Internal
 
 - Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
+- Reject member username changes with a stable API error and skip reserved usernames when provisioning new OIDC accounts.
+
 - Validate versioned account preferences and store theme, notification settings and navigation state on the device. Existing browser settings migrate when the app opens.
 
 - Use one request-timing middleware for both timing headers and metrics, align MCP, router and calendar module names, and split sync code into smaller modules. Keep parsed .hday events at the file and helper boundaries.
