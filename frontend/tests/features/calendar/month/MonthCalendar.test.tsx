@@ -210,7 +210,7 @@ describe("MonthCalendar", () => {
       );
       const focused = document.activeElement as HTMLElement;
       expect(focused).toHaveAttribute("role", "gridcell");
-      expect(focused).toHaveTextContent(/February 15, 2025/);
+      expect(focused).toHaveTextContent(/15 February 2025/);
       expect(screen.getAllByRole("gridcell").filter((c) => c.tabIndex === 0)).toEqual([focused]);
       await user.keyboard("{PageUp}");
       expect(onMonthChange.mock.calls[1]![0].format("YYYY-MM")).toBe("2025-01");

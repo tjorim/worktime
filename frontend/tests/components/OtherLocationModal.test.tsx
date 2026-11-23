@@ -47,7 +47,7 @@ describe("OtherLocationModal", () => {
   });
   it("renders the modal title with the formatted date", () => {
     setup();
-    expect(screen.getByText(/Other Location — Wednesday, Feb 18, 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Other Location — Wednesday, 18 February 2026/)).toBeInTheDocument();
   });
   it("pre-fills the country and label from an existing other-location entry", async () => {
     const { onConfirm } = setup("DE");

@@ -1,3 +1,4 @@
+import { dayjs, getDisplayLocale } from "@/lib/dates/dateTimeUtils";
 import { isValidRange, isValidTaskInterval, taskStopTime } from "@/lib/time-tracking/timeUtils";
 import { InfoIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -32,11 +33,9 @@ import {
 } from "@/features/calendar/unified/useCalendarRangeData";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import "@/features/calendar/unified/calendar.css";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
 import { withCalendarEventContent } from "@/features/calendar/unified/calendarEventContent";
 
 const EMPTY_EDIT_FORM: TaskEditForm = {
@@ -72,7 +71,12 @@ interface UnifiedCalendarViewProps {
 export function UnifiedCalendarView(props: UnifiedCalendarViewProps) {
   // The Schedule-X React hook reads configuration only once on mount.
   const { settings } = useSettings();
-  return <ConfiguredUnifiedCalendarView key={`${getLocale()}:${settings.timeFormat}`} {...props} />;
+  return (
+    <ConfiguredUnifiedCalendarView
+      key={`${getDisplayLocale()}:${settings.timeFormat}`}
+      {...props}
+    />
+  );
 }
 
 function ConfiguredUnifiedCalendarView({
@@ -82,10 +86,13 @@ function ConfiguredUnifiedCalendarView({
   const [range, setRange] = useState<CalendarRange>(currentMonthRange);
   const rangeEvents = useCalendarRangeData(range);
   const { scheduleType, myTeam, settings } = useSettings();
-  const locale = getLocale() === "nl" ? "nl-NL" : "en-GB";
+  const displayLocale = getDisplayLocale();
   const events = useMemo(
-    () => rangeEvents.map((event) => withCalendarEventContent(event, locale, settings.timeFormat)),
-    [rangeEvents, locale, settings.timeFormat],
+    () =>
+      rangeEvents.map((event) =>
+        withCalendarEventContent(event, displayLocale, settings.timeFormat),
+      ),
+    [rangeEvents, displayLocale, settings.timeFormat],
   );
   // Mirrors useCalendarRangeData's own effective-team check so single-user schedules
   // (e.g. "9-5", teamCount === 1) don't trigger a false "no roster configured" warning.
@@ -166,7 +173,7 @@ function ConfiguredUnifiedCalendarView({
       views: [createViewMonthGrid(), createViewWeek(), createViewDay(), createViewMonthAgenda()],
       defaultView: "month-grid",
       timezone: Temporal.Now.timeZoneId(),
-      locale,
+      locale: displayLocale,
       weekOptions: {
         timeAxisFormatOptions: {
           hour: "numeric",

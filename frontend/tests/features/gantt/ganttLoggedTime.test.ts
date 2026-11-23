@@ -23,15 +23,15 @@ describe("getLoggedMinutes", () => {
 
 describe("formatLoggedDuration", () => {
   it("formats minutes only", () => {
-    expect(formatLoggedDuration(45)).toBe("45 min");
+    expect(formatLoggedDuration(45)).toBe("45m");
   });
 
   it("formats whole hours", () => {
-    expect(formatLoggedDuration(120)).toBe("2 h");
+    expect(formatLoggedDuration(120)).toBe("2h");
   });
 
   it("formats hours and minutes", () => {
-    expect(formatLoggedDuration(150)).toBe("2 h 30 min");
+    expect(formatLoggedDuration(150)).toBe("2h 30m");
   });
 });
 

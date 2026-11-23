@@ -1,3 +1,10 @@
+import {
+  dayjs,
+  formatDisplayDate,
+  formatDuration,
+  getDisplayLocale,
+  setTimeFromFractionalHour,
+} from "@/lib/dates/dateTimeUtils";
 import { Grid, GridItem } from "@/components/ui/grid";
 import {
   CalendarIcon,
@@ -18,8 +25,6 @@ import { Progress } from "@/components/ui/progress";
 import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 import { useCountdown } from "@/features/status/useCountdown";
-import { dayjs, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
-import { getLocale } from "@/paraglide/runtime.js";
 import type { UpcomingShiftResult, ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { getAllTeamsShifts, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
 import { ShiftTimeDisplay } from "@/features/status/ShiftTimeDisplay";
@@ -46,7 +51,6 @@ interface GenericStatusContentProps {
 export function GenericStatusContent({ scheduleType, compact = false }: GenericStatusContentProps) {
   const scheduleConfig = getScheduleConfig(scheduleType);
   const hasTeams = scheduleConfig.shiftConfig.teamCount > 1;
-  const locale = getLocale();
 
   const today = dayjs();
   const todayMinuteKey = today.startOf("minute").toISOString();
@@ -98,6 +102,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
 
   const countdown = useCountdown(nextShiftStartTime);
 
+  const locale = getDisplayLocale();
   const teamsSummary = useMemo(() => {
     if (!hasTeams) return null;
 
@@ -155,8 +160,7 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
 
     return {
       percentage: Math.min(100, Math.max(0, (clampedElapsedSeconds / totalSeconds) * 100)),
-      remainingHours: Math.floor(remainingSeconds / 3600),
-      remainingMinutes: Math.floor((remainingSeconds % 3600) / 60),
+      remainingSeconds,
     };
   }, [currentShiftStartTime, currentShiftEndTime, todayMinuteKey]); // oxlint-disable-line react-hooks/exhaustive-deps -- dependencies intentionally use minute key for stable updates
 
@@ -242,29 +246,18 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                       {shiftProgress && (
                         <div className="mt-2">
                           <div className="text-sm text-muted-foreground mb-1">
-                            {shiftProgress.remainingHours > 0
-                              ? m.generic_status_shift_progress_remaining({
-                                  hours: String(shiftProgress.remainingHours),
-                                  minutes: String(shiftProgress.remainingMinutes),
-                                })
-                              : m.generic_status_shift_progress_remaining_minutes_only({
-                                  minutes: String(shiftProgress.remainingMinutes),
-                                })}
+                            {m.generic_status_shift_progress_remaining({
+                              duration: formatDuration(shiftProgress.remainingSeconds),
+                            })}
                           </div>
                           <Progress
                             indicatorClassName="bg-warning"
                             value={shiftProgress.percentage}
-
-                            aria-label={
-                              shiftProgress.remainingHours > 0
-                                ? m.generic_status_shift_progress_remaining_aria({
-                                    hours: String(shiftProgress.remainingHours),
-                                    minutes: String(shiftProgress.remainingMinutes),
-                                  })
-                                : m.generic_status_shift_progress_remaining_minutes_only_aria({
-                                    minutes: String(shiftProgress.remainingMinutes),
-                                  })
-                            }
+                            aria-label={m.generic_status_shift_progress_remaining_aria({
+                              duration: formatDuration(shiftProgress.remainingSeconds, {
+                                style: "long",
+                              }),
+                            })}
                           />
                         </div>
                       )}
@@ -306,14 +299,8 @@ export function GenericStatusContent({ scheduleType, compact = false }: GenericS
                     {hasTeams
                       ? `${m.generic_status_team_label({ team: String(nextShiftAnyTeam.teamNumber) })} `
                       : ""}
-                    {typeof (nextShiftAnyTeam.date as { toDate?: () => Date }).toDate === "function"
-                      ? new Intl.DateTimeFormat(locale, {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                        }).format((nextShiftAnyTeam.date as { toDate: () => Date }).toDate())
-                      : nextShiftAnyTeam.date.format("ddd, MMM D")}{" "}
-                    - {nextShiftAnyTeam.shift.name}
+                    {formatDisplayDate(nextShiftAnyTeam.date, "weekdayDate")} -{" "}
+                    {nextShiftAnyTeam.shift.name}
                   </div>
                   <ShiftTimeDisplay
                     shift={nextShiftAnyTeam.shift}

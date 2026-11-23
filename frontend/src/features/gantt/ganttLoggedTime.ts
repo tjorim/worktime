@@ -1,7 +1,6 @@
-import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { dayjs, formatDuration } from "@/lib/dates/dateTimeUtils";
 import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
-import * as m from "@/paraglide/messages.js";
 
 export function getLoggedMinutes(
   startTime: string,
@@ -14,11 +13,7 @@ export function getLoggedMinutes(
 }
 
 export function formatLoggedDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours === 0) return m.gantt_logged_minutes({ minutes: remainingMinutes });
-  if (remainingMinutes === 0) return m.gantt_logged_hours({ hours });
-  return m.gantt_logged_hours_minutes({ hours, minutes: remainingMinutes });
+  return formatDuration(minutes * 60);
 }
 
 export function getLoggedMinutesByTaskId(entries: StoredTimeTrackingTask[]): Map<string, number> {

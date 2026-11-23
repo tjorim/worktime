@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { SearchSelect } from "@/components/SearchSelect";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
+import { dayjs, formatDuration } from "@/lib/dates/dateTimeUtils";
 import type { Label } from "@/lib/time-tracking/constants";
 import { BREAK_DURATION_MINUTES } from "@/lib/time-tracking/timeUtils";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
@@ -165,7 +165,7 @@ export function TaskEditModal({
                 disabled={!value.includesBreak && isTooShortForBreak}
               />
               <FieldLabel htmlFor="editTaskBreak">
-                {m.tt_includes_break({ minutes: BREAK_DURATION_MINUTES })}
+                {m.tt_includes_break({ duration: formatDuration(BREAK_DURATION_MINUTES * 60) })}
               </FieldLabel>
             </Field>
             {isTooShortForBreak && !value.includesBreak && (

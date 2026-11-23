@@ -1,6 +1,6 @@
+import { dayjs, formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { buildLabelNameMap, type Label } from "@/lib/time-tracking/constants";
 import { actualTaskDurationHours } from "@/lib/time-tracking/timeUtils";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
@@ -37,7 +37,7 @@ function buildWeekDays(startIso: string): WeekDay[] {
     const date = dayjs(startIso).add(idx, "day");
     return {
       iso: date.format("YYYY-MM-DD"),
-      label: date.format("dddd"),
+      label: formatDisplayDate(date, "weekday"),
     };
   });
 }

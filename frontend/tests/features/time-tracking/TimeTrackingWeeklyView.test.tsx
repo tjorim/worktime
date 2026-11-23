@@ -219,8 +219,8 @@ describe("TimeTrackingWeeklyView Component", () => {
       renderPanel({ tasks: weekTasks, weeklyTargetHours: 40 });
 
       expect(screen.getByText(/Weekly Progress/i)).toBeInTheDocument();
-      expect(screen.getByText(/4\.0h \/ 40\.0h/i)).toBeInTheDocument();
-      expect(screen.getByText(/36\.0h remaining/i)).toBeInTheDocument();
+      expect(screen.getByText(/4h \/ 40h/i)).toBeInTheDocument();
+      expect(screen.getByText(/36h remaining/i)).toBeInTheDocument();
     });
 
     it("handles zero weekly target without NaN percentages", () => {
@@ -234,8 +234,8 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       expect(container.textContent).not.toContain("NaN");
       expect(screen.getByText(/No target this week:/)).toBeInTheDocument();
-      expect(screen.queryByText(/4\.0h \/ 0\.0h/)).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/Monday: 4\.0 hours, 0% of daily target/i)).toBeInTheDocument();
+      expect(screen.queryByText(/4h \/ 0h/)).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/Monday: 4 hours, 0% of daily target/i)).toBeInTheDocument();
     });
 
     it("uses singular hour in weekly chart aria text for exactly one hour", () => {
@@ -243,7 +243,7 @@ describe("TimeTrackingWeeklyView Component", () => {
 
       renderPanel({ tasks: weekTasks, weeklyTargetHours: 40 });
 
-      expect(screen.getByLabelText(/Monday: 1\.0 hour, 13% of daily target/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Monday: 1 hour, 13% of daily target/i)).toBeInTheDocument();
     });
 
     it("includes all labels in work hour totals", () => {
@@ -402,7 +402,7 @@ describe("TimeTrackingWeeklyView Component", () => {
     it("states the week total once when a target shows it in the progress bar", () => {
       renderCollapsedPanel({ tasks: mondayTask(), weeklyTargetHours: 40 });
 
-      expect(screen.getByText(/3\.0h \/ 40\.0h/)).toBeInTheDocument();
+      expect(screen.getByText(/3h \/ 40h/)).toBeInTheDocument();
       expect(screen.queryByText("Total Hours")).not.toBeInTheDocument();
     });
 

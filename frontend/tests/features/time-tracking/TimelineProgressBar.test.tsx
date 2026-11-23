@@ -32,7 +32,7 @@ describe("TimelineProgressBar", () => {
         screen.getByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`),
       ).toBeInTheDocument();
       // The work segments should have the task tooltip
-      const workSegments = screen.getAllByLabelText(/Morning work: \d+\.\d+h/);
+      const workSegments = screen.getAllByLabelText(/Morning work: \d+[hm](?: \d+m)?/);
       expect(workSegments.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -44,7 +44,7 @@ describe("TimelineProgressBar", () => {
       expect(
         screen.queryByLabelText(`Break deduction: ${BREAK_DURATION_MINUTES} minutes`),
       ).not.toBeInTheDocument();
-      expect(screen.getByLabelText(/Morning work: \d+\.\d+h/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Morning work: \d+[hm](?: \d+m)?/)).toBeInTheDocument();
     });
 
     it("applies reduced opacity to break segment", () => {
@@ -75,7 +75,7 @@ describe("TimelineProgressBar", () => {
       render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
       const totalDuration = screen.getByTestId("timeline-total-duration");
-      expect(totalDuration).toHaveTextContent("7.50h");
+      expect(totalDuration).toHaveTextContent("7h 30m");
     });
 
     it("shows full hours without break", () => {
@@ -83,7 +83,7 @@ describe("TimelineProgressBar", () => {
 
       const { container } = render(<TimelineProgressBar tasks={[task]} labels={TEST_LABELS} />);
 
-      expect(container.textContent).toContain("8.00h");
+      expect(container.textContent).toContain("8h");
     });
   });
 
@@ -110,12 +110,9 @@ describe("TimelineProgressBar", () => {
         />,
       );
 
-      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("2.00h (25.0%)");
-      expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 2.00h");
-      expect(screen.getByLabelText("Prepare report: 2.00h")).toHaveAttribute(
-        "data-planned",
-        "true",
-      );
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("2h (25.0%)");
+      expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 2h");
+      expect(screen.getByLabelText("Prepare report: 2h")).toHaveAttribute("data-planned", "true");
     });
 
     it("shows the known gap from now until the first planned task", () => {
@@ -135,7 +132,7 @@ describe("TimelineProgressBar", () => {
         />,
       );
 
-      expect(screen.getByLabelText("120 minutes until next task")).toBeInTheDocument();
+      expect(screen.getByLabelText("2 hours until next task")).toBeInTheDocument();
     });
 
     it("shows time from now until a planned task after a running task", () => {
@@ -161,12 +158,9 @@ describe("TimelineProgressBar", () => {
         />,
       );
 
-      expect(screen.getByLabelText("60 minutes until next task")).toBeInTheDocument();
-      expect(screen.getByLabelText("Current work: 0.17h")).toBeInTheDocument();
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveAttribute(
-        "data-planned",
-        "true",
-      );
+      expect(screen.getByLabelText("1 hour until next task")).toBeInTheDocument();
+      expect(screen.getByLabelText("Current work: 10m")).toBeInTheDocument();
+      expect(screen.getByLabelText("Prepare report: 1h")).toHaveAttribute("data-planned", "true");
     });
 
     it("keeps an overrun plan separate from worked time while the timer is running", () => {
@@ -192,12 +186,9 @@ describe("TimelineProgressBar", () => {
         />,
       );
 
-      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("1.25h");
-      expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 1.00h");
-      expect(screen.getByLabelText("Prepare report: 1.00h")).toHaveAttribute(
-        "data-planned",
-        "true",
-      );
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("1h 15m");
+      expect(screen.getByTestId("timeline-planned-duration")).toHaveTextContent("Planned: 1h");
+      expect(screen.getByLabelText("Prepare report: 1h")).toHaveAttribute("data-planned", "true");
     });
   });
 
@@ -304,7 +295,7 @@ describe("TimelineProgressBar", () => {
     it("sizes and colours segments through custom properties", () => {
       render(<TimelineProgressBar tasks={[makeTask()]} labels={TEST_LABELS} />);
 
-      const segment = screen.getByLabelText(/Morning work: \d+\.\d+h/);
+      const segment = screen.getByLabelText(/Morning work: \d+[hm](?: \d+m)?/);
       expect(segment).toHaveAttribute("role", "progressbar");
       expect(segment.style.getPropertyValue("--seg-w")).toBe("100%");
       expect(segment.style.getPropertyValue("--label-bg")).toBe("#c82333");
@@ -316,7 +307,7 @@ describe("TimelineProgressBar", () => {
       const { container } = render(<TimelineProgressBar tasks={[]} labels={TEST_LABELS} />);
 
       expect(container.querySelector("[role=progressbar]")).toBeNull();
-      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("0.00h (0.0%)");
+      expect(screen.getByTestId("timeline-total-duration")).toHaveTextContent("0m (0.0%)");
     });
   });
 });

@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { ChartColumnStackedIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
@@ -48,18 +49,20 @@ export function WeeklyLabelChart({
       fill: resolveLabelColors(color).background,
     }));
     const visible: readonly string[] = domain.filter((label) => !hiddenLabels.includes(label));
-    const days = weekDays.map((day) => day.label.substring(0, 3));
+    const days = weekDays.map((day) => formatDisplayDate(day.iso, "shortWeekday"));
     // The x domain follows the rows, so an empty day gets a zero-hour row to keep all seven days.
     const rows: LabelHoursRow[] = weekDays.flatMap((day) => {
       const dayRows = series.flatMap(({ label, fill }) => {
         const hours = dailyTotals[day.iso]?.[label] ?? 0;
-        return hours > 0 ? [{ day: day.label.substring(0, 3), label, hours, fill }] : [];
+        return hours > 0
+          ? [{ day: formatDisplayDate(day.iso, "shortWeekday"), label, hours, fill }]
+          : [];
       });
       return dayRows.length > 0
         ? dayRows
         : [
             {
-              day: day.label.substring(0, 3),
+              day: formatDisplayDate(day.iso, "shortWeekday"),
               label: domain[0] ?? "",
               hours: 0,
               fill: "transparent",

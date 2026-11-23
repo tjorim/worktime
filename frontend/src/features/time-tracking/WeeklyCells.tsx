@@ -1,3 +1,4 @@
+import { formatDecimalHours } from "@/lib/dates/dateTimeUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Hint } from "@/components/ui/tooltip";
 import { TableCell } from "@/components/ui/table";
@@ -42,7 +43,7 @@ export function CopyableHoursCell({
         className={cn(cellValue && "cursor-copy", className)}
         onClick={cellValue ? () => onCopyCell(cellId, cellValue) : undefined}
       >
-        {cellValue ?? "-"}
+        {cellValue === null ? "-" : formatDecimalHours(Number(cellValue), 2)}
       </TableCell>
     </Hint>
   );

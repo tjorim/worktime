@@ -1,3 +1,9 @@
+import {
+  dayjs,
+  formatDisplayDate,
+  formatYYWWD,
+  getISOWeekYear2Digit,
+} from "@/lib/dates/dateTimeUtils";
 import { CalendarPlusIcon, KeyboardIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
@@ -18,9 +24,7 @@ import type { ScheduleOption } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { dayjs, formatYYWWD, getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
 import { calculateShift } from "@/lib/schedule/shiftCalculations";
-import { getLocale } from "@/paraglide/runtime.js";
 import { ShiftBadge } from "@/components/ShiftBadge";
 import { WeekNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import * as m from "@/paraglide/messages.js";
@@ -101,23 +105,9 @@ export function WeekView({
 
   // Memoize today's date for consistent "today" highlighting throughout rendering
   const today = dayjs();
-  const locale = getLocale();
-  const shortDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
-    [locale],
-  );
-  const longDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }),
-    [locale],
-  );
-  const shortWeekdayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
-    [locale],
-  );
-
-  const formatShortDate = (value: Dayjs) => shortDateFormatter.format(dayjs(value).toDate());
-  const formatLongDate = (value: Dayjs) => longDateFormatter.format(dayjs(value).toDate());
-  const formatShortWeekday = (value: Dayjs) => shortWeekdayFormatter.format(dayjs(value).toDate());
+  const formatShortDate = (value: Dayjs) => formatDisplayDate(value, "monthDay");
+  const formatDayHeading = (value: Dayjs) => formatDisplayDate(value, "currentDay");
+  const formatShortWeekday = (value: Dayjs) => formatDisplayDate(value, "shortWeekday");
 
   // No schedule selected - show setup prompt
   if (!scheduleType) {
@@ -192,7 +182,7 @@ export function WeekView({
                       key={`day-header-${dayIndex}-${day.format("YYYY-MM-DD")}`}
                       className={cn("text-center", isToday && "bg-primary/10")}
                       aria-label={m.week_view_day_header_aria({
-                        date: formatLongDate(day),
+                        date: formatDayHeading(day),
                         today: isToday ? m.daycell_today_label() : "",
                       })}
                     >
@@ -260,11 +250,11 @@ export function WeekView({
                           hasTeams
                             ? m.week_view_team_day_shift_aria({
                                 team: String(teamNumber),
-                                day: formatLongDate(day),
+                                day: formatDayHeading(day),
                                 shift: shift.isWorking ? shift.name : m.schedule_off(),
                               })
                             : m.week_view_schedule_day_shift_aria({
-                                day: formatLongDate(day),
+                                day: formatDayHeading(day),
                                 shift: shift.isWorking ? shift.name : m.schedule_off(),
                               })
                         }

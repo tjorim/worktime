@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatLongDate } from "@/lib/dates/dateTimeUtils";
 import {
   BanknoteIcon,
   BanIcon,
@@ -191,15 +192,11 @@ export function DayCell({
     () => new Intl.PluralRules(locale).select(hiddenCount),
     [hiddenCount, locale],
   );
-  const longDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { dateStyle: "full" }),
-    [locale],
-  );
   const hasCourse = events.some(({ entry }) => getEntryFlagsForDisplay(entry).includes("course"));
   const courseLabel = m.calendar_legend_course_training();
   const holidayIndicators = getIndicatorDetails(publicHoliday, paydayInfo, schoolHoliday);
   const workLocationLabel = getWorkLocationLabel(workLocation);
-  const descriptionParts = [longDateFormatter.format(date.toDate())];
+  const descriptionParts = [formatLongDate(date)];
   if (isToday) {
     descriptionParts.push(m.daycell_today_label());
   }
@@ -430,7 +427,7 @@ export function DayCell({
         {descriptionParts.join(" - ")}
       </span>
       <div className="month-calendar-day-header">
-        <span className="month-calendar-day-number">{date.date()}</span>
+        <span className="month-calendar-day-number">{formatDisplayDate(date, "day")}</span>
         <span className="month-calendar-day-indicators" aria-hidden="true">
           {hasCourse && (
             <span className="month-calendar-day-indicator" title={courseLabel}>
@@ -457,7 +454,7 @@ export function DayCell({
             type="button"
             className="month-calendar-add-btn"
             tabIndex={-1}
-            aria-label={m.daycell_add_event_on({ date: longDateFormatter.format(date.toDate()) })}
+            aria-label={m.daycell_add_event_on({ date: formatLongDate(date) })}
             onClick={(e) => {
               e.stopPropagation();
               if (justLongPressedRef.current) {

@@ -10,7 +10,6 @@ import { useLiveTime } from "@/hooks/useLiveTime";
 import { useWorkLocationStorage } from "@/hooks/useWorkLocationStorage";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
 import { useDefaultLabelColor, type Label } from "@/lib/time-tracking/constants";
 import type { StoredTimeTrackingTask } from "@/lib/time-tracking/types";
 import { WeeklyDataView } from "./WeeklyDataView";
@@ -57,7 +56,6 @@ export function TimeTrackingWeeklyView({
     };
   }, []);
 
-  const pluralRules = useMemo(() => new Intl.PluralRules(getLocale()), []);
   const { settings } = useSettings();
   const liveTime = useLiveTime({ precision: "minute" });
   const weeklyDate = dayjs(selectedDate);
@@ -156,7 +154,6 @@ export function TimeTrackingWeeklyView({
             crossBorderEnabled={settings.enableCrossBorderTracking}
             workLocationMap={workLocationMap}
             onSwitchToDaily={onSwitchToDaily}
-            pluralRules={pluralRules}
             copiedCellId={copiedCellId}
             onCopyCell={handleCopyCell}
           />

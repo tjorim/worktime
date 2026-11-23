@@ -1,3 +1,9 @@
+import {
+  dayjs,
+  formatDisplayDate,
+  formatDuration,
+  getLocalizedShiftTime,
+} from "@/lib/dates/dateTimeUtils";
 import { Grid, GridItem } from "@/components/ui/grid";
 import {
   BriefcaseIcon,
@@ -42,7 +48,6 @@ import { ShiftBadge } from "@/components/ShiftBadge";
 import type { ScheduleOption, ShiftCode } from "@/lib/schedule/rosters";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { getScheduleConfig } from "@/lib/schedule/scheduleUtils";
-import { dayjs, getLocalizedShiftTime } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
 import { calculateShift } from "@/lib/schedule/shiftCalculations";
@@ -260,7 +265,7 @@ export function ScheduleDetailModal({
                       <ShiftBadge shift={currentStatus.shift} showName pill showTooltip={false} />
                     )}
                     <small className="text-muted-foreground">
-                      {currentStatus.date.format("dddd, MMM D")}
+                      {formatDisplayDate(currentStatus.date, "currentDay")}
                     </small>
                   </div>
                 </div>
@@ -269,7 +274,7 @@ export function ScheduleDetailModal({
                     <small className="text-muted-foreground block">{m.schedule_next_shift()}</small>
                     <ShiftBadge shift={nextShift.shift} showName pill showTooltip={false} />
                     <small className="text-muted-foreground block">
-                      {nextShift.date.format("MMM D")}
+                      {formatDisplayDate(nextShift.date, "monthDay")}
                     </small>
                   </div>
                 )}
@@ -379,7 +384,7 @@ export function ScheduleDetailModal({
                         className={cn(day.isToday && "bg-primary/10 font-medium")}
                       >
                         <TableCell>
-                          <strong>{day.date.format("MMM D")}</strong>
+                          <strong>{formatDisplayDate(day.date, "monthDay")}</strong>
                           {day.isToday && (
                             <Badge variant="default" className="ml-2">
                               <Icon icon={CircleIcon} className="mr-1 size-2" fill="currentColor" />
@@ -392,7 +397,7 @@ export function ScheduleDetailModal({
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell>{day.date.format("ddd")}</TableCell>
+                        <TableCell>{formatDisplayDate(day.date, "shortWeekday")}</TableCell>
                         <TableCell>
                           {day.shift.code === "O" ? (
                             <Badge variant="secondary">{m.schedule_off()}</Badge>
@@ -445,7 +450,7 @@ export function ScheduleDetailModal({
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h6 className="mb-1">
-                          {day.date.format("dddd")}
+                          {formatDisplayDate(day.date, "weekday")}
                           {day.isToday && (
                             <Badge variant="default" className="ml-2">
                               <Icon icon={CircleIcon} className="mr-1 size-2" fill="currentColor" />
@@ -459,7 +464,7 @@ export function ScheduleDetailModal({
                           )}
                         </h6>
                         <small className="text-muted-foreground">
-                          {day.date.format("MMMM D, YYYY")}
+                          {formatDisplayDate(day.date)}
                         </small>
                       </div>
                       <div>
@@ -556,9 +561,7 @@ export function ScheduleDetailModal({
                         {m.schedule_total_weekly_hours()}
                       </span>
                       <Badge variant="default">
-                        {Number.isInteger(stats.totalWeeklyHours)
-                          ? `${stats.totalWeeklyHours}h`
-                          : `${stats.totalWeeklyHours.toFixed(1)}h`}
+                        {formatDuration(stats.totalWeeklyHours * 3600)}
                       </Badge>
                     </li>
                   </ul>
