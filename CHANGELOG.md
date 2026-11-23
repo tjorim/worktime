@@ -22,6 +22,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Changed
 
+- Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.
+
 - Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
 - Dates and durations across the web app follow the selected language, with UK date order in English and consistent hour and minute units.
 

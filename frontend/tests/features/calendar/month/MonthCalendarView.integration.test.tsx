@@ -326,10 +326,10 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.contextMenu(targetCell!);
 
       // Verify context menu appears
-      expect(screen.getByText("Add new event")).toBeInTheDocument();
+      expect(screen.getByText("Add entry")).toBeInTheDocument();
 
       // Click add event using fireEvent (more reliable with fake timers)
-      fireEvent.click(screen.getByText("Add new event"));
+      fireEvent.click(screen.getByText("Add entry"));
 
       // Verify modal opens
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -354,15 +354,15 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.contextMenu(vacationBadge!);
 
       // Verify context menu appears with edit option
-      expect(screen.getByText("Edit event")).toBeInTheDocument();
+      expect(screen.getByText("Edit entry")).toBeInTheDocument();
 
       // Click edit event using fireEvent
-      fireEvent.click(screen.getByText("Edit event"));
+      fireEvent.click(screen.getByText("Edit entry"));
 
       // Verify modal opens in edit mode
       const modal = screen.getByRole("dialog");
       expect(modal).toBeInTheDocument();
-      expect(within(modal).getByText(/Edit Event/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/Edit entry/i)).toBeInTheDocument();
     });
 
     it("shows delete option in context menu for events", async () => {
@@ -383,7 +383,7 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.contextMenu(vacationBadge!);
 
       // Verify delete option appears
-      expect(screen.getByText("Delete event")).toBeInTheDocument();
+      expect(screen.getByText("Delete entry")).toBeInTheDocument();
     });
 
     it("does not show context menu when time-off is disabled", async () => {
@@ -405,7 +405,7 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.contextMenu(targetCell!);
 
       // Verify context menu does NOT appear
-      expect(screen.queryByText("Add new event")).not.toBeInTheDocument();
+      expect(screen.queryByText("Add entry")).not.toBeInTheDocument();
     });
   });
 
@@ -541,8 +541,8 @@ describe("MonthCalendarView Integration Tests", () => {
       const legendButton = screen.getByRole("button", { name: /Legend/i });
       fireEvent.click(legendButton);
 
-      // Verify "Event Types" section is not shown when time-off is disabled
-      expect(screen.queryByText("Event Types")).not.toBeInTheDocument();
+      // Verify "Entry types" section is not shown when time-off is disabled
+      expect(screen.queryByText("Entry types")).not.toBeInTheDocument();
       // But "Day Indicators" should still be visible
       expect(screen.getByText("Day Indicators")).toBeInTheDocument();
     });
@@ -587,7 +587,7 @@ describe("MonthCalendarView Integration Tests", () => {
 
   describe("Modal Event Workflows", () => {
     /**
-     * Helper function to open the 'Add new event' modal for a specific day.
+     * Helper function to open the 'Add entry' modal for a specific day.
      */
     const openAddEventModalForDay = (container: HTMLElement, day: string) => {
       const dayCells = container.querySelectorAll(".month-calendar-day");
@@ -598,7 +598,7 @@ describe("MonthCalendarView Integration Tests", () => {
         throw new Error(`Target day cell for date "${day}" was not found in the month calendar.`);
       }
       fireEvent.contextMenu(targetCell!);
-      fireEvent.click(screen.getByText("Add new event"));
+      fireEvent.click(screen.getByText("Add entry"));
     };
 
     beforeEach(() => {
@@ -612,9 +612,9 @@ describe("MonthCalendarView Integration Tests", () => {
 
       openAddEventModalForDay(container, "20");
 
-      // Fill in event details (the label is "Comment" not "Event title") using fireEvent
+      // Fill in entry details using fireEvent
       const modal = screen.getByRole("dialog");
-      const titleInput = within(modal).getByLabelText(/Comment/i);
+      const titleInput = within(modal).getByLabelText(/Note/i);
       fireEvent.change(titleInput, { target: { value: "Doctor Appointment" } });
 
       // Submit form using fireEvent (button is "Add" in add mode)
@@ -664,7 +664,7 @@ describe("MonthCalendarView Integration Tests", () => {
 
       // Verify view modal opens
       const modal = screen.getByRole("dialog");
-      expect(within(modal).getByText(/View Event/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/View entry/i)).toBeInTheDocument();
 
       // Click edit button using fireEvent (button text is "Edit" in view mode)
       const editButtons = within(modal).getAllByRole("button", { name: /Edit/i });
@@ -673,7 +673,7 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.click(editButton!);
 
       // Verify modal switches to edit mode (button is "Update" not "Save" in edit mode)
-      expect(within(modal).getByText(/Edit Event/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/Edit entry/i)).toBeInTheDocument();
       expect(within(modal).getByRole("button", { name: /Update/i })).toBeInTheDocument();
     });
 
@@ -701,7 +701,7 @@ describe("MonthCalendarView Integration Tests", () => {
 
       fireEvent.click(within(modal).getByRole("button", { name: /^Cancel$/i }));
 
-      expect(within(modal).getByText(/View Event/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/View entry/i)).toBeInTheDocument();
     });
 
     it("confirms reset in edit mode when form has unsaved changes", async () => {
@@ -724,7 +724,7 @@ describe("MonthCalendarView Integration Tests", () => {
       expect(editButton).toBeTruthy();
       fireEvent.click(editButton!);
 
-      const commentInput = within(modal).getByLabelText(/Comment/i);
+      const commentInput = within(modal).getByLabelText(/Note/i);
       fireEvent.change(commentInput, { target: { value: "Updated title" } });
 
       fireEvent.click(within(modal).getByRole("button", { name: /Reset form/i }));
@@ -752,7 +752,7 @@ describe("MonthCalendarView Integration Tests", () => {
     const openDeleteConfirmationForVacation = () => {
       const vacationBadge = screen.getAllByRole("button", { name: /Vacation/i })[0];
       fireEvent.contextMenu(vacationBadge!);
-      fireEvent.click(screen.getByText("Delete event"));
+      fireEvent.click(screen.getByText("Delete entry"));
     };
 
     beforeEach(() => {
@@ -768,7 +768,7 @@ describe("MonthCalendarView Integration Tests", () => {
       openDeleteConfirmationForVacation();
 
       // Verify confirmation dialog appears
-      expect(screen.getByText(/Delete Event/i)).toBeInTheDocument();
+      expect(screen.getByText(/Delete entry/i)).toBeInTheDocument();
       expect(screen.getByText(/Are you sure/i)).toBeInTheDocument();
     });
 

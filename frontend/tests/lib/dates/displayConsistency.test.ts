@@ -14,8 +14,8 @@ import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
 afterEach(() => setLocale("en", { reload: false }));
 describe("display consistency", () => {
   it.each([
-    ["en", "2 Nov 2026", "Training/Course", "AM (half day)"],
-    ["nl", "2 nov 2026", "Training/Cursus", "Ochtend (halve dag)"],
+    ["en", "2 Nov 2026", "Training", "AM (half day)"],
+    ["nl", "2 nov 2026", "Training", "Ochtend (halve dag)"],
   ] as const)("localises dates and flags in %s", (locale, date, course, half) => {
     setLocale(locale, { reload: false });
     expect(formatDisplayDate("2026-11-02")).toBe(date);

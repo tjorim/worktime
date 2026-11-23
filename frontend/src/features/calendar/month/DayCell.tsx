@@ -1,8 +1,11 @@
 import { formatDisplayDate, formatLongDate } from "@/lib/dates/dateTimeUtils";
 import {
   BanknoteIcon,
+  BanIcon,
   BookOpenIcon,
+  MapPinIcon,
   PartyPopperIcon,
+  PlaneTakeoffIcon,
   PlusIcon,
   SchoolIcon,
   TriangleAlertIcon,
@@ -31,7 +34,8 @@ import { ShiftBadge } from "@/components/ShiftBadge";
 import {
   getEventColorClass,
   getEventTypeLabel,
-  getTimeLocationSymbol,
+  getEventModifierLabel,
+  getHalfDaySymbol,
 } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import * as m from "@/paraglide/messages.js";
@@ -68,20 +72,11 @@ interface DayCellProps {
  */
 const MAX_EVENTS = 3;
 
-/**
- * Returns accessible labels for time/location symbols displayed in events.
- * Maps each symbol to a human-readable description for screen readers.
- */
-function getSymbolLabel(symbol: string): string {
-  const labels: Record<string, () => string> = {
-    "◐": m.daycell_morning_half,
-    "◑": m.daycell_afternoon_half,
-    W: m.daycell_onsite_support,
-    N: m.daycell_no_fly,
-    F: m.daycell_can_fly,
-  };
-  return labels[symbol]?.() ?? symbol;
-}
+const MODIFIER_ICONS: Partial<Record<TimeOffEntry["entryFlag"], LucideIcon>> = {
+  onsite: MapPinIcon,
+  no_fly: BanIcon,
+  can_fly: PlaneTakeoffIcon,
+};
 
 const getIndicatorDetails = (
   publicHoliday?: PublicHolidayInfo,
@@ -320,9 +315,13 @@ export function DayCell({
         entryFlags,
         dayEvent.entry.entryKind === "weekly" ? "weekly" : "range",
       );
-      const title = dayEvent.entry.note || getEventTypeLabel(entryFlags);
+      const typeLabel = getEventTypeLabel(entryFlags);
+      const title = dayEvent.entry.note || typeLabel;
       const label = dayEvent.overlapping ? `${title} · ${m.timeoff_overlap()}` : title;
-      const symbol = getTimeLocationSymbol(entryFlags);
+      const symbol = getHalfDaySymbol(entryFlags);
+      const modifierLabel = getEventModifierLabel(entryFlags);
+      const modifierIcon = MODIFIER_ICONS[dayEvent.entry.entryFlag];
+      const details = [label, modifierLabel].filter(Boolean).join(" · ");
       const id = dayEvent.entry.id;
       const keyId = dayEvent.entry.id;
 
@@ -356,23 +355,20 @@ export function DayCell({
           }}
           onTouchEnd={clearLongPress}
           onTouchMove={handleTouchMove}
-          title={label}
-          aria-label={m.daycell_view_event_aria({ label })}
+          title={details}
+          aria-label={m.daycell_view_event_aria({ label: details })}
         >
-          {dayEvent.overlapping && <Icon icon={TriangleAlertIcon} className="size-3 shrink-0" />}
+          {dayEvent.overlapping && (
+            <Icon icon={TriangleAlertIcon} className="size-3 shrink-0 max-sm:size-2" />
+          )}
           <span className={cn("month-calendar-event-color", colorClass)} />
-          <span className="month-calendar-event-label">
-            {symbol && (
-              <span
-                className="month-calendar-event-symbol"
-                role="img"
-                aria-label={getSymbolLabel(symbol)}
-              >
-                {symbol}
-              </span>
-            )}
-            {title}
-          </span>
+          {modifierIcon && <Icon icon={modifierIcon} className="size-3 shrink-0 max-sm:size-2" />}
+          {symbol && (
+            <span className="month-calendar-event-symbol" aria-hidden="true">
+              {symbol}
+            </span>
+          )}
+          <span className="month-calendar-event-label">{title}</span>
         </button>
       );
     },

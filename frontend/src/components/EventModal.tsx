@@ -26,7 +26,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
-import { getEventTypeLabel } from "@/lib/hday/presentation";
+import { getEventModifierLabel, getEventTypeLabel } from "@/lib/hday/presentation";
 import { formatDisplayDate, getWeekdayName } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 
@@ -276,6 +276,7 @@ export function EventModal({
           : { ...metadata, entryKind: "range", start, end }
         : null;
   const overlaps = candidate ? getOverlappingEntries(candidate, entries) : [];
+  const modifierLabel = getEventModifierLabel(eventFlags);
 
   // The validation errors are set by `onSubmit`; once they have rendered, move focus to the first
   // invalid field so keyboard and screen-reader users land on the error instead of the button.
@@ -346,10 +347,10 @@ export function EventModal({
                             : m.event_modal_select_date()}
                       </div>
                       {eventTitle && <div className="text-muted-foreground">{eventTitle}</div>}
-                      {eventFlags.length > 0 && (
+                      {modifierLabel && (
                         <div className="text-sm text-muted-foreground">
                           {m.event_modal_flags_label({
-                            flags: eventFlags.map((flag) => getEventFlagLabel(flag)).join(", "),
+                            flags: modifierLabel,
                           })}
                         </div>
                       )}

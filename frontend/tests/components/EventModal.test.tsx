@@ -89,7 +89,7 @@ describe("EventModal", () => {
 
     const typeGroup = screen.getByRole("radiogroup", { name: "Category" });
     expect(within(typeGroup).getByRole("radio", { name: "Business trip" })).toBeChecked();
-    expect(within(typeGroup).getByRole("radio", { name: "Holiday (default)" })).not.toBeChecked();
+    expect(within(typeGroup).getByRole("radio", { name: "Vacation" })).not.toBeChecked();
 
     const locationGroup = screen.getByRole("radiogroup", { name: "Time and location" });
     expect(within(locationGroup).getByRole("radio", { name: "Onsite" })).toBeChecked();
@@ -99,7 +99,7 @@ describe("EventModal", () => {
     renderModal({ eventFlags: [] });
 
     const typeGroup = screen.getByRole("radiogroup", { name: "Category" });
-    expect(within(typeGroup).getByRole("radio", { name: "Holiday (default)" })).toBeChecked();
+    expect(within(typeGroup).getByRole("radio", { name: "Vacation" })).toBeChecked();
     const locationGroup = screen.getByRole("radiogroup", { name: "Time and location" });
     expect(within(locationGroup).getByRole("radio", { name: "Full day" })).toBeChecked();
   });
@@ -108,10 +108,10 @@ describe("EventModal", () => {
     const user = userEvent.setup();
     const handlers = renderModal({ eventFlags: ["business"] });
 
-    await user.click(screen.getByRole("radio", { name: "Training/Course" }));
+    await user.click(screen.getByRole("radio", { name: "Training" }));
     expect(handlers.onTypeFlagChange).toHaveBeenCalledWith("course");
 
-    await user.click(screen.getByRole("radio", { name: "Holiday (default)" }));
+    await user.click(screen.getByRole("radio", { name: "Vacation" }));
     expect(handlers.onTypeFlagChange).toHaveBeenLastCalledWith("none");
 
     await user.click(screen.getByRole("radio", { name: "AM (half day)" }));
@@ -139,14 +139,14 @@ describe("EventModal", () => {
 
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.getByText("Business trip")).toBeInTheDocument();
-    expect(screen.getByLabelText("Comment (optional)")).toBeDisabled();
-    expect(screen.getByLabelText("Event type")).toBeDisabled();
+    expect(screen.getByLabelText("Note (optional)")).toBeDisabled();
+    expect(screen.getByLabelText("Pattern")).toBeDisabled();
   });
 
   it("limits the comment to the server's note length", () => {
     renderModal({ mode: "add" });
 
-    expect(screen.getByLabelText("Comment (optional)")).toHaveAttribute("maxlength", "1000");
+    expect(screen.getByLabelText("Note (optional)")).toHaveAttribute("maxlength", "1000");
   });
 
   it("moves focus to the first invalid date field and announces its error on a failed Add", async () => {

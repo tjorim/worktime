@@ -893,7 +893,7 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getByText("You're on leave (Holiday)")).toBeInTheDocument();
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
     });
 
     it("colours the time-off indicator through palette custom properties, not inline colours", () => {
@@ -917,7 +917,7 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      const indicator = screen.getByTitle("You're on leave (Holiday)");
+      const indicator = screen.getByTitle("You're on leave (Vacation)");
       expect(indicator.style.getPropertyValue("--event-bg")).toBe(
         "var(--wt-event-holiday-full-bg)",
       );
@@ -942,7 +942,7 @@ describe("TransferView", () => {
 
       renderWithProviders(<TransferView {...defaultProps} />);
 
-      expect(screen.getByText("You're on leave (Holiday)")).toBeInTheDocument();
+      expect(screen.getByText("You're on leave (Vacation)")).toBeInTheDocument();
     });
   });
 

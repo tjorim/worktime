@@ -62,6 +62,14 @@ const entries: TimeOffEntry[] = [
     entryFlag: "half_am",
     note: "Weekly appointment",
   },
+  {
+    id: "d",
+    entryKind: "date",
+    date: "2026-11-21",
+    entryType: "course",
+    entryFlag: "no_fly",
+    note: null,
+  },
 ];
 const noop = () => {};
 function Fixture() {

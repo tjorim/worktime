@@ -71,7 +71,7 @@ Where:
 
 | Flags    | Meaning                        | Display Color                    |
 | -------- | ------------------------------ | -------------------------------- |
-| _(none)_ | Regular vacation/holiday       | Red (#EC0000)                    |
+| _(none)_ | Vacation                       | Red (#EC0000)                    |
 | `a`      | Half day AM off                | Pink with `,` (#FF8A8A)          |
 | `p`      | Half day PM off                | Pink with `'` (#FF8A8A)          |
 | `b`      | Business trip (full day)       | Orange (#FF9500)                 |
@@ -195,26 +195,26 @@ When rendered in team overview pages (in Worktime the light and dark values are 
 
 | Color            | Hex     | Meaning                           |
 | ---------------- | ------- | --------------------------------- |
-| Red              | #EC0000 | Off work / vacation               |
-| Pink             | #FF8A8A | Half day off (`,` = AM, `'` = PM) |
+| Red              | #EC0000 | Vacation                          |
+| Pink             | #FF8A8A | Half day off (◐ = AM, ◑ = PM)     |
 | Orange           | #FF9500 | Business trip                     |
 | Light Orange     | #FFC04D | Half day business                 |
-| Dark Yellow/Gold | #D9AD00 | Training / course                 |
+| Dark Yellow/Gold | #D9AD00 | Training                          |
 | Light Yellow     | #F0D04D | Half day training                 |
 | Teal             | #008899 | In office                         |
 | Light Teal       | #00B8CC | Half day in office                |
-| Dark Magenta     | #990099 | Weekend event                     |
+| Dark Magenta     | #990099 | Weekend entry                     |
 | Light Magenta    | #CC66CC | Half day weekend                  |
 | Dark Blue        | #0000CC | Birthday                          |
 | Light Blue       | #6666FF | Half day birthday                 |
-| Dark Olive       | #336600 | Ill / sick leave                  |
+| Dark Olive       | #336600 | Sick leave                        |
 | Light Olive      | #669933 | Half day ill                      |
 | Slate Gray       | #6C757D | Other / unspecified               |
 | Light Gray       | #ADB5BD | Half day other                    |
 | Brown            | #8B5A2B | Weekly recurring day off          |
 | Light Brown      | #C9A27A | Half day weekly recurring         |
 | Gray             | #AAAAAA | Weekend day (calendar background) |
-| Light Blue (bg)  | #AAAAFF | Official holiday (CR day)         |
+| Light Blue (bg)  | #AAAAFF | Public holiday                    |
 | Light Green      | #BBFFBB | In during school vacation         |
 | Green            | #90EE90 | Regular work day / "today" marker |
 

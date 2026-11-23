@@ -51,13 +51,13 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Table view starts active
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/No time-off entries yet/i)).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
       expect(screen.getByRole("region", { name: /Time off statistics/i })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: /^Table$/i }));
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/No time-off entries yet/i)).toBeInTheDocument();
     });
 
     it("restores the last used Time Off view from settings state", () => {
@@ -156,7 +156,7 @@ describe("TimeOffView Integration Tests", () => {
       // The flags column shows translated labels, never raw flag keys
       const table = screen.getByRole("table");
       expect(within(table).getAllByText("Business trip").length).toBeGreaterThan(0);
-      expect(within(table).getAllByText("Training/Course").length).toBeGreaterThan(0);
+      expect(within(table).getAllByText("Training").length).toBeGreaterThan(0);
       expect(within(table).queryByText("course")).not.toBeInTheDocument();
       expect(within(table).queryByText("business")).not.toBeInTheDocument();
     });
@@ -191,11 +191,10 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText("Half day PM")).toBeInTheDocument();
       expect(screen.getByText("Business trip onsite")).toBeInTheDocument();
 
-      // Verify flag symbols (◐ = AM symbol, ◑ = PM symbol)
       const table = screen.getByRole("table");
-      // The symbols appear in the type badge
-      expect(within(table).getByText(/◐/)).toBeInTheDocument(); // Half day AM symbol
-      expect(within(table).getByText(/◑/)).toBeInTheDocument(); // Half day PM symbol
+      expect(within(table).getByText("AM (half day)")).toBeInTheDocument();
+      expect(within(table).getByText("PM (half day)")).toBeInTheDocument();
+      expect(within(table).getByText("Onsite")).toBeInTheDocument();
     });
 
     it("keeps the raw editor synced with imported content", async () => {
@@ -237,13 +236,13 @@ describe("TimeOffView Integration Tests", () => {
 
       // === CREATE ===
       // Add a new event via UI
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-06-15");
 
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Summer vacation");
 
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
@@ -302,7 +301,7 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Create business trip with flags
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
@@ -312,7 +311,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.clear(endInput);
       await user.type(endInput, "2025-07-25");
 
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Conference");
 
       // Select business trip type
@@ -349,19 +348,19 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Create a few events via UI
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-08-10");
-      let titleInput = screen.getByLabelText(/Comment/i);
+      let titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "First event");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-08-15");
-      titleInput = screen.getByLabelText(/Comment/i);
+      titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Second event");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -440,11 +439,11 @@ describe("TimeOffView Integration Tests", () => {
       const { unmount } = renderWithProviders();
 
       // Add an event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-09-01");
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Persistent event");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -522,7 +521,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.selectOptions(yearSelect, "2025");
 
       // Statistics should show breakdown by event type for 2025
-      expect(within(statsRegion).getByText("Holiday")).toBeInTheDocument();
+      expect(within(statsRegion).getByText("Vacation")).toBeInTheDocument();
     });
   });
 
@@ -532,27 +531,27 @@ describe("TimeOffView Integration Tests", () => {
       renderWithProviders();
 
       // Add multiple events
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       let startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-11-01");
-      let titleInput = screen.getByLabelText(/Comment/i);
+      let titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Event 1");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-11-02");
-      titleInput = screen.getByLabelText(/Comment/i);
+      titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Event 2");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-11-03");
-      titleInput = screen.getByLabelText(/Comment/i);
+      titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Event 3");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 

@@ -111,18 +111,18 @@ describe("TimeOffTableView", () => {
   it("re-sorts when a column header is clicked", async () => {
     renderTable();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Title/ }));
+    await user.click(screen.getByRole("button", { name: /Note/ }));
     // Ascending by title: blank (weekly) first, then Conference, then Ski trip.
     expect(bodyRows()[1]).toHaveTextContent("Conference");
     expect(bodyRows()[2]).toHaveTextContent("Ski trip");
-    await user.click(screen.getByRole("button", { name: /Title/ }));
+    await user.click(screen.getByRole("button", { name: /Note/ }));
     expect(bodyRows()[0]).toHaveTextContent("Ski trip");
   });
 
   it("filters rows by search text, including the date", async () => {
     renderTable();
     const user = userEvent.setup();
-    const search = screen.getByRole("searchbox", { name: /search time-off events/i });
+    const search = screen.getByRole("searchbox", { name: /search time-off entries/i });
 
     await user.type(search, "conf");
     expect(bodyRows()).toHaveLength(1);
@@ -137,7 +137,7 @@ describe("TimeOffTableView", () => {
   it("shows an empty state when nothing matches", async () => {
     renderTable();
     await userEvent.setup().type(screen.getByRole("searchbox"), "zzz");
-    expect(screen.getByText("No matching events")).toBeInTheDocument();
+    expect(screen.getByText("No matching entries")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -168,7 +168,7 @@ describe("TimeOffTableView", () => {
     renderTable();
     const classes = (label: string) =>
       screen.getByText(label, { selector: "[data-event-type-badge]" }).className;
-    expect(classes("Holiday")).toContain("bg-wt-event-holiday-full-bg");
+    expect(classes("Vacation")).toContain("bg-wt-event-holiday-full-bg");
     expect(classes("Business trip")).toContain("bg-wt-event-business-full-bg");
     expect(classes("In office")).toContain("bg-wt-event-in-full-bg");
   });
@@ -257,7 +257,7 @@ describe("TimeOffTableView", () => {
       const badges = Array.from(document.querySelectorAll("[data-event-type-badge]")).map((el) =>
         el.textContent?.trim(),
       );
-      expect(badges.join(" ")).toContain("Holiday");
+      expect(badges.join(" ")).toContain("Vacation");
       expect(badges.join(" ")).toContain("Business trip");
     });
   });
@@ -270,7 +270,7 @@ describe("TimeOffTableView", () => {
         selectedCount: 1,
         selectedIds: new Set(["weekly"]),
       });
-      await userEvent.setup().click(screen.getByRole("button", { name: /^select all events$/i }));
+      await userEvent.setup().click(screen.getByRole("button", { name: /^select all entries$/i }));
       expect(onSetSelection).toHaveBeenCalledWith(["range", "date", "weekly"], true);
     });
 
@@ -285,7 +285,7 @@ describe("TimeOffTableView", () => {
       onSetSelection.mockClear();
 
       await user.click(
-        screen.getByRole("button", { name: /select all events matching the search/i }),
+        screen.getByRole("button", { name: /select all entries matching the search/i }),
       );
       expect(onSetSelection).toHaveBeenCalledTimes(1);
       expect(onSetSelection).toHaveBeenCalledWith(["range", "date"], true);
@@ -293,18 +293,18 @@ describe("TimeOffTableView", () => {
 
     it("labels the button as scoped to the search", async () => {
       renderTable({ selectedCount: 1, selectedIds: new Set(["range"]) });
-      expect(screen.getByRole("button", { name: /^select all events$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^select all entries$/i })).toBeInTheDocument();
       await userEvent.setup().type(screen.getByRole("searchbox"), "ski");
-      expect(screen.getByRole("button", { name: /select all events matching/i })).toHaveTextContent(
-        "Select all matching",
-      );
+      expect(
+        screen.getByRole("button", { name: /select all entries matching/i }),
+      ).toHaveTextContent("Select all matching");
     });
 
     it("disables Select All once every matching entry is already selected", async () => {
       renderTable({ selectedCount: 1, selectedIds: new Set(["range"]) });
       await userEvent.setup().type(screen.getByRole("searchbox"), "ski");
       // Only "Ski trip" matches, and it is the one selected.
-      expect(screen.getByRole("button", { name: /select all events matching/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /select all entries matching/i })).toBeDisabled();
     });
 
     it("drops selected entries the new search hides", async () => {
@@ -391,8 +391,9 @@ it.each(["en", "nl"] as const)("renders translated flags in the table (%s)", (lo
   setLocale(locale, { reload: false });
   renderTable({ entries: [{ ...entries[1]!, entryType: "course", entryFlag: "half_am" }] });
   const row = bodyRows()[0]!;
-  expect(row).toHaveTextContent(
-    locale === "en" ? "Training/Course, AM (half day)" : "Training/Cursus, Ochtend (halve dag)",
+  expect(within(row).getAllByRole("cell")[1]).toHaveTextContent(/^Training$/);
+  expect(within(row).getAllByRole("cell")[4]).toHaveTextContent(
+    locale === "en" ? /^AM \(half day\)$/ : /^Ochtend \(halve dag\)$/,
   );
   expect(row).not.toHaveTextContent("half_am");
   setLocale("en", { reload: false });

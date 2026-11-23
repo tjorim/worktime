@@ -1,4 +1,5 @@
 import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
+import { getEntryTypeFlag } from "@/lib/time-off/codecs";
 import { getEventTypeLabel } from "@/lib/hday/presentation";
 import { isValidEntryType } from "@/lib/time-off/types";
 import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail";
@@ -70,7 +71,7 @@ export function getAuditResourceName(entry: AuditEntry): string {
   if (isTimeOffAuditEntry(entry)) {
     const { entry_type, date, start_date, end_date, weekday } = entry.details;
     const type = isValidEntryType(entry_type)
-      ? getEventTypeLabel([entry_type === "vacation" ? "holiday" : entry_type])
+      ? getEventTypeLabel([getEntryTypeFlag(entry_type)])
       : resource;
     const start = formatAuditDate(start_date);
     const end = formatAuditDate(end_date);

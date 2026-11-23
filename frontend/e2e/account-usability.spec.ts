@@ -158,7 +158,7 @@ for (const theme of ["light", "dark"] as const) {
         await expectNoAccessibilityViolations(page, `connections page (${label})`);
 
         await openSection("activity", "Recent activity");
-        await expect(page.getByText("Created · Holiday (2 Nov 2026)")).toBeVisible();
+        await expect(page.getByText("Created · Vacation (2 Nov 2026)")).toBeVisible();
         await expect(page.getByText("legacy-opaque-id")).toHaveCount(0);
         await capture("activity");
 

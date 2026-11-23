@@ -324,7 +324,7 @@ describe("MonthCalendar", () => {
 
       render(<MonthCalendar {...defaultProps} entries={entries} />);
 
-      expect(screen.getByRole("button", { name: /View Holiday/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /View Vacation/i })).toBeInTheDocument();
     });
 
     it("should handle long-range events efficiently (performance optimization)", () => {

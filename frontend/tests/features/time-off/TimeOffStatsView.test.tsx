@@ -76,7 +76,7 @@ describe("TimeOffStatsView", () => {
       ];
       render(<TimeOffStatsView entries={entries} />);
 
-      expect(screen.getByText("Holiday")).toBeInTheDocument();
+      expect(screen.getByText("Vacation")).toBeInTheDocument();
       expect(screen.getByText("Business trip")).toBeInTheDocument();
       expect(screen.getByText("Sick leave")).toBeInTheDocument();
     });
@@ -95,7 +95,7 @@ describe("TimeOffStatsView", () => {
       const entries = [dateEntry(monday)];
       render(<TimeOffStatsView entries={entries} />);
 
-      expect(screen.getByText("Holiday")).toBeInTheDocument();
+      expect(screen.getByText("Vacation")).toBeInTheDocument();
       expect(screen.queryByText("Business trip")).not.toBeInTheDocument();
       expect(screen.queryByText("Sick leave")).not.toBeInTheDocument();
     });
