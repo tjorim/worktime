@@ -892,7 +892,11 @@ internal class FakeApi(
     )
 
     override suspend fun getPreferences(authorization: String): Response<UserPreferencesRead?> =
-        if (preferencesResponse == null) Response.success(204, null) else Response.success(preferencesResponse)
+        if (preferencesResponse == null) {
+            Response.success(204, null as UserPreferencesRead?)
+        } else {
+            Response.success(preferencesResponse)
+        }
 
     override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
         lastPreferencesWritePayload = payload
