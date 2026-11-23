@@ -42,6 +42,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Internal
 
 - Standardise REST routes, use PATCH for partial updates and expose typed sync items and results. Keep deprecated routes available for native clients. (#1988)
+- Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
 - Reject member username changes with a stable API error and skip reserved usernames when provisioning new OIDC accounts.
 
 - Validate versioned account preferences and store theme, notification settings and navigation state on the device. Existing browser settings migrate when the app opens.
