@@ -1,43 +1,85 @@
 import { describe, expect, it } from "vitest";
-import { entriesOverlap, getOverlappingEntries } from "@/lib/time-off/overlap";
+import {
+  entriesOverlap,
+  getEffectiveEntriesForDay,
+  getOverlappingEntries,
+} from "@/lib/time-off/overlap";
 import type { TimeOffEntry } from "@/lib/time-off/types";
-const base = { id: "a", entryType: "vacation", entryFlag: "full_day", note: null } as const;
-const range: TimeOffEntry = { ...base, entryKind: "range", start: "2026-11-09", end: "2026-11-13" };
-const date: TimeOffEntry = { ...base, id: "b", entryKind: "date", date: "2026-11-13" };
-const weekly: TimeOffEntry = { ...base, id: "c", entryKind: "weekly", weekday: 3 };
+
+const base = { entryType: "vacation", entryFlag: "full_day", note: null } as const;
+const range = {
+  ...base,
+  id: "range",
+  entryKind: "range",
+  start: "2026-11-09",
+  end: "2026-11-13",
+} satisfies TimeOffEntry;
+const date = { ...base, id: "date", entryKind: "date", date: "2026-11-11" } satisfies TimeOffEntry;
+const weekly = { ...base, id: "weekly", entryKind: "weekly", weekday: 3 } satisfies TimeOffEntry;
+
 describe("time-off overlaps", () => {
-  it("includes range boundaries and single dates, symmetrically", () => {
-    expect(entriesOverlap(range, date)).toBe(true);
-    expect(entriesOverlap(date, range)).toBe(true);
-    expect(entriesOverlap(date, date)).toBe(true);
-    expect(entriesOverlap(range, { ...date, date: "2026-11-14" })).toBe(false);
-    expect(entriesOverlap(range, { ...range, start: "2026-11-11", end: "2026-11-20" })).toBe(true);
+  it.each([
+    [weekly, date],
+    [weekly, range],
+    [range, date],
+  ])("allows %s and %s to coexist on the same day", (lower, higher) => {
+    expect(entriesOverlap(lower, higher, date.date)).toBe(false);
+    expect(entriesOverlap(higher, lower, date.date)).toBe(false);
+    expect(getOverlappingEntries(lower, [higher])).toEqual([]);
+    expect(getEffectiveEntriesForDay([lower, higher], date.date)).toEqual([higher]);
+    expect(getEffectiveEntriesForDay([higher, lower], date.date)).toEqual([higher]);
   });
-  it("checks weekly entries against dates, ranges and weekly patterns", () => {
-    expect(entriesOverlap(range, weekly)).toBe(true);
-    expect(entriesOverlap(weekly, range)).toBe(true);
-    expect(entriesOverlap(weekly, date)).toBe(false);
-    expect(entriesOverlap(weekly, { ...date, date: "2026-11-11" })).toBe(true);
-    expect(entriesOverlap(weekly, weekly)).toBe(true);
-    expect(entriesOverlap(weekly, { ...weekly, weekday: 4 })).toBe(false);
-    expect(entriesOverlap({ ...weekly, weekday: 7 }, range)).toBe(false);
-    expect(entriesOverlap({ ...weekly, weekday: 7 }, { ...range, end: "2027-11-13" })).toBe(true);
+
+  it("returns all highest-precedence entries occurring on the requested date", () => {
+    const otherDate = { ...date, id: "other" };
+    const entries = [range, date, weekly, otherDate];
+    expect(getEffectiveEntriesForDay(entries, date.date)).toEqual([date, otherDate]);
+    expect(getEffectiveEntriesForDay(entries, range.end)).toEqual([range]);
+    expect(getEffectiveEntriesForDay(entries, "2026-11-18")).toEqual([weekly]);
+    expect(getEffectiveEntriesForDay(entries, "2026-11-19")).toEqual([]);
   });
+
+  it("flags singles only on their shared date", () => {
+    expect(entriesOverlap(date, { ...date, id: "other" }, date.date)).toBe(true);
+    expect(entriesOverlap(date, date, "2026-11-12")).toBe(false);
+    expect(entriesOverlap(date, { ...date, date: "2026-11-18" }, date.date)).toBe(false);
+  });
+
+  it("treats a stored one-day range as a single-day entry", () => {
+    const oneDayRange = { ...range, start: date.date, end: date.date };
+    expect(entriesOverlap(date, oneDayRange, date.date)).toBe(true);
+    expect(entriesOverlap(range, oneDayRange, date.date)).toBe(false);
+    expect(getEffectiveEntriesForDay([range, oneDayRange], date.date)).toEqual([oneDayRange]);
+  });
+
+  it("flags only the inclusive intersection of two ranges", () => {
+    const otherRange = { ...range, id: "other", start: "2026-11-13", end: "2026-11-20" };
+    expect(entriesOverlap(range, otherRange, "2026-11-12")).toBe(false);
+    expect(entriesOverlap(range, otherRange, "2026-11-13")).toBe(true);
+    expect(entriesOverlap(range, otherRange, "2026-11-14")).toBe(false);
+    expect(getOverlappingEntries(range, [range, otherRange])).toEqual([
+      { entry: otherRange, period: { start: "2026-11-13", end: "2026-11-13" } },
+    ]);
+    expect(getOverlappingEntries(range, [{ ...otherRange, start: "2026-11-14" }])).toEqual([]);
+  });
+
+  it("flags weekly entries only on their shared weekday", () => {
+    const otherWeekly = { ...weekly, id: "other" };
+    expect(entriesOverlap(weekly, otherWeekly, date.date)).toBe(true);
+    expect(entriesOverlap(weekly, otherWeekly, "2026-11-12")).toBe(false);
+    expect(entriesOverlap(weekly, { ...otherWeekly, weekday: 4 }, date.date)).toBe(false);
+    expect(getOverlappingEntries(weekly, [otherWeekly])).toEqual([
+      { entry: otherWeekly, period: { weekday: 3 } },
+    ]);
+  });
+
   it("separates opposite half-days but treats location flags as full-day occupancy", () => {
-    expect(
-      entriesOverlap({ ...range, entryFlag: "half_am" }, { ...date, entryFlag: "half_pm" }),
-    ).toBe(false);
-    expect(
-      entriesOverlap({ ...range, entryFlag: "half_pm" }, { ...date, entryFlag: "half_am" }),
-    ).toBe(false);
+    const morning = { ...date, entryFlag: "half_am" } as const;
+    const afternoon = { ...date, entryFlag: "half_pm" } as const;
+    expect(entriesOverlap(morning, afternoon, date.date)).toBe(false);
+    expect(entriesOverlap(afternoon, morning, date.date)).toBe(false);
     for (const entryFlag of ["full_day", "half_am", "onsite", "no_fly", "can_fly"] as const) {
-      expect(entriesOverlap({ ...range, entryFlag: "half_am" }, { ...date, entryFlag })).toBe(true);
+      expect(entriesOverlap(morning, { ...date, entryFlag }, date.date)).toBe(true);
     }
-    expect(
-      entriesOverlap({ ...weekly, entryFlag: "half_am" }, { ...weekly, entryFlag: "half_pm" }),
-    ).toBe(false);
-  });
-  it("excludes the entry being edited", () => {
-    expect(getOverlappingEntries(range, [range, date, weekly])).toEqual([date, weekly]);
   });
 });

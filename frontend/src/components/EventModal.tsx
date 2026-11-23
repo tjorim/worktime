@@ -3,7 +3,8 @@ import { TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import type { TimeOffEntry } from "@/lib/time-off/types";
 import { getOverlappingEntries } from "@/lib/time-off/overlap";
-import { getEntryFlagsForDisplay, getEntryTimeFlagFromDisplayFlags } from "@/lib/time-off/codecs";
+import { formatOverlapWarning } from "@/lib/time-off/overlapPresentation";
+import { getEntryTimeFlagFromDisplayFlags } from "@/lib/time-off/codecs";
 import { isValidDate } from "@/lib/hday/validation";
 import {
   Dialog,
@@ -270,7 +271,9 @@ export function EventModal({
     eventType === "weekly"
       ? { ...metadata, entryKind: "weekly", weekday: eventWeekday }
       : isValidDate(eventStart) && (!eventEnd || isValidDate(eventEnd)) && start <= end
-        ? { ...metadata, entryKind: "range", start, end }
+        ? start === end
+          ? { ...metadata, entryKind: "date", date: start }
+          : { ...metadata, entryKind: "range", start, end }
         : null;
   const overlaps = candidate ? getOverlappingEntries(candidate, entries) : [];
   const modifierLabel = getEventModifierLabel(eventFlags);
@@ -313,18 +316,8 @@ export function EventModal({
                   <Alert variant="warning" role="status">
                     <Icon icon={TriangleAlertIcon} />
                     <AlertDescription>
-                      {overlaps.map((entry) => (
-                        <div key={entry.id}>
-                          {m.timeoff_overlap_with({
-                            name: entry.note || getEventTypeLabel(getEntryFlagsForDisplay(entry)),
-                            dates:
-                              entry.entryKind === "weekly"
-                                ? m.timeoff_every_weekday({ day: getWeekdayName(entry.weekday) })
-                                : entry.entryKind === "date"
-                                  ? formatDisplayDate(entry.date)
-                                  : `${formatDisplayDate(entry.start)} – ${formatDisplayDate(entry.end)}`,
-                          })}
-                        </div>
+                      {overlaps.map(({ entry, period }) => (
+                        <div key={entry.id}>{formatOverlapWarning(entry, period)}</div>
                       ))}
                       {mode !== "view" && <div>{m.timeoff_overlap_allowed()}</div>}
                     </AlertDescription>

@@ -61,7 +61,9 @@ describe("EventModal", () => {
       note: "Autumn break",
     } as const;
     const handlers = renderModal({ entries: [entry] });
-    expect(screen.getByRole("status")).toHaveTextContent("Overlaps with Autumn break (2 Mar 2026)");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Overlaps with Autumn break on 2 Mar 2026",
+    );
     expect(screen.getByRole("status")).toHaveTextContent("You can still save this entry.");
     await userEvent.click(screen.getByRole("button", { name: /^Add$/ }));
     expect(handlers.onSubmit).toHaveBeenCalledOnce();

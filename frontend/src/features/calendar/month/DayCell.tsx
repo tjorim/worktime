@@ -368,7 +368,7 @@ export function DayCell({
               {symbol}
             </span>
           )}
-          <span className="month-calendar-event-label">{label}</span>
+          <span className="month-calendar-event-label">{title}</span>
         </button>
       );
     },

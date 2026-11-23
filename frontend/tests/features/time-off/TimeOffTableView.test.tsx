@@ -80,12 +80,21 @@ const bodyRows = () => within(screen.getAllByRole("rowgroup")[1]!).getAllByRole(
 
 describe("TimeOffTableView", () => {
   it("marks overlapping rows with visible text, including when the other row is filtered out", async () => {
-    renderTable();
-    expect(within(bodyRows()[0]!).getByText("Overlapping entry")).toBeVisible();
-    expect(within(bodyRows()[2]!).getByText("Overlapping entry")).toBeVisible();
-    expect(within(bodyRows()[1]!).queryByText("Overlapping entry")).not.toBeInTheDocument();
+    const other = {
+      ...entries[0]!,
+      id: "other",
+      start: "2026-01-09",
+      end: "2026-01-12",
+      note: "Business trip",
+    } as TimeOffEntry;
+    renderTable({ entries: [...entries, other] });
+    expect(
+      within(bodyRows()[0]!).getByText("Overlaps with Business trip on 9 Jan 2026"),
+    ).toBeVisible();
+    expect(within(bodyRows()[1]!).getByText("Overlaps with Ski trip on 9 Jan 2026")).toBeVisible();
+    expect(within(bodyRows()[3]!).queryByText(/Overlaps with/)).not.toBeInTheDocument();
     await userEvent.type(screen.getByRole("searchbox"), "Ski trip");
-    expect(screen.getByText("Overlapping entry")).toBeVisible();
+    expect(screen.getByText("Overlaps with Business trip on 9 Jan 2026")).toBeVisible();
   });
   it("opens sorted by start date with weekly entries last", () => {
     renderTable();
@@ -352,7 +361,7 @@ describe("mobile Time Off cards", () => {
     expect(cards).toHaveTextContent("5 Jan 2026");
     expect(cards).toHaveTextContent("9 Jan 2026");
     expect(cards).toHaveTextContent("Every Wed");
-    expect(cards).toHaveTextContent("Overlapping entry");
+    expect(cards).not.toHaveTextContent("Overlaps with");
     await userEvent.click(screen.getByRole("button", { name: "Edit: Ski trip" }));
     await userEvent.click(screen.getByRole("button", { name: "Delete: Ski trip" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Ski trip" }));

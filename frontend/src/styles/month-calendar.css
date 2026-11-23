@@ -99,7 +99,7 @@
   @media (width <= 768px) {
     min-height: 3.5rem;
   }
-  @media (width <= 360px) {
+  @media (width <= 480px) {
     padding-inline: 0.125rem;
   }
 }
@@ -199,6 +199,9 @@
   @media (width <= 768px) {
     padding: 0.15rem 0.25rem 0.35rem;
   }
+  @media (width <= 480px) {
+    padding-inline: 0;
+  }
 }
 @utility month-calendar-event {
   border: none;
@@ -224,6 +227,13 @@
     outline: 2px solid var(--wt-month-calendar-focus-outline);
     outline-offset: 1px;
   }
+  @media (width <= 480px) {
+    flex-wrap: wrap;
+    gap: 0.15rem;
+    padding: 0.15rem;
+    font-size: 0.625rem;
+    line-height: 1.25;
+  }
 }
 @utility month-calendar-event-color {
   width: 0.5rem;
@@ -235,6 +245,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  @media (width <= 480px) {
+    display: block;
+    flex-basis: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 @utility month-calendar-event-symbol {
   flex-shrink: 0;
