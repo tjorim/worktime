@@ -22,7 +22,6 @@ data class TemplatePatchRequest(
 @Serializable
 data class TemplateRecord(
     val id: String,
-    @SerialName("user_id") val userId: Int,
     @SerialName("label_id") val labelId: String? = null,
     val text: String,
     @SerialName("start_time") val startTime: String,

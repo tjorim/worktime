@@ -116,7 +116,6 @@ class TodayScreenTest {
 
     private fun sampleRunningTask() = TaskRecord(
         id = "task-1",
-        userId = 1,
         labelId = null,
         text = "Standup",
         startTime = "2026-05-26T08:00:00Z",

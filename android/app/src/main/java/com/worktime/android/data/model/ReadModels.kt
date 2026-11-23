@@ -113,7 +113,6 @@ data class TaskMutationRequest(
 @Serializable
 data class TaskRecord(
     val id: String,
-    @SerialName("user_id") val userId: Int,
     @SerialName("label_id") val labelId: String? = null,
     val text: String,
     @SerialName("start_time") val startTime: String,
@@ -127,7 +126,6 @@ data class TaskListResponse(val items: List<TaskRecord>, val total: Int)
 
 @Serializable
 data class WorkLocationMutationRequest(
-    val date: String,
     @SerialName("country_code") val countryCode: String,
     val label: String? = null
 )
@@ -135,7 +133,6 @@ data class WorkLocationMutationRequest(
 @Serializable
 data class WorkLocationRecord(
     val id: Int,
-    @SerialName("user_id") val userId: Int,
     val date: String,
     @SerialName("country_code") val countryCode: String,
     val label: String? = null,
