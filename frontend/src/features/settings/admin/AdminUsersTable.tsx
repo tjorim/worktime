@@ -23,6 +23,7 @@ interface AdminUsersTableProps {
   users: AdminUserRow[];
   currentAccountId: number | null;
   deletingAdminUserId: number | null;
+  onRequestRename: (user: AdminUserRow) => void;
   onRequestDelete: (userId: number) => void;
 }
 
@@ -40,6 +41,7 @@ export function AdminUsersTable({
   users,
   currentAccountId,
   deletingAdminUserId,
+  onRequestRename,
   onRequestDelete,
 }: AdminUsersTableProps) {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
@@ -151,7 +153,19 @@ export function AdminUsersTable({
               return (
                 <TableRow key={user.id} className="odd:bg-muted/30">
                   <TableCell>{user.id}</TableCell>
-                  <TableCell>{user.username}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{user.username}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={m.account_admin_users_rename_user({ username: user.username })}
+                        onClick={() => onRequestRename(user)}
+                      >
+                        {m.account_admin_users_rename()}
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell>{user.display_name}</TableCell>
                   <TableCell>{formatTimestamp(user.created_at)}</TableCell>
                   <TableCell>{formatTimestamp(user.updated_at)}</TableCell>

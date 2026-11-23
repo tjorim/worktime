@@ -293,6 +293,7 @@ export function SettingsContent({
   const {
     profileLoadFailed,
     retryProfile,
+    applyUsername,
     accountProfile,
     profileDraft,
     setProfileDraft,
@@ -332,6 +333,7 @@ export function SettingsContent({
     adminUsersError,
     adminUsersDeleteError,
     deletingAdminUserId,
+    handleRenameAdminUser,
     handleDeleteAdminUser,
   } = useSettingsAdminUsers({
     isAuthenticated,
@@ -583,6 +585,12 @@ export function SettingsContent({
             adminUsersError={adminUsersError}
             adminUsersDeleteError={adminUsersDeleteError}
             deletingAdminUserId={deletingAdminUserId}
+            onRenameAdminUser={(id, username) =>
+              handleRenameAdminUser(id, username, (user) => {
+                applyUsername(user);
+                teamAuditTrail.reload();
+              })
+            }
             onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
           />
           <SettingsAuditTrailSection

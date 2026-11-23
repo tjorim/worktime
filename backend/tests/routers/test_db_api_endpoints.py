@@ -97,7 +97,7 @@ def test_db_user_crud_endpoints(
     update_response = client.put(
         f"/api/users/{user_id}",
         json={"username": "api-user-renamed", "display_name": "Renamed", "settings": {"theme": "light"}},
-        headers=_auth_headers(user_id),
+        headers=admin_headers,
     )
     assert update_response.status_code == 200
     assert update_response.json()["username"] == "api-user-renamed"
@@ -113,7 +113,7 @@ def test_db_user_crud_endpoints(
     duplicate_username_update = client.put(
         f"/api/users/{user_id}",
         json={"username": "api-user-other"},
-        headers=_auth_headers(user_id),
+        headers=admin_headers,
     )
     assert duplicate_username_update.status_code == 409
 

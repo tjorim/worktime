@@ -253,7 +253,8 @@ def test_derive_username_falls_back_to_sub_prefix() -> None:
     assert display_name == "user-abcdefgh"
 
 
-async def test_get_or_create_local_user_auto_provisions_missing_user(monkeypatch) -> None:
+@pytest.mark.parametrize("requested", ["alice", "ADMIN", "root", "administrator", "system", "support"])
+async def test_get_or_create_local_user_auto_provisions_missing_user(monkeypatch, requested) -> None:
     created_local_user = SimpleNamespace(id=42, username="alice", display_name="Alice")
 
     class FakeResult:
@@ -285,12 +286,12 @@ async def test_get_or_create_local_user_auto_provisions_missing_user(monkeypatch
 
     local_user = await oidc_config.get_or_create_local_user(
         "sub-abc123",
-        {"preferred_username": "alice", "name": "Alice"},
+        {"preferred_username": requested, "name": "Alice"},
         FakeSession(),
     )
 
     assert local_user is created_local_user
-    assert recorded["username"] == "alice"
+    assert recorded["username"] == (requested if requested == "alice" else f"{requested}-sub-abc12")
     assert recorded["display_name"] == "Alice"
     assert recorded["oidc_subject"] == "sub-abc123"
 

@@ -22,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
       ]}
       currentAccountId={null}
       deletingAdminUserId={null}
+      onRequestRename={() => {}}
       onRequestDelete={() => {}}
     />
     <SettingsAuditTrailSection

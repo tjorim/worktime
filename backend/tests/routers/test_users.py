@@ -127,10 +127,8 @@ def test_username_validation(db_client, auth_headers):
         ("   ", "username_invalid"),
         ("a b", "username_invalid"),
         ("a" * 65, "username_invalid"),
-        ("ADMIN", "username_reserved"),
-        ("root", "username_reserved"),
     ]:
-        response = db_client.put(f"/api/users/{user['id']}", json={"username": name}, headers=auth_headers(user["id"]))
+        response = db_client.put(f"/api/users/{user['id']}", json={"username": name}, headers=admin)
         assert response.status_code == 400
         assert response.json()["code"] == code
     response = db_client.put(f"/api/users/{user['id']}", json={"username": "admin"}, headers=admin)
