@@ -374,7 +374,7 @@ export function DayCell({
                 {symbol}
               </span>
             )}
-            {label}
+            {title}
           </span>
         </button>
       );

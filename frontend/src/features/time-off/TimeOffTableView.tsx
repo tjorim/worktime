@@ -1,4 +1,5 @@
 import { getOverlappingEntries } from "@/lib/time-off/overlap";
+import { formatOverlapWarning, weekdayMessages } from "@/lib/time-off/overlapPresentation";
 import { TriangleAlertIcon } from "lucide-react";
 import { CalendarXIcon, PencilIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -331,12 +332,7 @@ export function TimeOffTableView({
                       </div>
                       <div className="mt-2 text-sm">{renderEntryDisplayDate(entry)}</div>
                       {entry.note && <p className="my-2 wrap-anywhere">{entry.note}</p>}
-                      {getOverlappingEntries(entry, entries).length > 0 && (
-                        <span className="flex items-center gap-1 text-sm text-warning">
-                          <Icon icon={TriangleAlertIcon} />
-                          {m.timeoff_overlap()}
-                        </span>
-                      )}
+                      {renderOverlapWarnings(entry, entries)}
                       {flags.length > 0 && (
                         <p className="my-2 text-sm text-muted-foreground">
                           {flags.map(getEventFlagLabel).join(", ")}
@@ -419,12 +415,7 @@ export function TimeOffTableView({
                           <TableCell>{renderEntryDisplayDate(entry)}</TableCell>
                           <TableCell>
                             {entry.note || <span className="text-muted-foreground">—</span>}
-                            {getOverlappingEntries(entry, entries).length > 0 && (
-                              <span className="flex items-center gap-1 text-sm text-warning">
-                                <Icon icon={TriangleAlertIcon} />
-                                {m.timeoff_overlap()}
-                              </span>
-                            )}
+                            {renderOverlapWarnings(entry, entries)}
                           </TableCell>
                           <TableCell>
                             {flags.length ? (
@@ -492,19 +483,9 @@ function toDisplayDate(value: string): string {
   return formatDisplayDate(value);
 }
 
-const WEEKDAY_MESSAGES = [
-  m.weekday_mon,
-  m.weekday_tue,
-  m.weekday_wed,
-  m.weekday_thu,
-  m.weekday_fri,
-  m.weekday_sat,
-  m.weekday_sun,
-] as const;
-
 function getEntryDisplayDateText(entry: TimeOffEntry): string {
   if (isTimeOffWeeklyEntry(entry)) {
-    const weekdayMsg = WEEKDAY_MESSAGES[entry.weekday - 1];
+    const weekdayMsg = weekdayMessages[entry.weekday - 1];
     return weekdayMsg ? m.timeoff_every_weekday({ day: weekdayMsg() }) : "";
   }
   if (isTimeOffRangeEntry(entry)) {
@@ -524,7 +505,7 @@ function getEntryIsoDateText(entry: TimeOffEntry): string {
 
 function renderEntryDisplayDate(entry: TimeOffEntry) {
   if (isTimeOffWeeklyEntry(entry)) {
-    const weekdayMsg = WEEKDAY_MESSAGES[entry.weekday - 1];
+    const weekdayMsg = weekdayMessages[entry.weekday - 1];
     return weekdayMsg ? m.timeoff_every_weekday({ day: weekdayMsg() }) : "↻ —";
   }
 
@@ -542,4 +523,13 @@ function renderEntryDisplayDate(entry: TimeOffEntry) {
   }
 
   return isTimeOffDateEntry(entry) ? toDisplayDate(entry.date) : "";
+}
+
+function renderOverlapWarnings(entry: TimeOffEntry, entries: readonly TimeOffEntry[]) {
+  return getOverlappingEntries(entry, entries).map(({ entry: other, period }) => (
+    <span key={other.id} className="flex items-start gap-1 text-sm text-warning">
+      <Icon icon={TriangleAlertIcon} className="mt-0.5 shrink-0" />
+      <span className="wrap-anywhere">{formatOverlapWarning(other, period)}</span>
+    </span>
+  ));
 }
