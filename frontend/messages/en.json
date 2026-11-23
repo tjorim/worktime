@@ -139,7 +139,16 @@
   "notifications_unsupported": "Your browser doesn't support notifications.",
   "planned_task_reminder_notification_title": "Starting soon",
   "planned_task_reminder_notification_body": "{task} starts at {time}",
-  "timeoff_days_logged_in": "days logged in {year}",
+  "timeoff_leave_days_in_year": [
+    {
+      "declarations": ["input count", "input year", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} day of leave in {year}",
+        "countPlural=other": "{count} days of leave in {year}"
+      }
+    }
+  ],
   "loading": "Loading...",
   "error": "Error",
   "close": "Close",
@@ -392,7 +401,7 @@
   "timeoff_copy_raw_aria": "Copy raw .hday text",
   "timeoff_copy_raw_failed": "Could not copy to clipboard",
   "timeoff_apply_raw": "Apply raw content",
-  "timeoff_vacation_stats": "Vacation Statistics",
+  "timeoff_stats": "Time off statistics",
   "timeoff_year_label": "Year:",
   "calendar_heading": "My Working Calendar",
   "calendar_select_schedule_hint": "Select your schedule to see your working calendar",
@@ -421,8 +430,18 @@
   "work_location_other": "Other",
   "tt_label_breakdown": "Label Breakdown",
   "timeoff_every_weekday": "Every {day}",
-  "timeoff_no_time_off_year": "No time off recorded for {year}",
-  "timeoff_days_unit": "days",
+  "timeoff_other_entries": "Other entries",
+  "timeoff_no_entries_year": "No entries recorded for {year}",
+  "timeoff_day_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} day",
+        "countPlural=other": "{count} days"
+      }
+    }
+  ],
   "event_type_vacation": "Vacation",
   "event_type_business": "Business trip",
   "event_type_weekend": "Weekend",
@@ -520,7 +539,7 @@
   "location_days_count": "{count} day",
   "location_copy_aria": "Copy location summary to clipboard",
   "location_copy_btn": "Copy",
-  "timeoff_select_year_aria": "Select year for vacation statistics",
+  "timeoff_select_year_aria": "Select year for time off statistics",
   "timeoff_select_all_events_aria": "Select all entries",
   "timeoff_select_event_aria": "Select {name}",
   "timeoff_toggle_view_aria": "Toggle time off view",
@@ -1006,7 +1025,7 @@
   "generic_status_next_activity": "Next Activity",
   "generic_status_select_team_hint": "Select your team above for personalized shift tracking and countdown timers",
   "timeoff_view_help_table": "Select entries from the table to edit or delete.",
-  "timeoff_view_help_stats": "Review your logged time off by year and type.",
+  "timeoff_view_help_stats": "Review your logged days by year and type.",
   "timeoff_view_help_team": "View team roster and .hday schedules for all team members.",
   "setup_btn_select_schedule": "Select Schedule",
   "setup_btn_select_team": "Select Team",
@@ -1388,7 +1407,7 @@
   "timeoff_import_invalid_date": "invalid date or reversed date range",
   "timeoff_import_invalid_syntax": "unsupported .hday syntax",
   "timeoff_import_more": "and {count} more",
-  "timeoff_statistics_counting_note": "Counts scheduled working days excluding public holidays, for the whole year including recurring entries. Each half-day is counted once; overlaps use the entry type order shown in the breakdown.",
+  "timeoff_statistics_counting_note": "Counts scheduled working days across the year, including recurring entries and excluding public holidays. Each half-day counts once, with leave taking priority.",
   "tt_no_target_week": "No target this week: scheduled days off, time off or public holidays.",
   "stats_holidays_loading": "Loading public holidays. Totals and targets may change.",
   "stats_holidays_unavailable": "Public holidays could not be loaded. Totals and targets may be too high until they are.",

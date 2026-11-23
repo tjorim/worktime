@@ -13,6 +13,7 @@ import type { TimeOffEntryFlag, TimeOffEntry } from "@/lib/time-off/types";
 import { isTimeOffDateEntry, isTimeOffRangeEntry } from "@/lib/time-off/types";
 import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
+  isLeaveEntry,
   statisticsWorkingDays,
   timeOffHalves,
   type WorkingDayOptions,
@@ -65,6 +66,7 @@ export interface VacationYearStats {
   year: number;
   totalDays: number;
   byType: VacationTypeTotals[];
+  otherByType: VacationTypeTotals[];
 }
 
 const isHalfDay = (flag?: TimeOffEntryFlag | null): boolean =>
@@ -107,35 +109,16 @@ export const calculateVacationStats = (
   year: number,
   options: WorkingDayOptions = { team: 1, schedule: "9-5", holidays: new Map() },
 ): VacationYearStats => {
-  const totals: Record<EventTypeKey, number> = {
-    holiday: 0,
-    business: 0,
-    course: 0,
-    in: 0,
-    weekend: 0,
-    birthday: 0,
-    ill: 0,
-    other: 0,
-  };
+  if (!entries?.length) return { year, totalDays: 0, byType: [], otherByType: [] };
 
+  const leaveTotals = new Map<EventTypeKey, number>();
+  const otherTotals = new Map<EventTypeKey, number>();
   let totalDays = 0;
-
-  if (!entries || entries.length === 0) {
-    return {
-      year,
-      totalDays: 0,
-      byType: EVENT_TYPE_ORDER.map((key) => ({
-        key,
-        label: getEventTypeKeyLabel(key),
-        days: 0,
-      })),
-    };
-  }
-
+  const typeKey = (entry: TimeOffEntry) => getEntryTypeFlag(entry.entryType);
   const ordered = [...entries].sort(
     (a, b) =>
-      EVENT_TYPE_ORDER.indexOf(getEntryTypeFlag(a.entryType)) -
-      EVENT_TYPE_ORDER.indexOf(getEntryTypeFlag(b.entryType)),
+      Number(isLeaveEntry(b)) - Number(isLeaveEntry(a)) ||
+      EVENT_TYPE_ORDER.indexOf(typeKey(a)) - EVENT_TYPE_ORDER.indexOf(typeKey(b)),
   );
   for (const { date } of statisticsWorkingDays(
     dayjs(`${year}-01-01`),
@@ -144,26 +127,21 @@ export const calculateVacationStats = (
   )) {
     for (const entry of timeOffHalves(date, ordered)) {
       if (!entry) continue;
-      totals[getEntryTypeFlag(entry.entryType)] += 0.5;
-      totalDays += 0.5;
+      const leave = isLeaveEntry(entry);
+      const totals = leave ? leaveTotals : otherTotals;
+      const key = typeKey(entry);
+      totals.set(key, (totals.get(key) ?? 0) + 0.5);
+      if (leave) totalDays += 0.5;
     }
   }
 
-  return {
-    year,
-    totalDays,
-    byType: EVENT_TYPE_ORDER.map((key) => ({
-      key,
-      label: getEventTypeKeyLabel(key),
-      days: totals[key],
-    })),
-  };
-};
+  const breakdown = (totals: ReadonlyMap<EventTypeKey, number>) =>
+    EVENT_TYPE_ORDER.flatMap((key) => {
+      const days = totals.get(key);
+      return days === undefined ? [] : [{ key, label: getEventTypeKeyLabel(key), days }];
+    });
 
-export const formatVacationValue = (value: number): string => {
-  if (Number.isNaN(value)) return "0";
-  if (Number.isInteger(value)) return value.toString();
-  return value.toFixed(1);
+  return { year, totalDays, byType: breakdown(leaveTotals), otherByType: breakdown(otherTotals) };
 };
 
 export const getHalfDayLabel = (flag?: TimeOffEntryFlag | null): string | null =>
