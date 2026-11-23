@@ -39,7 +39,7 @@ describe("TaskEditModal", () => {
     render(<Editor onSubmit={onSubmit} />);
     await user.clear(screen.getByLabelText("Task"));
     await user.type(screen.getByLabelText("Task"), "Updated task");
-    const checkbox = screen.getByRole("checkbox", { name: "Includes 30min break" });
+    const checkbox = screen.getByRole("checkbox", { name: "Includes 30m break" });
     checkbox.focus();
     await user.keyboard(" ");
     expect(checkbox).toBeChecked();
@@ -53,9 +53,9 @@ describe("TaskEditModal", () => {
   it("disables adding a break to a short task", async () => {
     const user = userEvent.setup();
     render(<Editor stop="09:20" onSubmit={vi.fn()} />);
-    const checkbox = screen.getByRole("checkbox", { name: "Includes 30min break" });
+    const checkbox = screen.getByRole("checkbox", { name: "Includes 30m break" });
     expect(checkbox).toHaveAttribute("aria-disabled", "true");
-    await user.click(screen.getByText("Includes 30min break"));
+    await user.click(screen.getByText("Includes 30m break"));
     expect(checkbox).not.toBeChecked();
     expect(screen.getByTestId("break-too-short-help")).toBeVisible();
   });

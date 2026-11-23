@@ -1,15 +1,14 @@
+import { dayjs, formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 import { NetworkIcon } from "lucide-react";
 import "@/features/gantt/gantt.css";
 import { useEffect, useMemo, useRef } from "react";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask, GanttViewMode } from "@/types/gantt";
 import { EmptyState } from "@/components/EmptyState";
 import { formatLoggedDuration } from "@/features/gantt/ganttLoggedTime";
 import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 
-const POPUP_DATE_FORMAT = "MMM D";
 const EMPTY_ARRAY: string[] = [];
 const EMPTY_MAP: Map<string, number> = new Map();
 
@@ -172,8 +171,8 @@ export function GanttChart({
           const task = tasksRef.current.find((candidate) => candidate.id === taskId);
           ctx.set_title(escapeHtml(task?.name ?? ""));
           ctx.set_subtitle(escapeHtml(ctx.task.notes ?? ""));
-          const start = ctx.task._start ? dayjs(ctx.task._start).format(POPUP_DATE_FORMAT) : "";
-          const end = ctx.task._end ? dayjs(ctx.task._end).format(POPUP_DATE_FORMAT) : "";
+          const start = ctx.task._start ? formatDisplayDate(ctx.task._start) : "";
+          const end = ctx.task._end ? formatDisplayDate(ctx.task._end) : "";
           const dateRange = start && end ? `${start} – ${end}` : start || end;
           const duration =
             ctx.task.actual_duration != null

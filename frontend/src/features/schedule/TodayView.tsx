@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatLongDate, getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
 import { Alert } from "@/components/ui/alert";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
@@ -21,8 +22,6 @@ import { cn } from "@/lib/utils";
 import { SCHEDULE_OPTIONS, type ScheduleOption } from "@/lib/schedule/rosters";
 import { ShiftBadge } from "@/components/ShiftBadge";
 import { hasMultipleTeams, isValidScheduleType } from "@/lib/schedule/scheduleUtils";
-import { getISOWeekYear2Digit } from "@/lib/dates/dateTimeUtils";
-import { getLocale } from "@/paraglide/runtime.js";
 import type { ShiftResult } from "@/lib/schedule/shiftCalculations";
 import { getAllTeamsShifts, isCurrentlyWorking } from "@/lib/schedule/shiftCalculations";
 import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
@@ -121,9 +120,7 @@ function TeamCard({
                 code: shiftResult.code,
                 isoYear: getISOWeekYear2Digit(shiftResult.date),
                 isoWeek: String(shiftResult.date.isoWeek()),
-                weekday: new Intl.DateTimeFormat(getLocale(), { weekday: "long" }).format(
-                  shiftResult.date.toDate(),
-                ),
+                weekday: formatDisplayDate(shiftResult.date, "weekday"),
                 shift: shift.name,
               })}
             </div>
@@ -275,12 +272,7 @@ export function TodayView({
         </div>
         {viewingScheduleType && (
           <div className="text-muted-foreground text-sm">
-            {new Intl.DateTimeFormat(getLocale(), {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            }).format(today.toDate())}
+            {formatLongDate(today)}
             <Badge variant="success" className="ml-2" aria-label={m.today_view_current_day_aria()}>
               {m.today()}
             </Badge>

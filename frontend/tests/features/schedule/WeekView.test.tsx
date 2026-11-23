@@ -39,44 +39,6 @@ vi.mock("@/hooks/useKeyboardShortcuts", () => ({
   useKeyboardShortcuts: vi.fn(),
 }));
 
-vi.mock("@/lib/dates/dateTimeUtils", () => {
-  return {
-    dayjs: vi.fn(() => {
-      return {
-        startOf: vi.fn(() => ({
-          add: vi.fn(() => {
-            return {
-              format: vi.fn(() => "13-STATIC"),
-              isSame: vi.fn(() => false),
-              isoWeek: vi.fn(() => 20),
-              isoWeekday: vi.fn(() => 1),
-              toDate: vi.fn(() => new Date(2025, 0, 13)),
-            };
-          }),
-          format: vi.fn(() => "Jan 13"),
-          isSame: vi.fn(() => false),
-          isoWeekYear: vi.fn(() => 2025),
-        })),
-        format: vi.fn(() => "2025-01-15"),
-        add: vi.fn(() => {
-          return {
-            format: vi.fn(() => "18-STATIC"),
-            toDate: vi.fn(() => new Date(2025, 0, 18)),
-          };
-        }),
-        subtract: vi.fn(() => ({
-          format: vi.fn(() => "Jan 12"),
-          toDate: vi.fn(() => new Date(2025, 0, 12)),
-        })),
-        toDate: vi.fn(() => new Date(2025, 0, 15)),
-      };
-    }),
-    formatYYWWD: vi.fn((_date: string) => "2503.1"),
-    getISOWeekYear2Digit: vi.fn(() => "25"),
-    getLocalizedShiftTime: vi.fn(() => "07:00–15:00"),
-  };
-});
-
 vi.mock("@/lib/schedule/shiftCalculations", () => ({
   calculateShift: vi.fn(() => ({
     code: "M",
@@ -122,7 +84,7 @@ describe("WeekView", () => {
     it("renders schedule overview header", () => {
       renderWithProviders(<WeekView {...defaultProps} />);
       expect(screen.queryByText("All Teams")).not.toBeInTheDocument();
-      expect(screen.getByText(/Week 20/)).toBeInTheDocument();
+      expect(screen.getByText(/Week 3/)).toBeInTheDocument();
     });
 
     it("displays navigation buttons", () => {

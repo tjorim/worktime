@@ -1,3 +1,9 @@
+import {
+  dayjs,
+  formatDisplayDate,
+  formatDuration,
+  formatTimeByPreference,
+} from "@/lib/dates/dateTimeUtils";
 import { CalendarXIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
@@ -6,7 +12,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useEventStore } from "@/app/providers/EventStoreContext";
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useToast } from "@/app/providers/ToastContext";
-import { dayjs, formatTimeByPreference } from "@/lib/dates/dateTimeUtils";
 import { hasFullDayTimeOffEvent } from "@/lib/schedule/workingDayUtils";
 import { useLiveTime } from "@/hooks/useLiveTime";
 import { useGanttTasks } from "@/hooks/useGanttTasks";
@@ -65,14 +70,6 @@ type TimeTrackingDailyViewProps = {
 
 function todayIso() {
   return dayjs().format("YYYY-MM-DD");
-}
-
-function formatDuration(totalSeconds: number) {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
-  return [hours, minutes, seconds].map((part) => part.toString().padStart(2, "0")).join(":");
 }
 
 export function TimeTrackingDailyView({
@@ -161,7 +158,10 @@ export function TimeTrackingDailyView({
   });
   const timerStart = runningTask ? getTimerStart(runningTask) : undefined;
   const timerElapsed = timerStart
-    ? formatDuration(Math.max(0, liveTime.diff(timerStart, "second")))
+    ? formatDuration(Math.max(0, liveTime.diff(timerStart, "second")), {
+        style: "digital",
+        precision: "second",
+      })
     : undefined;
   const isRunningTaskVisible = runningTask
     ? dailyTasks.some((task) => task.id === runningTask.id)
@@ -534,7 +534,7 @@ export function TimeTrackingDailyView({
               ? {
                   task: runningTask.text,
                   label: labelNameById[runningTask.label] ?? m.tt_unknown_label(),
-                  time: `${dayjs(runningTask.startTime).format("YYYY-MM-DD")} ${formatTimeByPreference(
+                  time: `${formatDisplayDate(runningTask.startTime)} ${formatTimeByPreference(
                     dayjs(runningTask.startTime),
                     settings.timeFormat,
                   )}`,

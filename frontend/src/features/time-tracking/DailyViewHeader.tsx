@@ -1,8 +1,8 @@
+import { dayjs, formatLongDate } from "@/lib/dates/dateTimeUtils";
 import { ClockIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
 import { DayNavigationButtonGroup } from "@/components/NavigationButtonGroup";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { WorkLocationDayHeader } from "./WorkLocationDayHeader";
 
@@ -39,7 +39,7 @@ export function DailyViewHeader({
       </div>
       <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
         <div className="text-sm text-muted-foreground">
-          {dailyDate.format("dddd, MMMM D, YYYY")}
+          {formatLongDate(dailyDate)}
           {isDailyCurrent && (
             <Badge variant="success" className="ml-2" aria-label={m.today()}>
               {m.today()}

@@ -29,34 +29,136 @@ export const formatISODate = (date: Date): string => {
   return dayjs(date).format("YYYY-MM-DD");
 };
 
-/** BCP 47 tag used for every user-facing date and time; British conventions for English. */
-const getDisplayLocale = (): string => (getLocale() === "nl" ? "nl-NL" : "en-GB");
+/** British formatting conventions for the app's English catalogue. */
+export const getDisplayLocale = (): string => {
+  const locale = getLocale();
+  return locale === "en" ? "en-GB" : "nl-NL";
+};
 
-/**
- * The one user-facing date format: day, abbreviated month, year ("2 Nov 2026" / "2 nov 2026").
- * Serialization formats (ISO, .hday) stay separate. Returns an em dash for unparseable input.
- */
-export const formatDisplayDate = (value: string | number | Date | Dayjs): string => {
-  const date = dayjs(value);
-  if (!date.isValid()) return "—";
-  return new Intl.DateTimeFormat(getDisplayLocale(), {
+type DisplayDate = string | number | Date | Dayjs;
+
+const dateFormats = {
+  short: { day: "numeric", month: "short", year: "numeric" },
+  long: { dateStyle: "full" },
+  monthDay: { month: "short", day: "numeric" },
+  weekdayDate: { weekday: "short", month: "short", day: "numeric" },
+  currentDay: { weekday: "long", month: "short", day: "numeric" },
+  month: { month: "long", year: "numeric" },
+  shortMonth: { month: "short", year: "numeric" },
+  weekday: { weekday: "long" },
+  shortWeekday: { weekday: "short" },
+  day: { day: "numeric" },
+  dateTime: {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(date.toDate());
-};
-
-/** The one user-facing timestamp format: `formatDisplayDate` plus a 24-hour time ("2 Nov 2026 22:24"). */
-export const formatDisplayDateTime = (value: string | number | Date | Dayjs): string => {
-  const date = dayjs(value);
-  if (!date.isValid()) return "—";
-  const time = new Intl.DateTimeFormat(getDisplayLocale(), {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
-  }).format(date.toDate());
-  return `${formatDisplayDate(date)} ${time}`;
-};
+  },
+} satisfies Record<string, Intl.DateTimeFormatOptions>;
+
+type DateFormat = keyof typeof dateFormats;
+
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+export function formatDisplayDate(value: DisplayDate, format: DateFormat = "short"): string {
+  const date = dayjs(value);
+  if (!date.isValid()) return "—";
+  const locale = getDisplayLocale();
+  const key = `${locale}:${format}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, dateFormats[format]);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter.format(date.toDate());
+}
+
+export const formatLongDate = (value: DisplayDate): string => formatDisplayDate(value, "long");
+
+export const formatDisplayDateTime = (value: DisplayDate): string =>
+  formatDisplayDate(value, "dateTime");
+
+type DurationUnit = "day" | "hour" | "minute" | "second";
+type DurationStyle = "narrow" | "long" | "digital";
+
+const durationFormatters = new Map<string, Intl.NumberFormat>();
+
+/** Format elapsed time, rounding to minutes unless seconds are requested. */
+export function formatDuration(
+  seconds: number,
+  {
+    style = "narrow",
+    precision = "minute",
+    largestUnit = "hour",
+  }: {
+    style?: DurationStyle;
+    precision?: "minute" | "second";
+    largestUnit?: "day" | "hour";
+  } = {},
+): string {
+  if (!Number.isFinite(seconds)) return "—";
+  const locale = getDisplayLocale();
+  const magnitude = Math.abs(seconds);
+  const totalSeconds =
+    precision === "minute" ? Math.round(magnitude / 60) * 60 : Math.floor(magnitude);
+
+  const format = (value: number, unit: DurationUnit) => {
+    const key = `${locale}:${style}:${unit}`;
+    let formatter = durationFormatters.get(key);
+    if (!formatter) {
+      formatter = new Intl.NumberFormat(
+        locale,
+        style === "digital"
+          ? { minimumIntegerDigits: 2, useGrouping: false }
+          : { style: "unit", unit, unitDisplay: style },
+      );
+      durationFormatters.set(key, formatter);
+    }
+    return formatter.format(value);
+  };
+
+  const totalHours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const remainder = totalSeconds % 60;
+  const signed = seconds < 0 && totalSeconds > 0;
+  if (style === "digital") {
+    return [
+      format(signed ? -totalHours : totalHours, "hour"),
+      format(minutes, "minute"),
+      format(remainder, "second"),
+    ].join(":");
+  }
+  const days = largestUnit === "day" ? Math.floor(totalHours / 24) : 0;
+  const hours = totalHours - days * 24;
+  const parts: [number, DurationUnit][] = [
+    [days, "day"],
+    [hours, "hour"],
+    [minutes, "minute"],
+    [remainder, "second"],
+  ];
+  const visible = parts.filter(([value]) => value > 0);
+  if (visible.length === 0) return format(0, precision);
+  return visible
+    .map(([value, unit], index) => format(signed && index === 0 ? -value : value, unit))
+    .join(" ");
+}
+
+/** Localise decimal-hour table cells while preserving their numeric clipboard format. */
+export const formatDecimalHours = (hours: number, digits: number): string =>
+  new Intl.NumberFormat(getDisplayLocale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  }).format(hours);
+
+export const formatPercentage = (percent: number, digits = 0): string =>
+  new Intl.NumberFormat(getDisplayLocale(), {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(percent / 100);
 
 /**
  * Returns the 2-digit ISO week year (e.g., "25" for 2025)
@@ -237,19 +339,6 @@ export function getLocalizedShiftTime(
 }
 
 /**
- * Weekday names mapping (ISO 8601: 1=Monday, 7=Sunday)
- */
-const WEEKDAY_NAMES: Record<number, string> = {
-  1: "Mon",
-  2: "Tue",
-  3: "Wed",
-  4: "Thu",
-  5: "Fri",
-  6: "Sat",
-  7: "Sun",
-};
-
-/**
  * Returns the short weekday name for an ISO weekday number
  * @param isoWeekday - ISO weekday number (1=Monday, 7=Sunday)
  * @returns The short weekday name (e.g., "Mon", "Tue")
@@ -259,5 +348,5 @@ export const getWeekdayName = (isoWeekday: number): string => {
   if (isoWeekday < 1 || isoWeekday > 7) {
     throw new RangeError(`Invalid ISO weekday: ${isoWeekday}. Expected 1-7.`);
   }
-  return WEEKDAY_NAMES[isoWeekday]!;
+  return formatDisplayDate(dayjs("2026-01-05").add(isoWeekday - 1, "day"), "shortWeekday");
 };

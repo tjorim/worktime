@@ -1,3 +1,4 @@
+import { dayjs, formatDisplayDate, formatDuration } from "@/lib/dates/dateTimeUtils";
 import {
   CalendarClockIcon,
   ChartGanttIcon,
@@ -14,7 +15,6 @@ import type { Dayjs } from "dayjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/tooltip";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { Fragment, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ContextMenu, type ContextMenuItem } from "@/components/ContextMenu";
@@ -96,11 +96,11 @@ function GapIndicator({
 }) {
   const tooltipId = useId();
   const ariaLabel = untilNext
-    ? m.tt_until_next_aria({ minutes: durationMinutes })
-    : m.tt_gap_aria({ minutes: durationMinutes });
+    ? m.tt_until_next_aria({ duration: formatDuration(durationMinutes * 60, { style: "long" }) })
+    : m.tt_gap_aria({ duration: formatDuration(durationMinutes * 60, { style: "long" }) });
   const label = untilNext
-    ? m.tt_until_next_label({ minutes: durationMinutes })
-    : m.tt_gap_label({ minutes: durationMinutes });
+    ? m.tt_until_next_label({ duration: formatDuration(durationMinutes * 60) })
+    : m.tt_gap_label({ duration: formatDuration(durationMinutes * 60) });
   return (
     <div
       className="flex items-center gap-2 px-3 py-1"
@@ -123,20 +123,10 @@ function GapIndicator({
 function formatPlannedStart(start: Dayjs, liveTime: Dayjs) {
   const diffMinutes = start.diff(liveTime, "minute");
   const time = start.format("HH:mm");
-  if (diffMinutes < 0) {
-    return m.tt_plan_overrun({ time, minutes: String(Math.abs(diffMinutes)) });
-  }
-  const totalMinutes = diffMinutes;
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-  const minutes = totalMinutes % 60;
-  if (days > 0) {
-    return m.tt_starts_in_days({ time, days: String(days), hours: String(hours) });
-  }
-  if (hours > 0) {
-    return m.tt_starts_in_hours({ time, hours: String(hours), minutes: String(minutes) });
-  }
-  return m.tt_starts_in_minutes({ time, minutes: String(minutes) });
+  const duration = formatDuration(Math.abs(diffMinutes) * 60, { largestUnit: "day" });
+  return diffMinutes < 0
+    ? m.tt_plan_overrun({ time, duration })
+    : m.tt_starts_in({ time, duration });
 }
 
 export function DailyTaskList({
@@ -483,14 +473,16 @@ export function DailyTaskList({
       });
     } else if (isTooShort && !isRunning) {
       items.push({
-        label: m.tt_too_short_for_break({ minutes: BREAK_DURATION_MINUTES }),
+        label: m.tt_too_short_for_break({ duration: formatDuration(BREAK_DURATION_MINUTES * 60) }),
         icon: CoffeeIcon,
         onClick: () => {},
         disabled: true,
       });
     } else {
       items.push({
-        label: m.tt_context_includes_break({ minutes: BREAK_DURATION_MINUTES }),
+        label: m.tt_context_includes_break({
+          duration: formatDuration(BREAK_DURATION_MINUTES * 60),
+        }),
         icon: CoffeeIcon,
         onClick: () => handleToggleBreak(task.id),
       });
@@ -543,7 +535,7 @@ export function DailyTaskList({
             const stopDisplay = task.stopTime
               ? effectiveStopTime.isSame(dayjs(task.startTime), "day")
                 ? effectiveStopTime.format("HH:mm")
-                : `${effectiveStopTime.format("HH:mm")} (${effectiveStopTime.format("YYYY-MM-DD")})`
+                : `${effectiveStopTime.format("HH:mm")} (${formatDisplayDate(effectiveStopTime)})`
               : m.tt_running_status();
             const labelColor = colorByLabelId[task.label];
             const isCurrentTask = nowPosition?.type === "within" && nowPosition.taskIndex === index;
@@ -602,18 +594,26 @@ export function DailyTaskList({
                             placement="top"
                             content={
                               <div id={`break-badge-${task.id}`}>
-                                {m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                                {m.tt_break_deducted({
+                                  duration: formatDuration(BREAK_DURATION_MINUTES * 60, {
+                                    style: "long",
+                                  }),
+                                })}
                               </div>
                             }
                           >
                             <Badge
                               variant="secondary"
                               className="ml-2"
-                              aria-label={m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES })}
+                              aria-label={m.tt_break_deducted({
+                                duration: formatDuration(BREAK_DURATION_MINUTES * 60, {
+                                  style: "long",
+                                }),
+                              })}
                               tabIndex={0}
                             >
                               <Icon icon={CoffeeIcon} className="mr-1" />
-                              {m.tt_break_minutes_short({ minutes: BREAK_DURATION_MINUTES })}
+                              {formatDuration(-BREAK_DURATION_MINUTES * 60)}
                             </Badge>
                           </Hint>
                         )}
