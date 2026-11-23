@@ -1,3 +1,4 @@
+import { getEventModifierLabel, getEventTypeLabel } from "@/lib/hday/presentation";
 import type { EventFlag, TimeLocationFlag, TypeFlag } from "@/lib/hday/types";
 import * as m from "@/paraglide/messages.js";
 
@@ -21,14 +22,14 @@ export const Weekday = {
  */
 export function getTypeFlagOptions(): Array<[TypeFlag | "none", string]> {
   return [
-    ["none", m.timeoff_flag_holiday()],
-    ["business", m.timeoff_flag_business()],
-    ["course", m.timeoff_flag_course()],
-    ["in", m.timeoff_flag_in()],
-    ["weekend", m.timeoff_flag_weekend()],
-    ["birthday", m.timeoff_flag_birthday()],
-    ["ill", m.timeoff_flag_ill()],
-    ["other", m.timeoff_flag_other()],
+    ["none", getEventTypeLabel(["holiday"])],
+    ["business", getEventTypeLabel(["business"])],
+    ["course", getEventTypeLabel(["course"])],
+    ["in", getEventTypeLabel(["in"])],
+    ["weekend", getEventTypeLabel(["weekend"])],
+    ["birthday", getEventTypeLabel(["birthday"])],
+    ["ill", getEventTypeLabel(["ill"])],
+    ["other", getEventTypeLabel(["other"])],
   ];
 }
 
@@ -108,20 +109,5 @@ export function getViewModeHelpText(): Record<(typeof TIMEOFF_VIEWS)[number], st
  * @returns Human-readable label for the flag
  */
 export function getEventFlagLabel(flag: EventFlag): string {
-  const labels: Record<string, () => string> = {
-    business: m.timeoff_flag_business,
-    course: m.timeoff_flag_course,
-    in: m.timeoff_flag_in,
-    weekend: m.timeoff_flag_weekend,
-    birthday: m.timeoff_flag_birthday,
-    holiday: m.timeoff_flag_holiday,
-    ill: m.timeoff_flag_ill,
-    other: m.timeoff_flag_other,
-    half_am: m.timeoff_flag_half_am,
-    half_pm: m.timeoff_flag_half_pm,
-    onsite: m.timeoff_flag_onsite,
-    no_fly: m.timeoff_flag_no_fly,
-    can_fly: m.timeoff_flag_can_fly,
-  };
-  return labels[flag]?.() ?? m.event_type_other();
+  return getEventModifierLabel([flag]) || getEventTypeLabel([flag]);
 }

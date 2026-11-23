@@ -83,7 +83,7 @@ describe("MobileQuickActions", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await user.click(screen.getByRole("button", { name: "Add time off" }));
+    await user.click(screen.getByRole("button", { name: "Add entry" }));
 
     expect(onAddTimeOff).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -231,7 +231,7 @@ describe("MobileQuickActions", () => {
 
     await user.click(screen.getByRole("button", { name: "Open quick actions" }));
 
-    expect(screen.queryByRole("button", { name: "Add time off" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add entry" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Track time & location" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open calendar" }));
     expect(onOpenCalendar).toHaveBeenCalledOnce();

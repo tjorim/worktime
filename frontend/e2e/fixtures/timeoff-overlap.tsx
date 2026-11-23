@@ -46,6 +46,14 @@ const entries: TimeOffEntry[] = [
     entryFlag: "half_am",
     note: "Weekly appointment",
   },
+  {
+    id: "d",
+    entryKind: "date",
+    date: "2026-11-21",
+    entryType: "course",
+    entryFlag: "no_fly",
+    note: null,
+  },
 ];
 const noop = () => {};
 function Fixture() {
@@ -58,7 +66,7 @@ function Fixture() {
       <ToastProvider>
         <TimeOffTableView
           entries={entries}
-          eventCount={3}
+          eventCount={entries.length}
           selectedCount={0}
           selectedIds={new Set()}
           viewMode="table"

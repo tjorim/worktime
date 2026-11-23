@@ -15,7 +15,7 @@ export {
   getEventTextColor,
   getEventColorClass,
   getEventTypeLabel,
-  getTimeLocationSymbol,
+  getHalfDaySymbol,
 } from "./presentation";
 export { buildPreviewLine, toLine } from "./serializer";
 export { sortEvents } from "./sort";

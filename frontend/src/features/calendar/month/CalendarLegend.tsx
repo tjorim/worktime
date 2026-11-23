@@ -23,7 +23,7 @@ type CalendarLegendProps = {
  */
 export function CalendarLegend({ showEventTypes = true, shifts }: CalendarLegendProps) {
   const eventTypeLegend = [
-    { colorClass: "event-holiday-full", label: m.calendar_legend_holiday() },
+    { colorClass: "event-holiday-full", label: m.event_type_vacation() },
     { colorClass: "event-business-full", label: m.calendar_legend_business() },
     { colorClass: "event-course-full", label: m.calendar_legend_course() },
     { colorClass: "event-in-full", label: m.calendar_legend_in_office() },

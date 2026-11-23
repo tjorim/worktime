@@ -32,9 +32,7 @@ for (const theme of ["light", "dark"]) {
           );
           if (mode === "table") {
             await expect(
-              page.getByText(
-                lang === "en" ? "Other, AM (half day)" : "Overig, Ochtend (halve dag)",
-              ),
+              page.getByText(lang === "en" ? "AM (half day)" : "Ochtend (halve dag)"),
             ).toBeVisible();
             await expect(page.getByText("half_am", { exact: true })).toHaveCount(0);
           } else {
@@ -44,5 +42,43 @@ for (const theme of ["light", "dark"]) {
         }
       });
     }
+  }
+}
+
+for (const theme of ["light", "dark"]) {
+  for (const width of [1366, 390]) {
+    test(`time-off vocabulary (${theme}, ${width})`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: width === 1366 ? 768 : 844 });
+      for (const mode of ["table", "calendar", "add", "edit"]) {
+        await page.goto(`/e2e/fixtures/timeoff-overlap.html?theme=${theme}&mode=${mode}`);
+        if (mode === "table") {
+          await expect(page.getByText("Vacation", { exact: true })).toBeVisible();
+          await expect(page.getByText("No fly", { exact: true })).toBeVisible();
+          await expect(page.getByText(/N Training/)).toHaveCount(0);
+          if (width === 1366) {
+            await expect(page.getByRole("columnheader", { name: "Note" })).toBeVisible();
+            const row = page.getByRole("row").filter({ hasText: "Autumn break" });
+            await expect(row.getByRole("cell").nth(4)).toHaveText("—");
+          }
+        } else if (mode === "calendar") {
+          await expect(page.getByRole("button", { name: /View Training.*No fly/ })).toBeVisible();
+          await expect(
+            page.getByRole("button", { name: /View Weekly appointment.*AM \(half day\)/ }).first(),
+          ).toBeVisible();
+        } else {
+          const dialog = page.getByRole("dialog", {
+            name: mode === "add" ? "New entry" : "Edit entry",
+          });
+          const note = dialog.getByLabel("Note (optional)");
+          await expect(note).toBeVisible();
+          await expect(note).toHaveValue(mode === "add" ? "" : "Sick leave");
+          await expect(dialog.getByRole("radio", { name: "Vacation" })).toBeVisible();
+        }
+        const screenshotName = `${theme}-${width}-${mode}`;
+        const path = testInfo.outputPath(`${screenshotName}.png`);
+        await page.screenshot({ path });
+        await testInfo.attach(screenshotName, { path, contentType: "image/png" });
+      }
+    });
   }
 }

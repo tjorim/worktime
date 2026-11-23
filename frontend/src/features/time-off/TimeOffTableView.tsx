@@ -30,7 +30,7 @@ import {
 import {
   getEventColorUtilities,
   getEventTypeLabel,
-  getTimeLocationSymbol,
+  getEventModifierLabel,
 } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 import {
@@ -42,12 +42,12 @@ import {
 import { TimeOffToolbar } from "@/features/time-off/TimeOffToolbar";
 import { TimeOffRawView } from "@/features/time-off/TimeOffRawView";
 import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
-import { getEventFlagLabel } from "@/lib/time-off/timeoffConstants";
 import type { TimeOffViewMode } from "@/lib/time-off/timeoffConstants";
 import * as m from "@/paraglide/messages.js";
 
 type TimeOffRow = {
   entry: TimeOffEntry;
+  modifierLabel: string;
   flags: ReturnType<typeof getEntryFlagsForDisplay>;
   typeLabel: string;
   title: string;
@@ -139,19 +139,21 @@ export function TimeOffTableView({
     () =>
       entries.map((entry) => {
         const flags = getEntryFlagsForDisplay(entry);
+        const modifierLabel = getEventModifierLabel(flags);
         const typeLabel = getEventTypeLabel(flags);
         const title = entry.note || typeLabel;
         return {
           entry,
           flags,
           typeLabel,
+          modifierLabel,
           title,
           dateSortKey: getTimeOffEntrySortKey(entry),
-          // Newline-joined so a query can't match across two fields ("holiday" + "2026" ≈ "day 2").
+          // Newline-joined so a query can't match across two fields ("vacation" + "2026" ≈ "tion 2").
           searchText: [
             typeLabel,
             entry.note ?? "",
-            flags.map(getEventFlagLabel).join(", "),
+            modifierLabel,
             getEntryDisplayDateText(entry),
             getEntryIsoDateText(entry),
           ]
@@ -186,7 +188,7 @@ export function TimeOffTableView({
           header: () => m.timeoff_col_title(),
           sortFn: "text",
         }),
-        columnHelper.accessor((row) => row.flags.map(getEventFlagLabel).join(", "), {
+        columnHelper.accessor("modifierLabel", {
           id: "flags",
           header: () => m.timeoff_col_flags(),
           sortFn: "text",
@@ -311,62 +313,65 @@ export function TimeOffTableView({
                 />
               ) : isMobile ? (
                 <ul data-slot="timeoff-card-list" className="m-0 mb-3 list-none space-y-3 p-0">
-                  {visibleRows.map(({ original: { entry, flags, title, typeLabel } }) => (
-                    <li key={entry.id} className="rounded-lg border border-border p-3">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          aria-label={m.timeoff_select_event_aria({ name: title })}
-                          checked={selectedIds.has(entry.id)}
-                          onCheckedChange={() => onToggleSelection(entry.id)}
-                        />
-                        <Badge
-                          data-event-type-badge
-                          className={getEventColorUtilities(
-                            flags,
-                            isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
-                          )}
-                        >
-                          {getTimeLocationSymbol(flags)} {typeLabel}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 text-sm">{renderEntryDisplayDate(entry)}</div>
-                      {entry.note && <p className="my-2 wrap-anywhere">{entry.note}</p>}
-                      {getOverlappingEntries(entry, entries).length > 0 && (
-                        <span className="flex items-center gap-1 text-sm text-warning">
-                          <Icon icon={TriangleAlertIcon} />
-                          {m.timeoff_overlap()}
-                        </span>
-                      )}
-                      {flags.length > 0 && (
-                        <p className="my-2 text-sm text-muted-foreground">
-                          {flags.map(getEventFlagLabel).join(", ")}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          className="min-h-11"
-                          onClick={() => onEditEvent(entry.id)}
-                          aria-label={m.timeoff_card_action_aria({ action: m.edit(), name: title })}
-                        >
-                          <Icon icon={PencilIcon} />
-                          {m.edit()}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          className="min-h-11"
-                          onClick={() => onDeleteEvent(entry.id)}
-                          aria-label={m.timeoff_card_action_aria({
-                            action: m.delete(),
-                            name: title,
-                          })}
-                        >
-                          <Icon icon={TrashIcon} />
-                          {m.delete()}
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
+                  {visibleRows.map(
+                    ({ original: { entry, flags, title, typeLabel, modifierLabel } }) => (
+                      <li key={entry.id} className="rounded-lg border border-border p-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            aria-label={m.timeoff_select_event_aria({ name: title })}
+                            checked={selectedIds.has(entry.id)}
+                            onCheckedChange={() => onToggleSelection(entry.id)}
+                          />
+                          <Badge
+                            data-event-type-badge
+                            className={getEventColorUtilities(
+                              flags,
+                              isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
+                            )}
+                          >
+                            {typeLabel}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 text-sm">{renderEntryDisplayDate(entry)}</div>
+                        {entry.note && <p className="my-2 wrap-anywhere">{entry.note}</p>}
+                        {getOverlappingEntries(entry, entries).length > 0 && (
+                          <span className="flex items-center gap-1 text-sm text-warning">
+                            <Icon icon={TriangleAlertIcon} />
+                            {m.timeoff_overlap()}
+                          </span>
+                        )}
+                        {modifierLabel && (
+                          <p className="my-2 text-sm text-muted-foreground">{modifierLabel}</p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            className="min-h-11"
+                            onClick={() => onEditEvent(entry.id)}
+                            aria-label={m.timeoff_card_action_aria({
+                              action: m.edit(),
+                              name: title,
+                            })}
+                          >
+                            <Icon icon={PencilIcon} />
+                            {m.edit()}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            className="min-h-11"
+                            onClick={() => onDeleteEvent(entry.id)}
+                            aria-label={m.timeoff_card_action_aria({
+                              action: m.delete(),
+                              name: title,
+                            })}
+                          >
+                            <Icon icon={TrashIcon} />
+                            {m.delete()}
+                          </Button>
+                        </div>
+                      </li>
+                    ),
+                  )}
                 </ul>
               ) : (
                 <Table>
@@ -394,12 +399,11 @@ export function TimeOffTableView({
                   </TableHeader>
                   <TableBody>
                     {visibleRows.map((tableRow) => {
-                      const { entry, flags, title, typeLabel } = tableRow.original;
+                      const { entry, flags, title, typeLabel, modifierLabel } = tableRow.original;
                       const eventColors = getEventColorUtilities(
                         flags,
                         isTimeOffWeeklyEntry(entry) ? "weekly" : "range",
                       );
-                      const symbol = getTimeLocationSymbol(flags);
 
                       return (
                         <TableRow key={entry.id}>
@@ -412,7 +416,6 @@ export function TimeOffTableView({
                           </TableCell>
                           <TableCell>
                             <Badge data-event-type-badge className={eventColors}>
-                              {symbol && `${symbol} `}
                               {typeLabel}
                             </Badge>
                           </TableCell>
@@ -427,10 +430,8 @@ export function TimeOffTableView({
                             )}
                           </TableCell>
                           <TableCell>
-                            {flags.length ? (
-                              <span className="text-sm text-muted-foreground">
-                                {flags.map(getEventFlagLabel).join(", ")}
-                              </span>
+                            {modifierLabel ? (
+                              <span className="text-sm text-muted-foreground">{modifierLabel}</span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}

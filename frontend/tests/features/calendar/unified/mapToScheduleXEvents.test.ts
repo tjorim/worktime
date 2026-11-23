@@ -93,9 +93,9 @@ describe("mapToScheduleXEvents", () => {
 
     expect(event).toMatchObject({
       id: "time-off:leave-1",
-      title: "Holiday – Beach day",
+      title: "Vacation · Beach day",
       calendarId: "event-holiday-full",
-      entryTypeLabel: "Holiday",
+      entryTypeLabel: "Vacation",
       entryId: "leave-1",
       _options: { disableDND: true, disableResize: true },
     });
@@ -136,7 +136,10 @@ describe("mapToScheduleXEvents", () => {
       "weekly",
     );
 
-    expect(event).toMatchObject({ title: "◐ Holiday", calendarId: "event-recurring-half" });
+    expect(event).toMatchObject({
+      title: "Vacation · AM (half day)",
+      calendarId: "event-recurring-half",
+    });
     expect(event.end.toString()).toBe("2026-11-18");
   });
 

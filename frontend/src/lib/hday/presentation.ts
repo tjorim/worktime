@@ -1,6 +1,6 @@
 import { getPrimaryTimeLocationFlag, getPrimaryTypeFlag, hasHalfDayFlag } from "./flags";
 import * as m from "@/paraglide/messages.js";
-import type { EventFlag, HdayEvent, TypeFlag } from "./types";
+import type { EventFlag, HdayEvent, TimeLocationFlag, TypeFlag } from "./types";
 
 /**
  * Palette key for an event: which color set it uses, and whether it is the full-day or half-day
@@ -99,18 +99,12 @@ export function getEventColorClass(flags?: EventFlag[], eventType?: HdayEvent["t
   return `event-${type}-${variant}`;
 }
 
-export function getTimeLocationSymbol(flags?: EventFlag[]): string {
+export function getHalfDaySymbol(flags?: EventFlag[]): string {
   switch (getPrimaryTimeLocationFlag(flags)) {
     case "half_am":
       return "◐";
     case "half_pm":
       return "◑";
-    case "onsite":
-      return "W";
-    case "no_fly":
-      return "N";
-    case "can_fly":
-      return "F";
     default:
       return "";
   }
@@ -147,6 +141,19 @@ export function getEventTypeLabel(flags?: ReadonlyArray<EventFlag>): string {
     case "other":
       return m.event_type_other();
     default:
-      return m.event_type_holiday();
+      return m.event_type_vacation();
   }
+}
+
+const modifierLabels: Record<TimeLocationFlag, () => string> = {
+  half_am: m.timeoff_flag_half_am,
+  half_pm: m.timeoff_flag_half_pm,
+  onsite: m.timeoff_flag_onsite,
+  no_fly: m.timeoff_flag_no_fly,
+  can_fly: m.timeoff_flag_can_fly,
+};
+
+export function getEventModifierLabel(flags?: ReadonlyArray<EventFlag>): string {
+  const modifier = getPrimaryTimeLocationFlag(flags);
+  return modifier ? modifierLabels[modifier]() : "";
 }

@@ -241,18 +241,18 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
-      expect(screen.getByText(/Click "Add Event"/i)).toBeInTheDocument();
+      expect(screen.getByText(/No time-off entries yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/Click "Add entry"/i)).toBeInTheDocument();
     });
 
-    it("should show Add Event button in header", () => {
+    it("should show Add entry button in header", () => {
       render(
         <AllProviders>
           <TimeOffView />
         </AllProviders>,
       );
 
-      const addButton = screen.getByRole("button", { name: /Add Event/i });
+      const addButton = screen.getByRole("button", { name: /Add entry/i });
       expect(addButton).toBeInTheDocument();
     });
 
@@ -267,7 +267,7 @@ describe("TimeOffView", () => {
       expect(screen.queryByRole("button", { name: /Export/i })).not.toBeInTheDocument();
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -439,14 +439,14 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Open add modal
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       // Fill in event details
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
 
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Test vacation");
 
       // Submit
@@ -467,7 +467,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add a business trip event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
@@ -485,7 +485,7 @@ describe("TimeOffView", () => {
     });
   });
 
-  describe("Add Event Modal", () => {
+  describe("Add entry Modal", () => {
     it("opens from an external quick-action request on mount", () => {
       render(
         <AllProviders>
@@ -494,10 +494,10 @@ describe("TimeOffView", () => {
       );
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText(/New event/i)).toBeInTheDocument();
+      expect(screen.getByText(/New entry/i)).toBeInTheDocument();
     });
 
-    it("should open modal when Add Event button is clicked", async () => {
+    it("should open modal when Add entry button is clicked", async () => {
       render(
         <AllProviders>
           <TimeOffView />
@@ -506,10 +506,10 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
-      expect(screen.getByText(/New event/i)).toBeInTheDocument();
+      expect(screen.getByText(/New entry/i)).toBeInTheDocument();
     });
 
     it("should close modal when cancelled", async () => {
@@ -521,7 +521,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       const modal = screen.getByRole("dialog");
       const closeButton = within(modal).getByLabelText(/Close/i);
@@ -539,7 +539,7 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       // Try to submit without start date
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
@@ -556,7 +556,7 @@ describe("TimeOffView", () => {
       );
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
       expect(screen.getByText(m.timeoff_fix_validation())).toBeInTheDocument();
 
@@ -576,13 +576,13 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
 
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Preview test");
 
       // Check preview section - use getAllByText since date might appear multiple times
@@ -592,7 +592,7 @@ describe("TimeOffView", () => {
     });
   });
 
-  describe("Edit Event", () => {
+  describe("Edit entry", () => {
     it("should open edit modal with pre-filled data", async () => {
       render(
         <AllProviders>
@@ -603,11 +603,11 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event first
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Original title");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -618,15 +618,15 @@ describe("TimeOffView", () => {
         await user.click(editButton);
       }
 
-      // Modal should show "Edit event" and have the original data - use getAllByText since title might appear in table too
-      const editTexts = screen.getAllByText(/Edit event/i);
+      // Modal should show "Edit entry" and have the original data - use getAllByText since title might appear in table too
+      const editTexts = screen.getAllByText(/Edit entry/i);
       expect(editTexts.length).toBeGreaterThan(0);
       const titleInputs = screen.getAllByDisplayValue(/Original title/i);
       expect(titleInputs.length).toBeGreaterThan(0);
     });
   });
 
-  describe("Delete Event", () => {
+  describe("Delete entry", () => {
     it("should delete immediately without a confirmation dialog", async () => {
       render(
         <AllProviders>
@@ -637,11 +637,11 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "To be deleted");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -657,7 +657,7 @@ describe("TimeOffView", () => {
       });
 
       // An undo toast is offered.
-      expect(screen.getByText(/Event deleted successfully/i)).toBeInTheDocument();
+      expect(screen.getByText(/Entry deleted successfully/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Undo/i })).toBeInTheDocument();
     });
 
@@ -671,11 +671,11 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add event
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "To be deleted");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -704,17 +704,17 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
 
       // Select weekly event type
-      const eventTypeSelect = screen.getByLabelText(/Event type/i);
+      const eventTypeSelect = screen.getByLabelText(/Pattern/i);
       await user.selectOptions(eventTypeSelect, "weekly");
 
       // Select weekday (e.g., Monday)
       const weekdaySelect = screen.getByLabelText(/Weekday/i);
       await user.selectOptions(weekdaySelect, "1");
 
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Every Monday");
 
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
@@ -748,7 +748,7 @@ describe("TimeOffView", () => {
       // reaches the guarded handler directly.
       fireEvent.keyDown(document, { key: "s", ctrlKey: true });
 
-      expect(screen.getByText("No events to export")).toBeInTheDocument();
+      expect(screen.getByText("No entries to export")).toBeInTheDocument();
     });
   });
 
@@ -1078,7 +1078,7 @@ describe("TimeOffView", () => {
       // A local edit while that push is still in flight schedules an
       // auto-push after the debounce — it must queue behind the in-flight
       // one instead of racing it with a now-stale etag.
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-12-01");
@@ -1136,7 +1136,7 @@ describe("TimeOffView", () => {
 
       // A local edit while the pull is in flight schedules an auto-push; it
       // must queue behind the pull rather than firing a concurrent PUT.
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-10-15");
@@ -1182,7 +1182,7 @@ describe("TimeOffView", () => {
       );
       await screen.findByRole("button", { name: m.timeoff_push_events_aria() });
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-08-01");
@@ -1270,7 +1270,7 @@ describe("TimeOffView", () => {
       await user.click(await screen.findByRole("button", { name: m.timeoff_pull_events_aria() }));
       await screen.findByText(m.timeoff_pulled({ username: "jsmith" }));
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-10-10");
@@ -1323,7 +1323,7 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-11-01");
@@ -1532,11 +1532,11 @@ describe("TimeOffView", () => {
         </AllProviders>,
       );
 
-      expect(screen.getByRole("button", { name: /Add Event/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Add entry/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Import/i })).toBeInTheDocument();
 
       const user = userEvent.setup();
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -1555,7 +1555,7 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       // Add an event to display table
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -1564,7 +1564,7 @@ describe("TimeOffView", () => {
       // Table should have proper column headers
       expect(screen.getByRole("columnheader", { name: /Type/i })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: /Date \/ Pattern/i })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: /Title/i })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: /Note/i })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: /Flags/i })).toBeInTheDocument();
       expect(screen.getByRole("columnheader", { name: /Actions/i })).toBeInTheDocument();
     });
@@ -1581,10 +1581,10 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       expect(screen.queryByRole("button", { name: /Delete Selected/i })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Select all events/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Select all entries/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Clear selection/i })).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
@@ -1592,10 +1592,10 @@ describe("TimeOffView", () => {
 
       expect(screen.queryByRole("button", { name: /Delete Selected/i })).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole("checkbox", { name: /Select Holiday/i }));
+      await user.click(screen.getByRole("checkbox", { name: /Select Vacation/i }));
 
       expect(screen.getByRole("button", { name: /Delete Selected/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Select all events/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Select all entries/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Clear selection/i })).toBeInTheDocument();
     });
 
@@ -1608,14 +1608,14 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
-      const headerCheckbox = screen.getByRole("checkbox", { name: /Select all events/i });
-      const rowCheckbox = screen.getByRole("checkbox", { name: /Select Holiday/i });
+      const headerCheckbox = screen.getByRole("checkbox", { name: /Select all entries/i });
+      const rowCheckbox = screen.getByRole("checkbox", { name: /Select Vacation/i });
 
       expect(headerCheckbox).not.toBeChecked();
       expect(rowCheckbox).not.toBeChecked();
@@ -1640,11 +1640,11 @@ describe("TimeOffView", () => {
 
       const user = userEvent.setup();
 
-      await user.click(screen.getByRole("button", { name: /Add Event/i }));
+      await user.click(screen.getByRole("button", { name: /Add entry/i }));
       const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
       await user.clear(startInput);
       await user.type(startInput, "2025-01-15");
-      const titleInput = screen.getByLabelText(/Comment/i);
+      const titleInput = screen.getByLabelText(/Note/i);
       await user.type(titleInput, "Bulk delete me");
       await user.click(screen.getByRole("button", { name: /^Add$/i }));
 
@@ -1676,11 +1676,11 @@ describe("TimeOffView", () => {
       const user = userEvent.setup();
 
       const addEvent = async (start: string, title: string) => {
-        await user.click(screen.getByRole("button", { name: /Add Event/i }));
+        await user.click(screen.getByRole("button", { name: /Add entry/i }));
         const startInput = screen.getByLabelText(/Start \(YYYY\/MM\/DD\)/i);
         await user.clear(startInput);
         await user.type(startInput, start);
-        await user.type(screen.getByLabelText(/Comment/i), title);
+        await user.type(screen.getByLabelText(/Note/i), title);
         await user.click(screen.getByRole("button", { name: /^Add$/i }));
       };
       await addEvent("2025-01-15", "Ski trip");

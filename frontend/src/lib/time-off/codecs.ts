@@ -3,7 +3,7 @@ import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { normalizeEventFlags } from "@/lib/hday/flags";
 import { parseHday } from "@/lib/hday/parser";
 import { toLine } from "@/lib/hday/serializer";
-import type { EventFlag } from "@/lib/hday/types";
+import type { EventFlag, TypeFlag } from "@/lib/hday/types";
 import type {
   TimeOffDateEntry,
   TimeOffEntry,
@@ -26,7 +26,7 @@ const TYPE_FLAG_TO_ENTRY_TYPE: Record<string, TimeOffEntryType> = {
   other: "other",
 };
 
-const ENTRY_TYPE_TO_EVENT_FLAG: Record<TimeOffEntryType, EventFlag> = {
+const ENTRY_TYPE_TO_EVENT_FLAG: Record<TimeOffEntryType, TypeFlag> = {
   vacation: "holiday",
   business: "business",
   course: "course",
@@ -45,8 +45,12 @@ function toHdayDate(value: string): string {
   return value.replace(/-/g, "/");
 }
 
+export function getEntryTypeFlag(entryType: TimeOffEntryType): TypeFlag {
+  return ENTRY_TYPE_TO_EVENT_FLAG[entryType];
+}
+
 function getEntryFlags(entryType: TimeOffEntryType, entryFlag: TimeOffEntryFlag): EventFlag[] {
-  const typeFlag = ENTRY_TYPE_TO_EVENT_FLAG[entryType];
+  const typeFlag = getEntryTypeFlag(entryType);
   return normalizeEventFlags(entryFlag !== "full_day" ? [typeFlag, entryFlag] : [typeFlag]);
 }
 

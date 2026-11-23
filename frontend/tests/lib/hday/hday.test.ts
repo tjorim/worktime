@@ -9,7 +9,7 @@ import {
   getEventTextColor,
   getEventColorClass,
   getEventTypeLabel,
-  getTimeLocationSymbol,
+  getHalfDaySymbol,
   type HdayEvent,
   normalizeEventFlags,
   parseHday,
@@ -234,8 +234,8 @@ describe("getEventTypeLabel", () => {
   });
 
   const cases: Array<[string, EventFlag[], string, string]> = [
-    ["no flags", [], "Holiday", "Vakantie"],
-    ["holiday", ["holiday"], "Holiday", "Vakantie"],
+    ["no flags", [], "Vacation", "Vakantie"],
+    ["holiday", ["holiday"], "Vacation", "Vakantie"],
     ["business", ["business"], "Business trip", "Zakenreis"],
     ["weekend", ["weekend"], "Weekend", "Weekend"],
     ["birthday", ["birthday"], "Birthday", "Verjaardag"],
@@ -304,63 +304,63 @@ describe("buildPreviewLine", () => {
   });
 });
 
-describe("getTimeLocationSymbol", () => {
+describe("getHalfDaySymbol", () => {
   it("returns empty string for undefined flags", () => {
-    expect(getTimeLocationSymbol()).toBe("");
+    expect(getHalfDaySymbol()).toBe("");
   });
 
   it("returns empty string for empty array", () => {
-    expect(getTimeLocationSymbol([])).toBe("");
+    expect(getHalfDaySymbol([])).toBe("");
   });
 
   it("returns left half-circle (◐) for half_am flag", () => {
-    expect(getTimeLocationSymbol(["half_am"])).toBe("◐");
+    expect(getHalfDaySymbol(["half_am"])).toBe("◐");
   });
 
   it("returns right half-circle (◑) for half_pm flag", () => {
-    expect(getTimeLocationSymbol(["half_pm"])).toBe("◑");
+    expect(getHalfDaySymbol(["half_pm"])).toBe("◑");
   });
 
   it("returns ◐ when half_am is combined with other flags", () => {
-    expect(getTimeLocationSymbol(["business", "half_am"])).toBe("◐");
+    expect(getHalfDaySymbol(["business", "half_am"])).toBe("◐");
   });
 
   it("returns ◑ when half_pm is combined with other flags", () => {
-    expect(getTimeLocationSymbol(["course", "half_pm"])).toBe("◑");
+    expect(getHalfDaySymbol(["course", "half_pm"])).toBe("◑");
   });
 
   it("returns empty string for full day events", () => {
-    expect(getTimeLocationSymbol(["business"])).toBe("");
-    expect(getTimeLocationSymbol(["course"])).toBe("");
-    expect(getTimeLocationSymbol(["in"])).toBe("");
-    expect(getTimeLocationSymbol(["holiday"])).toBe("");
+    expect(getHalfDaySymbol(["business"])).toBe("");
+    expect(getHalfDaySymbol(["course"])).toBe("");
+    expect(getHalfDaySymbol(["in"])).toBe("");
+    expect(getHalfDaySymbol(["holiday"])).toBe("");
   });
 
   it("returns first time/location flag when multiple are present (mutual exclusivity)", () => {
     // When multiple time/location flags are present, normalizeEventFlags keeps only the first one
     const normalized = normalizeEventFlags(["half_am", "half_pm"]);
-    expect(getTimeLocationSymbol(normalized)).toBe("◐"); // Only half_am is kept
+    expect(getHalfDaySymbol(normalized)).toBe("◐"); // Only half_am is kept
   });
 
-  it("returns W for onsite flag", () => {
-    expect(getTimeLocationSymbol(["onsite"])).toBe("W");
+  it("returns no symbol for onsite", () => {
+    expect(getHalfDaySymbol(["onsite"])).toBe("");
   });
 
-  it("returns N for no_fly flag", () => {
-    expect(getTimeLocationSymbol(["no_fly"])).toBe("N");
+  it("returns no symbol for no_fly", () => {
+    expect(getHalfDaySymbol(["no_fly"])).toBe("");
   });
 
-  it("returns F for can_fly flag", () => {
-    expect(getTimeLocationSymbol(["can_fly"])).toBe("F");
+  it("returns no symbol for can_fly", () => {
+    expect(getHalfDaySymbol(["can_fly"])).toBe("");
   });
 
   it("uses Unicode symbols that are more intuitive than comma/apostrophe", () => {
     // Verify we're not using the old symbols
-    expect(getTimeLocationSymbol(["half_am"])).not.toBe(",");
-    expect(getTimeLocationSymbol(["half_pm"])).not.toBe("'");
+    expect(getHalfDaySymbol(["half_am"])).not.toBe(",");
+    expect(getHalfDaySymbol(["half_pm"])).not.toBe("'");
     // Verify Unicode codepoints
-    expect(getTimeLocationSymbol(["half_am"]).charCodeAt(0)).toBe(0x25d0); // ◐
-    expect(getTimeLocationSymbol(["half_pm"]).charCodeAt(0)).toBe(0x25d1); // ◑
+    expect(getHalfDaySymbol(["half_am"]).charCodeAt(0)).toBe(0x25d0); // ◐
+    expect(getHalfDaySymbol(["half_pm"]).charCodeAt(0)).toBe(0x25d1); // ◑
   });
 });
 

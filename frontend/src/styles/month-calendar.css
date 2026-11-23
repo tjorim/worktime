@@ -212,6 +212,10 @@
   text-align: left;
   color: var(--wt-month-calendar-event-text);
   cursor: pointer;
+  @media (width < 640px) {
+    gap: 0.125rem;
+    padding-inline: 0.125rem;
+  }
   &:hover {
     background: var(--wt-month-calendar-event-hover);
   }
@@ -231,12 +235,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
 }
 @utility month-calendar-event-symbol {
+  flex-shrink: 0;
   font-size: 0.7rem;
+  @media (width < 640px) {
+    font-size: 0.5rem;
+  }
 }
 @utility month-calendar-event-overflow {
   font-size: 0.7rem;

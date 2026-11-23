@@ -17,6 +17,8 @@ import {
   timeOffHalves,
   type WorkingDayOptions,
 } from "@/lib/schedule/statisticsWorkingDays";
+import { getEventTypeLabel } from "@/lib/hday/presentation";
+import { getEntryTypeFlag } from "@/lib/time-off/codecs";
 import * as m from "@/paraglide/messages.js";
 
 export type EventTypeKey =
@@ -29,26 +31,7 @@ export type EventTypeKey =
   | "ill"
   | "other";
 
-export const getEventTypeKeyLabel = (key: EventTypeKey): string => {
-  switch (key) {
-    case "holiday":
-      return m.event_type_holiday();
-    case "business":
-      return m.event_type_business();
-    case "course":
-      return m.event_type_course();
-    case "in":
-      return m.event_type_in();
-    case "weekend":
-      return m.event_type_weekend();
-    case "birthday":
-      return m.event_type_birthday();
-    case "ill":
-      return m.event_type_ill();
-    case "other":
-      return m.event_type_other();
-  }
-};
+export const getEventTypeKeyLabel = (key: EventTypeKey): string => getEventTypeLabel([key]);
 
 export const EVENT_TYPE_ORDER: EventTypeKey[] = [
   "holiday",
@@ -151,8 +134,8 @@ export const calculateVacationStats = (
 
   const ordered = [...entries].sort(
     (a, b) =>
-      EVENT_TYPE_ORDER.indexOf(a.entryType === "vacation" ? "holiday" : a.entryType) -
-      EVENT_TYPE_ORDER.indexOf(b.entryType === "vacation" ? "holiday" : b.entryType),
+      EVENT_TYPE_ORDER.indexOf(getEntryTypeFlag(a.entryType)) -
+      EVENT_TYPE_ORDER.indexOf(getEntryTypeFlag(b.entryType)),
   );
   for (const { date } of statisticsWorkingDays(
     dayjs(`${year}-01-01`),
@@ -161,7 +144,7 @@ export const calculateVacationStats = (
   )) {
     for (const entry of timeOffHalves(date, ordered)) {
       if (!entry) continue;
-      totals[entry.entryType === "vacation" ? "holiday" : entry.entryType] += 0.5;
+      totals[getEntryTypeFlag(entry.entryType)] += 0.5;
       totalDays += 0.5;
     }
   }

@@ -10,7 +10,7 @@ import {
   EVENT_PALETTE_KEYS,
   getEventColorClass,
   getEventTypeLabel,
-  getTimeLocationSymbol,
+  getEventModifierLabel,
 } from "@/lib/hday/presentation";
 import { getEntryFlagsForDisplay } from "@/lib/time-off/codecs";
 
@@ -133,17 +133,18 @@ export function timeOffToEvent(
 
   const flags = getEntryFlagsForDisplay(entry);
   const typeLabel = getEventTypeLabel(flags);
-  const symbol = getTimeLocationSymbol(flags);
-  const label = symbol ? `${symbol} ${typeLabel}` : typeLabel;
+  const modifierLabel = getEventModifierLabel(flags);
 
   return {
     id: `time-off:${entry.id}`,
-    title: entry.note ? `${label} – ${entry.note}` : label,
+    title: [typeLabel, entry.note, modifierLabel].filter(Boolean).join(" · "),
     start: Temporal.PlainDate.from(start),
     end: Temporal.PlainDate.from(end),
     calendarId: getEventColorClass(flags, occurrenceType),
     entryId: entry.id,
     entryTypeLabel: typeLabel,
+    entryNote: entry.note,
+    entryModifierLabel: modifierLabel,
     _options: { disableDND: true, disableResize: true },
   };
 }

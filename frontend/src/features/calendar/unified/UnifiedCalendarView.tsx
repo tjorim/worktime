@@ -454,13 +454,19 @@ function ConfiguredUnifiedCalendarView({
           <div className="min-h-0 overflow-y-auto p-4">
             <dl className="mb-0">
               <dt>{m.calendar_detail_title()}</dt>
-              <dd>{timeOffEvent?.title}</dd>
+              <dd>{timeOffEvent?.entryNote || "—"}</dd>
               <dt>{m.calendar_detail_dates()}</dt>
               <dd>
                 {timeOffStart === timeOffEnd ? timeOffStart : `${timeOffStart} – ${timeOffEnd}`}
               </dd>
               <dt>{m.calendar_detail_type()}</dt>
               <dd>{timeOffEvent?.entryTypeLabel}</dd>
+              {timeOffEvent?.entryModifierLabel && (
+                <>
+                  <dt>{m.timeoff_col_flags()}</dt>
+                  <dd>{timeOffEvent.entryModifierLabel}</dd>
+                </>
+              )}
             </dl>
           </div>
         </DialogContent>

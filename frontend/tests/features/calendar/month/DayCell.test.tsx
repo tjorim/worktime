@@ -149,7 +149,7 @@ describe("DayCell", () => {
       render(<DayCell {...defaultProps} events={events} />);
 
       // Should show "+2 more" (5 events - 3 visible = 2 hidden)
-      const overflowButton = screen.getByRole("button", { name: "Show 2 more events" });
+      const overflowButton = screen.getByRole("button", { name: "Show 2 more entries" });
       expect(overflowButton).toBeInTheDocument();
       expect(overflowButton).toHaveTextContent("+2 more");
     });
@@ -164,7 +164,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more entry" });
       expect(overflowButton).toBeInTheDocument();
       expect(overflowButton).toHaveTextContent("+1 more");
     });
@@ -180,9 +180,9 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      await user.click(screen.getByRole("button", { name: "Show 1 more event" }));
+      await user.click(screen.getByRole("button", { name: "Show 1 more entry" }));
 
-      expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Hide 1 more entry" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
     });
 
@@ -197,12 +197,12 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      await user.click(screen.getByRole("button", { name: "Show 1 more event" }));
+      await user.click(screen.getByRole("button", { name: "Show 1 more entry" }));
       expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Hide 1 more event" }));
+      await user.click(screen.getByRole("button", { name: "Hide 1 more entry" }));
       expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show 1 more entry" })).toBeInTheDocument();
     });
 
     it("should reveal hidden events when activating overflow toggle with keyboard", async () => {
@@ -216,11 +216,11 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more entry" });
       overflowButton.focus();
       await user.keyboard("{Enter}");
 
-      expect(screen.getByRole("button", { name: "Hide 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Hide 1 more entry" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
     });
 
@@ -235,16 +235,16 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      const overflowButton = screen.getByRole("button", { name: "Show 1 more event" });
+      const overflowButton = screen.getByRole("button", { name: "Show 1 more entry" });
       overflowButton.focus();
       await user.keyboard("{Enter}");
       expect(screen.getByRole("button", { name: "View Event 4" })).toBeInTheDocument();
 
-      const hideButton = screen.getByRole("button", { name: "Hide 1 more event" });
+      const hideButton = screen.getByRole("button", { name: "Hide 1 more entry" });
       hideButton.focus();
       await user.keyboard("{Enter}");
       expect(screen.queryByRole("button", { name: "View Event 4" })).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Show 1 more event" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show 1 more entry" })).toBeInTheDocument();
     });
 
     it("should display event type label when no title", () => {
@@ -252,7 +252,7 @@ describe("DayCell", () => {
 
       render(<DayCell {...defaultProps} events={events} />);
 
-      expect(screen.getByRole("button", { name: "View Holiday" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View Vacation" })).toBeInTheDocument();
     });
 
     it("should display time/location symbols", () => {
@@ -264,6 +264,7 @@ describe("DayCell", () => {
       const symbol = container.querySelector(".month-calendar-event-symbol");
       expect(symbol).toBeInTheDocument();
       expect(symbol?.textContent).toBe("◐");
+      expect(screen.getByRole("button", { name: "View Event · AM (half day)" })).toBeVisible();
     });
 
     it("should render multiple events with the same title", () => {
