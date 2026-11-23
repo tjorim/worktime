@@ -40,6 +40,7 @@ import io.mockk.mockk
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -305,14 +306,12 @@ class WorktimeRepositoryTest {
     }
 
     @Test
-    fun listTasksReturnsItems() = runTest {
+    fun listTasksReturnsItemsWithoutLoadingDashboard() = runTest {
         val repository =
             WorktimeRepository(
-                api = FakeApi(taskListResponse = TaskListResponse(items = listOf(sampleTask(userId = 1)), total = 1)),
+                api = FakeApi(taskListResponse = TaskListResponse(items = listOf(sampleTask()), total = 1)),
                 sessionController = FakeSessionController(token = "token-123")
             )
-        repository.loadDashboard()
-
         val result = repository.listTasks()
 
         assertTrue(result is MutationResult.Success)
@@ -374,6 +373,22 @@ class WorktimeRepositoryTest {
         val result = repository.deleteWorkLocation(LocalDate.parse("2026-05-26"))
 
         assertEquals(MutationResult.Success(Unit), result)
+    }
+
+    @Test
+    fun workLocationPreferencesCanBeCreatedWhenNoDocumentExists() = runTest {
+        val api = FakeApi()
+        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
+
+        assertEquals(MutationResult.Success(WorkLocationPreferences()), repository.loadWorkLocationPreferences())
+        assertEquals(
+            MutationResult.Success(WorkLocationPreferences(homeCountry = "BE")),
+            repository.updateWorkLocationPreferences(homeCountry = "be", officeCountry = null)
+        )
+        val write = requireNotNull(api.lastPreferencesWritePayload)
+        assertEquals(true, OffsetDateTime.parse(write.clientUpdatedAt).isBefore(OffsetDateTime.now().plusMinutes(1)))
+        val data = write.data
+        assertEquals("BE", data["settings"]?.jsonObject?.get("homeCountry")?.jsonPrimitive?.content)
     }
 
     @Test
@@ -732,46 +747,34 @@ internal class FakeApi(
         return response
     }
 
-    override suspend fun createTask(authorization: String, userId: Int, payload: TaskMutationRequest): TaskRecord {
+    override suspend fun createTask(authorization: String, payload: TaskMutationRequest): TaskRecord {
         taskThrowable?.let { throw it }
-        return sampleTask(userId = userId, text = payload.text ?: "Task")
+        return sampleTask(text = payload.text ?: "Task")
     }
 
-    override suspend fun updateTask(
-        authorization: String,
-        taskId: String,
-        userId: Int,
-        payload: TaskMutationRequest
-    ): TaskRecord {
+    override suspend fun updateTask(authorization: String, taskId: String, payload: TaskMutationRequest): TaskRecord {
         taskThrowable?.let { throw it }
-        return sampleTask(userId = userId, id = taskId, text = payload.text ?: "Task")
+        return sampleTask(id = taskId, text = payload.text ?: "Task")
     }
 
-    override suspend fun getRunningTask(authorization: String, userId: Int): Response<TaskRecord> =
-        Response.success(sampleTask(userId = userId))
+    override suspend fun getRunningTask(authorization: String): Response<TaskRecord> = Response.success(sampleTask())
 
-    override suspend fun listTasks(
-        authorization: String,
-        userId: Int,
-        startDate: String?,
-        endDate: String?
-    ): TaskListResponse {
+    override suspend fun listTasks(authorization: String, startDate: String?, endDate: String?): TaskListResponse {
         taskThrowable?.let { throw it }
         return taskListResponse
     }
 
-    override suspend fun deleteTask(authorization: String, taskId: String, userId: Int) {
+    override suspend fun deleteTask(authorization: String, taskId: String) {
         taskThrowable?.let { throw it }
     }
 
     override suspend fun upsertWorkLocation(
         authorization: String,
-        userId: Int,
+        valueDate: String,
         payload: WorkLocationMutationRequest
     ): WorkLocationRecord = WorkLocationRecord(
         id = 1,
-        userId = userId,
-        date = payload.date,
+        date = valueDate,
         countryCode = payload.countryCode.uppercase(),
         label = payload.label,
         createdAt = "2026-05-26T12:00:00Z"
@@ -779,7 +782,6 @@ internal class FakeApi(
 
     override suspend fun listWorkLocations(
         authorization: String,
-        userId: Int,
         startDate: String?,
         endDate: String?
     ): WorkLocationListResponse = WorkLocationListResponse(
@@ -787,11 +789,7 @@ internal class FakeApi(
         total = 0
     )
 
-    override suspend fun getWorkLocation(
-        authorization: String,
-        valueDate: String,
-        userId: Int
-    ): Response<WorkLocationRecord> {
+    override suspend fun getWorkLocation(authorization: String, valueDate: String): Response<WorkLocationRecord> {
         workLocationThrowable?.let { throw it }
         if (workLocationNotFound) {
             return Response.error(404, "".toResponseBody("text/plain".toMediaType()))
@@ -799,7 +797,6 @@ internal class FakeApi(
         return Response.success(
             WorkLocationRecord(
                 id = 1,
-                userId = userId,
                 date = valueDate,
                 countryCode = "BE",
                 label = null,
@@ -808,44 +805,35 @@ internal class FakeApi(
         )
     }
 
-    override suspend fun deleteWorkLocation(authorization: String, valueDate: String, userId: Int) {
+    override suspend fun deleteWorkLocation(authorization: String, valueDate: String) {
         workLocationThrowable?.let { throw it }
     }
 
-    override suspend fun createLabel(authorization: String, userId: Int, payload: LabelMutationRequest): LabelRecord {
+    override suspend fun createLabel(authorization: String, payload: LabelMutationRequest): LabelRecord {
         labelThrowable?.let { throw it }
         return sampleLabel(name = payload.name, color = payload.color)
     }
 
-    override suspend fun listLabels(authorization: String, userId: Int): LabelListResponse {
+    override suspend fun listLabels(authorization: String): LabelListResponse {
         labelThrowable?.let { throw it }
         return labelListResponse
     }
 
-    override suspend fun updateLabel(
-        authorization: String,
-        labelId: String,
-        userId: Int,
-        payload: LabelPatchRequest
-    ): LabelRecord {
+    override suspend fun updateLabel(authorization: String, labelId: String, payload: LabelPatchRequest): LabelRecord {
         labelThrowable?.let { throw it }
         return sampleLabel(id = labelId, name = payload.name ?: "Label")
     }
 
-    override suspend fun deleteLabel(authorization: String, labelId: String, userId: Int) {
+    override suspend fun deleteLabel(authorization: String, labelId: String) {
         labelThrowable?.let { throw it }
     }
 
-    override suspend fun createTemplate(
-        authorization: String,
-        userId: Int,
-        payload: TemplateMutationRequest
-    ): TemplateRecord {
+    override suspend fun createTemplate(authorization: String, payload: TemplateMutationRequest): TemplateRecord {
         templateThrowable?.let { throw it }
         return sampleTemplate(text = payload.text)
     }
 
-    override suspend fun listTemplates(authorization: String, userId: Int): TemplateListResponse {
+    override suspend fun listTemplates(authorization: String): TemplateListResponse {
         templateThrowable?.let { throw it }
         return templateListResponse
     }
@@ -853,14 +841,13 @@ internal class FakeApi(
     override suspend fun updateTemplate(
         authorization: String,
         templateId: String,
-        userId: Int,
         payload: TemplatePatchRequest
     ): TemplateRecord {
         templateThrowable?.let { throw it }
         return sampleTemplate(id = templateId, text = payload.text ?: "Template")
     }
 
-    override suspend fun deleteTemplate(authorization: String, templateId: String, userId: Int) {
+    override suspend fun deleteTemplate(authorization: String, templateId: String) {
         templateThrowable?.let { throw it }
     }
 
@@ -904,7 +891,12 @@ internal class FakeApi(
         serverTimestamp = "2026-05-26T12:00:00Z"
     )
 
-    override suspend fun getPreferences(authorization: String): UserPreferencesRead? = preferencesResponse
+    override suspend fun getPreferences(authorization: String): Response<UserPreferencesRead?> =
+        if (preferencesResponse == null) {
+            Response.success(204, null as UserPreferencesRead?)
+        } else {
+            Response.success(preferencesResponse)
+        }
 
     override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
         lastPreferencesWritePayload = payload
@@ -986,9 +978,8 @@ internal fun sampleDashboard(): DashboardResponse = DashboardResponse(
     )
 )
 
-private fun sampleTask(userId: Int, id: String = "task-1", text: String = "Task"): TaskRecord = TaskRecord(
+private fun sampleTask(id: String = "task-1", text: String = "Task"): TaskRecord = TaskRecord(
     id = id,
-    userId = userId,
     labelId = null,
     text = text,
     startTime = "2026-05-26T12:00:00Z",
@@ -998,11 +989,10 @@ private fun sampleTask(userId: Int, id: String = "task-1", text: String = "Task"
 )
 
 private fun sampleLabel(id: String = "label-1", name: String = "Focus", color: String = "#FF0000"): LabelRecord =
-    LabelRecord(id = id, userId = 1, name = name, color = color, createdAt = "2026-05-26T12:00:00Z")
+    LabelRecord(id = id, name = name, color = color, createdAt = "2026-05-26T12:00:00Z")
 
 private fun sampleTemplate(id: String = "template-1", text: String = "Deep work"): TemplateRecord = TemplateRecord(
     id = id,
-    userId = 1,
     labelId = null,
     text = text,
     startTime = "09:00:00",

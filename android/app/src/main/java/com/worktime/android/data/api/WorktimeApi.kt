@@ -37,6 +37,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Headers
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -54,51 +55,42 @@ interface WorktimeApi {
     @POST("api/time-tracking/tasks")
     suspend fun createTask(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
         @Body payload: TaskMutationRequest
     ): TaskRecord
 
-    @PUT("api/time-tracking/tasks/{taskId}")
+    @PATCH("api/time-tracking/tasks/{taskId}")
     suspend fun updateTask(
         @Header("Authorization") authorization: String,
         @Path("taskId") taskId: String,
-        @Query("user_id") userId: Int,
         @Body payload: TaskMutationRequest
     ): TaskRecord
 
     @GET("api/time-tracking/tasks/running")
-    suspend fun getRunningTask(
-        @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int
-    ): Response<TaskRecord>
+    suspend fun getRunningTask(@Header("Authorization") authorization: String): Response<TaskRecord>
 
-    @POST("api/work-locations")
+    @PUT("api/work-locations/{valueDate}")
     suspend fun upsertWorkLocation(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
+        @Path("valueDate") valueDate: String,
         @Body payload: WorkLocationMutationRequest
     ): WorkLocationRecord
 
     @GET("api/work-locations")
     suspend fun listWorkLocations(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
         @Query("start_date") startDate: String? = null,
         @Query("end_date") endDate: String? = null
     ): WorkLocationListResponse
 
-    @DELETE("api/time-tracking/labels/{labelId}")
-    suspend fun deleteLabel(
-        @Header("Authorization") authorization: String,
-        @Path("labelId") labelId: String,
-        @Query("user_id") userId: Int
-    )
+    @DELETE("api/labels/{labelId}")
+    suspend fun deleteLabel(@Header("Authorization") authorization: String, @Path("labelId") labelId: String)
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
 
+    @Headers("Prefer: return=minimal")
     @GET("api/preferences")
-    suspend fun getPreferences(@Header("Authorization") authorization: String): UserPreferencesRead?
+    suspend fun getPreferences(@Header("Authorization") authorization: String): Response<UserPreferencesRead?>
 
     @PUT("api/preferences")
     suspend fun putPreferences(
@@ -150,83 +142,59 @@ interface WorktimeApi {
     @DELETE("api/time-off/{entryId}")
     suspend fun deleteTimeOffEntry(@Header("Authorization") authorization: String, @Path("entryId") entryId: String)
 
-    @POST("api/time-tracking/labels")
+    @POST("api/labels")
     suspend fun createLabel(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
         @Body payload: LabelMutationRequest
     ): LabelRecord
 
-    @GET("api/time-tracking/labels")
-    suspend fun listLabels(
-        @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int
-    ): LabelListResponse
+    @GET("api/labels")
+    suspend fun listLabels(@Header("Authorization") authorization: String): LabelListResponse
 
-    @PUT("api/time-tracking/labels/{labelId}")
+    @PATCH("api/labels/{labelId}")
     suspend fun updateLabel(
         @Header("Authorization") authorization: String,
         @Path("labelId") labelId: String,
-        @Query("user_id") userId: Int,
         @Body payload: LabelPatchRequest
     ): LabelRecord
 
     @POST("api/time-tracking/templates")
     suspend fun createTemplate(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
         @Body payload: TemplateMutationRequest
     ): TemplateRecord
 
     @GET("api/time-tracking/templates")
-    suspend fun listTemplates(
-        @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int
-    ): TemplateListResponse
+    suspend fun listTemplates(@Header("Authorization") authorization: String): TemplateListResponse
 
-    @PUT("api/time-tracking/templates/{templateId}")
+    @PATCH("api/time-tracking/templates/{templateId}")
     suspend fun updateTemplate(
         @Header("Authorization") authorization: String,
         @Path("templateId") templateId: String,
-        @Query("user_id") userId: Int,
         @Body payload: TemplatePatchRequest
     ): TemplateRecord
 
     @DELETE("api/time-tracking/templates/{templateId}")
-    suspend fun deleteTemplate(
-        @Header("Authorization") authorization: String,
-        @Path("templateId") templateId: String,
-        @Query("user_id") userId: Int
-    )
+    suspend fun deleteTemplate(@Header("Authorization") authorization: String, @Path("templateId") templateId: String)
 
     @GET("api/time-tracking/tasks")
     suspend fun listTasks(
         @Header("Authorization") authorization: String,
-        @Query("user_id") userId: Int,
         @Query("start_date") startDate: String? = null,
         @Query("end_date") endDate: String? = null
     ): TaskListResponse
 
     @DELETE("api/time-tracking/tasks/{taskId}")
-    suspend fun deleteTask(
-        @Header("Authorization") authorization: String,
-        @Path("taskId") taskId: String,
-        @Query("user_id") userId: Int
-    )
+    suspend fun deleteTask(@Header("Authorization") authorization: String, @Path("taskId") taskId: String)
 
     @GET("api/work-locations/{valueDate}")
     suspend fun getWorkLocation(
         @Header("Authorization") authorization: String,
-        @Path("valueDate") valueDate: String,
-        @Query("user_id") userId: Int
+        @Path("valueDate") valueDate: String
     ): Response<WorkLocationRecord>
 
     @DELETE("api/work-locations/{valueDate}")
-    suspend fun deleteWorkLocation(
-        @Header("Authorization") authorization: String,
-        @Path("valueDate") valueDate: String,
-        @Query("user_id") userId: Int
-    )
+    suspend fun deleteWorkLocation(@Header("Authorization") authorization: String, @Path("valueDate") valueDate: String)
 
     companion object {
         fun create(

@@ -162,7 +162,6 @@ private fun sampleTask(id: String, hoursFromNow: Int, isPlanned: Boolean = true)
     val startTime = java.time.OffsetDateTime.now().plusHours(hoursFromNow.toLong())
     return TaskRecord(
         id = id,
-        userId = 1,
         text = "Task $id",
         startTime = startTime.toString(),
         stopTime = if (isPlanned) startTime.plusHours(1).toString() else null,

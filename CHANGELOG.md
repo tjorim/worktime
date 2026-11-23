@@ -22,6 +22,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Changed
 
+- **Android:** Use the current API routes for tasks, templates, labels and work locations, and handle empty work-location preferences.
 - Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.
 - Administrators can rename users in Settings. Recent activity shows the previous and new username, and members can still edit their own display name.
 

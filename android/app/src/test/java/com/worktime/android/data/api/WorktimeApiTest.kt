@@ -1,10 +1,14 @@
 package com.worktime.android.data.api
 
 import com.worktime.android.data.model.LabelMutationRequest
+import com.worktime.android.data.model.LabelPatchRequest
+import com.worktime.android.data.model.TaskMutationRequest
 import com.worktime.android.data.model.TemplatePatchRequest
 import com.worktime.android.data.model.TimeOffEntryPatchRequest
 import com.worktime.android.data.model.UserPreferencesWrite
+import com.worktime.android.data.model.WorkLocationMutationRequest
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -12,6 +16,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -114,7 +119,7 @@ class WorktimeApiTest {
     }
 
     @Test
-    fun listLabelsSendsUserIdQueryParam() = runTest {
+    fun listLabelsUsesCanonicalCollection() = runTest {
         server.enqueue(
             MockResponse.Builder()
                 .addHeader("Content-Type", "application/json")
@@ -123,11 +128,12 @@ class WorktimeApiTest {
         )
         val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
 
-        api.listLabels(authorization = "Bearer token-123", userId = 42)
+        api.listLabels(authorization = "Bearer token-123")
 
         val request = server.takeRequest()
         val path = request.requestLine.substringAfter(' ').substringBefore(' ')
-        assertEquals("/api/time-tracking/labels?user_id=42", path)
+        assertEquals("GET", request.method)
+        assertEquals("/api/labels", path)
         assertEquals("Bearer token-123", request.headers["Authorization"])
     }
 
@@ -144,12 +150,13 @@ class WorktimeApiTest {
     }
 
     @Test
-    fun createLabelSendsUserIdAndPayload() = runTest {
+    fun createLabelSendsPayloadToCanonicalCollection() = runTest {
         server.enqueue(
             MockResponse.Builder()
                 .addHeader("Content-Type", "application/json")
                 .body(
-                    """{"id":"label-1","user_id":42,"name":"Focus","color":"#2196F3","created_at":"2026-05-26T12:00:00Z"}"""
+                    """{"id":"label-1","name":"Focus","color":"#2196F3","created_at":"2026-05-26T12:00:00Z",""" +
+                        """"updated_at":"2026-05-26T12:00:00Z"}"""
                 ).build()
         )
         val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
@@ -157,7 +164,6 @@ class WorktimeApiTest {
         val response =
             api.createLabel(
                 authorization = "Bearer token-123",
-                userId = 42,
                 payload = LabelMutationRequest(name = "Focus", color = "#2196F3")
             )
 
@@ -165,7 +171,7 @@ class WorktimeApiTest {
         val body = request.body?.utf8().orEmpty()
         assertEquals("POST", request.method)
         assertEquals(
-            "/api/time-tracking/labels?user_id=42",
+            "/api/labels",
             request.requestLine.substringAfter(' ').substringBefore(' ')
         )
         assertEquals("Bearer token-123", request.headers["Authorization"])
@@ -180,8 +186,9 @@ class WorktimeApiTest {
             MockResponse.Builder()
                 .addHeader("Content-Type", "application/json")
                 .body(
-                    """{"id":"template-1","user_id":42,"label_id":"label-1","text":"Standup",""" +
-                        """"start_time":"09:00","stop_time":"09:15","created_at":"2026-05-26T12:00:00Z"}"""
+                    """{"id":"template-1","label_id":"label-1","text":"Standup",""" +
+                        """"start_time":"09:00","stop_time":"09:15","created_at":"2026-05-26T12:00:00Z",""" +
+                        """"updated_at":"2026-05-26T12:00:00Z"}"""
                 ).build()
         )
         val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
@@ -190,7 +197,6 @@ class WorktimeApiTest {
             api.updateTemplate(
                 authorization = "Bearer token-123",
                 templateId = "template-1",
-                userId = 42,
                 payload =
                 TemplatePatchRequest(
                     text = "Standup",
@@ -202,9 +208,9 @@ class WorktimeApiTest {
 
         val request = server.takeRequest()
         val body = request.body?.utf8().orEmpty()
-        assertEquals("PUT", request.method)
+        assertEquals("PATCH", request.method)
         assertEquals(
-            "/api/time-tracking/templates/template-1?user_id=42",
+            "/api/time-tracking/templates/template-1",
             request.requestLine.substringAfter(' ').substringBefore(' ')
         )
         assertEquals(true, body.contains(""""label_id":"label-1""""))
@@ -253,6 +259,105 @@ class WorktimeApiTest {
     }
 
     @Test
+    fun updateTaskSendsOnlyChangedFields() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .body(
+                    """{"id":"task-1","label_id":"label-1","text":"Focus","start_time":"2026-05-26T12:00:00Z",""" +
+                        """"stop_time":"2026-05-26T13:00:00Z","includes_break":false,""" +
+                        """"created_at":"2026-05-26T12:00:00Z","updated_at":"2026-05-26T13:00:00Z"}"""
+                ).build()
+        )
+        val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
+
+        val stopTime = "2026-05-26T13:00:00Z"
+        val response = api.updateTask("Bearer token-123", "task-1", TaskMutationRequest(stopTime = stopTime))
+
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/api/time-tracking/tasks/task-1", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals(
+            JsonObject(mapOf("stop_time" to JsonPrimitive(stopTime))),
+            Json.parseToJsonElement(requireNotNull(request.body).utf8())
+        )
+        assertEquals(stopTime, response.stopTime)
+    }
+
+    @Test
+    fun updateLabelUsesCanonicalPatchRoute() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .body(
+                    """{"id":"label-1","name":"Focus","color":"#2196F3","created_at":"2026-05-26T12:00:00Z",""" +
+                        """"updated_at":"2026-05-26T12:00:00Z"}"""
+                ).build()
+        )
+        val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
+
+        val response = api.updateLabel("Bearer token-123", "label-1", LabelPatchRequest(name = "Focus"))
+
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/api/labels/label-1", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals(
+            JsonObject(mapOf("name" to JsonPrimitive("Focus"))),
+            Json.parseToJsonElement(requireNotNull(request.body).utf8())
+        )
+        assertEquals("Focus", response.name)
+    }
+
+    @Test
+    fun deleteLabelUsesCanonicalItemRoute() = runTest {
+        server.enqueue(MockResponse.Builder().code(204).build())
+        val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
+
+        api.deleteLabel("Bearer token-123", "label-1")
+
+        val request = server.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/labels/label-1", request.requestLine.substringAfter(' ').substringBefore(' '))
+    }
+
+    @Test
+    fun upsertWorkLocationSendsDateInPathOnly() = runTest {
+        server.enqueue(
+            MockResponse.Builder()
+                .body(
+                    """{"id":1,"date":"2026-05-26","country_code":"BE","label":null,""" +
+                        """"created_at":"2026-05-26T12:00:00Z","updated_at":"2026-05-26T12:00:00Z"}"""
+                ).build()
+        )
+        val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
+
+        val response = api.upsertWorkLocation("Bearer token-123", "2026-05-26", WorkLocationMutationRequest("BE"))
+
+        val request = server.takeRequest()
+        assertEquals("PUT", request.method)
+        assertEquals("/api/work-locations/2026-05-26", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals(
+            JsonObject(mapOf("country_code" to JsonPrimitive("BE"))),
+            Json.parseToJsonElement(requireNotNull(request.body).utf8())
+        )
+        assertEquals("2026-05-26", response.date)
+    }
+
+    @Test
+    fun getPreferencesRequestsMinimalResponseAndAcceptsEmptyBody() = runTest {
+        server.enqueue(MockResponse.Builder().code(204).build())
+        val api = WorktimeApi.create(baseUrl = server.url("/").toString(), enableNetworkLogging = false)
+
+        val response = api.getPreferences("Bearer token-123")
+
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("/api/preferences", request.requestLine.substringAfter(' ').substringBefore(' '))
+        assertEquals("return=minimal", request.headers["Prefer"])
+        assertEquals("Bearer token-123", request.headers["Authorization"])
+        assertEquals(204, response.code())
+        assertNull(response.body())
+    }
+
+    @Test
     fun putPreferencesSendsNestedDataPayload() = runTest {
         server.enqueue(
             MockResponse.Builder()
@@ -273,7 +378,8 @@ class WorktimeApiTest {
                             "work_location_home_country" to JsonPrimitive("BE"),
                             "work_location_office_country" to JsonPrimitive("NL")
                         )
-                    )
+                    ),
+                    clientUpdatedAt = "2026-11-23T12:00:00Z"
                 )
             )
 
@@ -282,6 +388,7 @@ class WorktimeApiTest {
         assertEquals("PUT", request.method)
         assertEquals("/api/preferences", request.requestLine.substringAfter(' ').substringBefore(' '))
         assertEquals(true, body.contains(""""work_location_home_country":"BE""""))
+        assertEquals(true, body.contains(""""client_updated_at":"2026-11-23T12:00:00Z""""))
         assertEquals(JsonPrimitive("NL"), response.data["work_location_office_country"])
     }
 }

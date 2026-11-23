@@ -647,7 +647,6 @@ class DashboardViewModelTest {
         ): MutationResult<WorkLocationRecord> = MutationResult.Success(
             WorkLocationRecord(
                 id = 1,
-                userId = 1,
                 date = date.toString(),
                 countryCode = countryCode,
                 label = label,
@@ -816,7 +815,6 @@ private fun sampleDashboard(): DashboardResponse = DashboardResponse(
 
 private fun sampleTask(): TaskRecord = TaskRecord(
     id = "task-1",
-    userId = 1,
     labelId = null,
     text = "Focus work",
     startTime = "2026-05-26T12:00:00Z",
@@ -827,7 +825,6 @@ private fun sampleTask(): TaskRecord = TaskRecord(
 
 private fun sampleLabel(): LabelRecord = LabelRecord(
     id = "label-1",
-    userId = 1,
     name = "Focus",
     color = "#FF0000",
     createdAt = "2026-05-26T12:00:00Z"
@@ -835,7 +832,6 @@ private fun sampleLabel(): LabelRecord = LabelRecord(
 
 private fun sampleTemplate(): TemplateRecord = TemplateRecord(
     id = "template-1",
-    userId = 1,
     labelId = null,
     text = "Deep work",
     startTime = "09:00:00",

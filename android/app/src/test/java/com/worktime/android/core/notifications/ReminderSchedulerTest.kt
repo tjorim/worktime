@@ -52,7 +52,6 @@ class ReminderSchedulerTest {
         val stopTime = startTime.plusHours(1)
         return TaskRecord(
             id = taskId,
-            userId = 1,
             text = "Team meeting",
             startTime = startTime.toString(),
             stopTime = stopTime.toString(),
@@ -65,7 +64,6 @@ class ReminderSchedulerTest {
         val startTime = java.time.OffsetDateTime.now().plusHours(hoursAgo.toLong())
         return TaskRecord(
             id = taskId,
-            userId = 1,
             text = "Test Task",
             startTime = startTime.toString(),
             stopTime = null,
@@ -111,7 +109,6 @@ class ReminderSchedulerTest {
             .withNano(0)
         val task = TaskRecord(
             id = "planned-tz",
-            userId = 1,
             text = "Team meeting",
             startTime = startTime.toString(),
             stopTime = startTime.plusHours(1).toString(),
