@@ -100,7 +100,7 @@ LegacyPreferences = Annotated[
 class UserPreferencesRead(ResponseModel):
     """The authenticated user's preferences, including legacy documents."""
 
-    user_id: int
+    user_id: int = Field(deprecated=True)
     data: AccountPreferences | dict[str, Any] = Field(union_mode="left_to_right")
     client_updated_at: dt_datetime
     created_at: dt_datetime

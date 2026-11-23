@@ -14,18 +14,19 @@ import type {
 } from "@/api-types";
 import type { FetchFn } from "@/lib/sync/syncRequests";
 
-/**
- * Call GET /api/preferences.
- * Returns null if the request fails or returns 404 (no preferences stored yet).
- */
+/** Read preferences, treating both the canonical and legacy empty responses as absence. */
+export async function readPreferences(fetch: FetchFn): Promise<PreferencesResponse | null> {
+  const response = await fetch("/api/preferences", { headers: { Prefer: "return=minimal" } });
+  if (response.status === 204) return null;
+  if (!response.ok) throw new Error("Account preferences could not be loaded");
+  return (await response.json()) as PreferencesResponse | null;
+}
+
+/** Read preferences during reconciliation without interrupting sync on a failed read. */
 export async function fetchPreferences(fetch: FetchFn): Promise<PreferencesResponse | null> {
   try {
-    const response = await fetch("/api/preferences");
-    if (!response.ok) return null;
-    const body: unknown = await response.json();
-    // The endpoint returns null (JSON null) when no preferences exist yet.
-    if (body === null || typeof body !== "object") return null;
-    return body as PreferencesResponse;
+    const body = await readPreferences(fetch);
+    return body !== null && typeof body === "object" ? body : null;
   } catch {
     return null;
   }

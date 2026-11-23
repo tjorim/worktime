@@ -11,6 +11,7 @@ import type { UserPreferencesReadData } from './userPreferencesReadData';
  * The authenticated user's preferences, including legacy documents.
  */
 export type UserPreferencesRead = {
+  /** @deprecated */
   user_id: number;
   data: UserPreferencesReadData;
   client_updated_at: string;

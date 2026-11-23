@@ -152,7 +152,6 @@ it("refreshes actual saved rows after a partially committed conflict", async () 
               server_updated_at: null,
               conflict_reason: null,
               code: null,
-              conflicting_task_id: null,
             },
             {
               id: "old",
@@ -160,7 +159,6 @@ it("refreshes actual saved rows after a partially committed conflict", async () 
               server_updated_at: null,
               conflict_reason: null,
               code: null,
-              conflicting_task_id: null,
             },
           ],
         }),

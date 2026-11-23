@@ -8,6 +8,7 @@
 
 export type TaskRead = {
   id: string;
+  /** @deprecated */
   user_id: number;
   label_id: string | null;
   gantt_task_id: string | null;
@@ -16,4 +17,5 @@ export type TaskRead = {
   stop_time: string | null;
   includes_break: boolean;
   created_at: string;
+  updated_at: string;
 };

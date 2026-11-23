@@ -5,15 +5,8 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: snapshot
  */
-import type { WorkLocationSyncItemAction } from './workLocationSyncItemAction';
+import type { WorkLocationSyncCreateItem } from './workLocationSyncCreateItem';
+import type { WorkLocationSyncDeleteItem } from './workLocationSyncDeleteItem';
+import type { WorkLocationSyncUpdateItem } from './workLocationSyncUpdateItem';
 
-/**
- * Work locations are identified by date (natural key) rather than an integer PK.
- */
-export type WorkLocationSyncItem = {
-  date: string;
-  action: WorkLocationSyncItemAction;
-  client_updated_at: string;
-  country_code?: string | null;
-  label?: string | null;
-};
+export type WorkLocationSyncItem = WorkLocationSyncCreateItem | WorkLocationSyncUpdateItem | WorkLocationSyncDeleteItem;

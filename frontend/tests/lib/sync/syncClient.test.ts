@@ -1639,12 +1639,21 @@ describe("syncClient", () => {
       });
       const result = await fetchPreferences(mockFetch);
       expect(result).toEqual(prefs);
-      expect(mockFetch).toHaveBeenCalledWith("/api/preferences");
+      expect(mockFetch).toHaveBeenCalledWith("/api/preferences", {
+        headers: { Prefer: "return=minimal" },
+      });
     });
 
     it("returns null when response is not ok", async () => {
       mockFetch.mockResolvedValue({ ok: false });
       expect(await fetchPreferences(mockFetch)).toBeNull();
+    });
+
+    it("returns null without reading a body when the server returns 204", async () => {
+      const json = vi.fn();
+      mockFetch.mockResolvedValue({ ok: true, status: 204, json });
+      expect(await fetchPreferences(mockFetch)).toBeNull();
+      expect(json).not.toHaveBeenCalled();
     });
 
     it("returns null when server returns JSON null", async () => {
@@ -1770,7 +1779,6 @@ describe("syncClient", () => {
           {
             server_updated_at: null,
             conflict_reason: null,
-            conflicting_task_id: null,
             id: "g1",
             status: "conflict",
             code: "gantt_dependency_cycle",
@@ -1780,7 +1788,6 @@ describe("syncClient", () => {
           {
             server_updated_at: null,
             conflict_reason: null,
-            conflicting_task_id: null,
             id: "tpl1",
             status: "conflict",
             code: "label_required",
@@ -1788,7 +1795,6 @@ describe("syncClient", () => {
           {
             server_updated_at: null,
             conflict_reason: null,
-            conflicting_task_id: null,
             id: "tpl2",
             status: "conflict",
             code: "task_overlap",
@@ -1797,7 +1803,6 @@ describe("syncClient", () => {
             server_updated_at: null,
             conflict_reason: null,
             code: null,
-            conflicting_task_id: null,
             id: "tpl3",
             status: "ok",
           },

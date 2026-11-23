@@ -9,7 +9,7 @@ import type {
   PreferencesResponse,
   SyncPullResponse,
   SyncPushResponse,
-  SyncRecordResult,
+  TaskSyncRecordResult,
   SyncStatusResponse,
 } from "@/api-types";
 
@@ -18,8 +18,8 @@ import type {
  * (a conflict has no `server_updated_at` until the server wins, an ok has no `conflict_reason`).
  */
 export function syncRecordResult(
-  result: Pick<SyncRecordResult, "id" | "status"> & Partial<SyncRecordResult>,
-): SyncRecordResult {
+  result: Pick<TaskSyncRecordResult, "id" | "status"> & Partial<TaskSyncRecordResult>,
+): TaskSyncRecordResult {
   return {
     server_updated_at: null,
     conflict_reason: null,

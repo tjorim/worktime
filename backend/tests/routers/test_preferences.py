@@ -52,6 +52,16 @@ class TestGetPreferences:
         assert resp.status_code == 200
         assert resp.json() is None
 
+    def test_empty_preferences_opt_in(self, db_client, auth_headers, create_user_factory):
+        user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "prefs-get-minimal")
+        headers = {**auth_headers(user_id), "Prefer": "return=minimal"}
+        response = db_client.get("/api/preferences", headers=headers)
+
+        assert response.status_code == 204
+        assert not response.content
+        assert response.headers["Preference-Applied"] == "return=minimal"
+        assert "Prefer" in response.headers["Vary"]
+
     def test_returns_stored_preferences(
         self,
         db_client: TestClient,
@@ -69,7 +79,7 @@ class TestGetPreferences:
             headers=headers,
         )
 
-        resp = db_client.get("/api/preferences", headers=headers)
+        resp = db_client.get("/api/preferences", headers={**headers, "Prefer": "return=minimal"})
         assert resp.status_code == 200
         body = resp.json()
         assert body is not None

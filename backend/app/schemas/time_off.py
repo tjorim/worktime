@@ -6,7 +6,7 @@ from datetime import date as dt_date
 from datetime import datetime as dt_datetime
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from app.schemas.base import ListResponse, NonEmptyText, RequestModel, ResponseModel
 
@@ -73,7 +73,7 @@ class TimeOffEntryRead(ResponseModel):
 
     id: int
     entry_id: str
-    user_id: int
+    user_id: int = Field(deprecated=True)
     entry_kind: EntryKind
     date: dt_date | None
     start_date: dt_date | None

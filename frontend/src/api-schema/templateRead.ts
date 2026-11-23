@@ -8,10 +8,12 @@
 
 export type TemplateRead = {
   id: string;
+  /** @deprecated */
   user_id: number;
   label_id: string | null;
   text: string;
   start_time: string;
   stop_time: string;
   created_at: string;
+  updated_at: string;
 };

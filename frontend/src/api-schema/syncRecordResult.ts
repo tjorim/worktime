@@ -16,5 +16,4 @@ export type SyncRecordResult = {
   server_updated_at: string | null;
   conflict_reason: string | null;
   code: string | null;
-  conflicting_task_id: string | null;
 };

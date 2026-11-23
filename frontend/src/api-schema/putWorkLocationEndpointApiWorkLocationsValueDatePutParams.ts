@@ -6,9 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type ListLabelsEndpointApiTimeTrackingLabelsGetParams = {
+export type PutWorkLocationEndpointApiWorkLocationsValueDatePutParams = {
   user_id?: number | null;
-  limit?: number | null;
-  /** @minimum 0 */
-  offset?: number;
 };

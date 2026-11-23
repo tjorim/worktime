@@ -39,6 +39,7 @@ export type {
   WorkLocationListResponse,
   WorkLocationRead,
   WorkLocationCreate,
+  WorkLocationPut,
   // Sync wire format (`/api/sync/*`)
   GanttTaskSyncItem,
   GanttTaskSyncRead,
@@ -48,6 +49,7 @@ export type {
   SyncPushRequest,
   SyncPushResponse,
   SyncRecordResult,
+  TaskSyncRecordResult,
   SyncStatusResponse,
   TaskSyncItem,
   TaskSyncRead,

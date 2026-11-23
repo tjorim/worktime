@@ -24,6 +24,7 @@ from app.schemas import (
     WorkLocationListResponse,
     WorkLocationRead,
 )
+from app.schemas.work_locations import WorkLocationPut
 from app.services.db_service import (
     NotFoundError,
     ValidationError,
@@ -36,12 +37,37 @@ from app.services.db_service import (
 router = APIRouter(prefix="/work-locations", tags=["Work Locations"])
 
 
-@router.post("", response_model=WorkLocationRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WorkLocationRead, status_code=status.HTTP_201_CREATED, deprecated=True)
 async def create_or_update_work_location_endpoint(
     payload: WorkLocationCreate,
     user_id: int | None = Query(default=None, ge=1),
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
     session: AsyncSession = Depends(get_session),
+) -> WorkLocationRead:
+    return await _write_work_location(payload, user_id, principal, session)
+
+
+@router.put("/{value_date}", response_model=WorkLocationRead)
+async def put_work_location_endpoint(
+    value_date: date,
+    payload: WorkLocationPut,
+    user_id: int | None = Query(default=None, ge=1),
+    principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
+    session: AsyncSession = Depends(get_session),
+) -> WorkLocationRead:
+    return await _write_work_location(
+        WorkLocationCreate(date=value_date, country_code=payload.country_code, label=payload.label),
+        user_id,
+        principal,
+        session,
+    )
+
+
+async def _write_work_location(
+    payload: WorkLocationCreate,
+    user_id: int | None,
+    principal: AuthenticatedPrincipal,
+    session: AsyncSession,
 ) -> WorkLocationRead:
     user_id = resolve_scoped_user_id(user_id, principal.user_id)
 

@@ -833,7 +833,6 @@ describe("useOngoingSync", () => {
             {
               server_updated_at: null,
               code: null,
-              conflicting_task_id: null,
               id: "label-1",
               status: "conflict" as const,
               conflict_reason: "server version is newer",
@@ -930,7 +929,6 @@ describe("useOngoingSync", () => {
             {
               server_updated_at: null,
               code: null,
-              conflicting_task_id: null,
               id: "label-1",
               status: "conflict" as const,
               conflict_reason: "server version is newer",
@@ -1042,7 +1040,6 @@ describe("useOngoingSync", () => {
             {
               server_updated_at: null,
               code: null,
-              conflicting_task_id: null,
               id: "lbl-1",
               status: "conflict" as const,
               conflict_reason: "server is newer",
@@ -1133,7 +1130,6 @@ describe("useOngoingSync", () => {
             {
               server_updated_at: null,
               code: null,
-              conflicting_task_id: null,
               id: "lbl-1",
               status: "conflict" as const,
               conflict_reason: "server is newer",
@@ -1206,7 +1202,6 @@ describe("useOngoingSync", () => {
             {
               server_updated_at: null,
               code: null,
-              conflicting_task_id: null,
               id: "lbl-1",
               status: "conflict" as const,
               conflict_reason: "server is newer",
@@ -1299,7 +1294,6 @@ describe("useOngoingSync", () => {
                   server_updated_at: null,
                   conflict_reason: null,
                   code: null,
-                  conflicting_task_id: null,
                   id: "lbl-1",
                   status: "ok",
                 },

@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type UpdateGanttTaskEndpointApiGanttTasksTaskIdPutParams = {
+export type CreateLabelEndpointApiLabelsPostParams = {
   user_id?: number | null;
 };

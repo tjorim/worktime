@@ -169,8 +169,8 @@ else:
 _cors_kwargs: dict[str, Any] = {
     "allow_origins": cors_origins,
     "allow_credentials": "*" not in cors_origins,
-    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization", "X-Request-ID"],
+    "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "Prefer", "X-Request-ID"],
     "expose_headers": [
         "Retry-After",
         "X-RateLimit-Limit",
@@ -245,6 +245,7 @@ if settings.DATABASE_ENABLED:
     from .routers.registration import router as registration_router
     from .routers.sync import router as sync_router
     from .routers.time_off import router as time_off_router
+    from .routers.time_tracking import labels_router
     from .routers.time_tracking import router as time_tracking_router
     from .routers.users import router as users_router
     from .routers.work_locations import router as work_locations_router
@@ -257,6 +258,7 @@ if settings.DATABASE_ENABLED:
     app.include_router(client_diagnostics_router, prefix="/api")
     app.include_router(registration_router, prefix="/api")
     app.include_router(users_router, prefix="/api")
+    app.include_router(labels_router, prefix="/api")
     app.include_router(time_tracking_router, prefix="/api")
     app.include_router(work_locations_router, prefix="/api")
     app.include_router(gantt_router, prefix="/api")

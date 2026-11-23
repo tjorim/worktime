@@ -28,7 +28,7 @@ def test_unknown_label_field_does_not_create_a_row(
         ({"taskz": []}, ("taskz",)),
         (
             {"tasks": [{"id": "task", "action": "update", "client_updated_at": "2026-10-23T10:00:00Z", "txt": "lost"}]},
-            ("tasks", 0, "txt"),
+            ("tasks", 0, "update", "txt"),
         ),
     ],
 )

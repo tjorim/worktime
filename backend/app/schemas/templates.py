@@ -21,12 +21,13 @@ class TemplateCreate(RequestModel):
 
 class TemplateRead(ResponseModel):
     id: str
-    user_id: int
+    user_id: int = Field(deprecated=True)
     label_id: str | None
     text: str
     start_time: dt_time
     stop_time: dt_time
     created_at: dt_datetime
+    updated_at: dt_datetime
 
 
 class TemplateUpdate(RequestModel):

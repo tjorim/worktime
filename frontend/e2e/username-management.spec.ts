@@ -42,11 +42,11 @@ for (const theme of ["light", "dark"]) {
           }),
         );
       });
-      await page.route("**/api/users/?*", (route) =>
+      await page.route("**/api/users?*", (route) =>
         route.fulfill(routeJson<UserListResponse>({ items: [admin, member], total: 2 })),
       );
       await page.route("**/api/users/2", async (route) => {
-        expect(route.request().method()).toBe("PUT");
+        expect(route.request().method()).toBe("PATCH");
         const body = route.request().postDataJSON();
         if (body.username === "admin-user") {
           const failure = {

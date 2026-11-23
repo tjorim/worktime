@@ -5,12 +5,8 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: snapshot
  */
-import type { LabelSyncItemAction } from './labelSyncItemAction';
+import type { LabelSyncCreateItem } from './labelSyncCreateItem';
+import type { LabelSyncDeleteItem } from './labelSyncDeleteItem';
+import type { LabelSyncUpdateItem } from './labelSyncUpdateItem';
 
-export type LabelSyncItem = {
-  id: string;
-  action: LabelSyncItemAction;
-  client_updated_at: string;
-  name?: string | null;
-  color?: string | null;
-};
+export type LabelSyncItem = LabelSyncCreateItem | LabelSyncUpdateItem | LabelSyncDeleteItem;

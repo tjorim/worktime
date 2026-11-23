@@ -57,6 +57,7 @@ from app.services.db_service import (
 )
 
 router = APIRouter(prefix="/time-tracking", tags=["Time Tracking"])
+labels_router = APIRouter(prefix="/labels", tags=["Labels"])
 
 
 def _handle_error(error: Exception) -> None:
@@ -72,7 +73,8 @@ def _handle_error(error: Exception) -> None:
     raise error
 
 
-@router.post("/labels", response_model=LabelRead, status_code=status.HTTP_201_CREATED)
+@labels_router.post("", response_model=LabelRead, status_code=status.HTTP_201_CREATED)
+@router.post("/labels", response_model=LabelRead, status_code=status.HTTP_201_CREATED, deprecated=True)
 async def create_label_endpoint(
     payload: LabelCreate,
     user_id: int | None = Query(default=None, ge=1),
@@ -89,7 +91,8 @@ async def create_label_endpoint(
     return LabelRead.model_validate(label, from_attributes=True)
 
 
-@router.get("/labels", response_model=LabelListResponse)
+@labels_router.get("", response_model=LabelListResponse)
+@router.get("/labels", response_model=LabelListResponse, deprecated=True)
 async def list_labels_endpoint(
     user_id: int | None = Query(default=None, ge=1),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
@@ -114,7 +117,8 @@ async def list_labels_endpoint(
     )
 
 
-@router.get("/labels/{label_id}", response_model=LabelRead)
+@labels_router.get("/{label_id}", response_model=LabelRead)
+@router.get("/labels/{label_id}", response_model=LabelRead, deprecated=True)
 async def get_label_endpoint(
     label_id: str,
     user_id: int | None = Query(default=None, ge=1),
@@ -131,7 +135,8 @@ async def get_label_endpoint(
     return LabelRead.model_validate(label, from_attributes=True)
 
 
-@router.put("/labels/{label_id}", response_model=LabelRead)
+@labels_router.patch("/{label_id}", response_model=LabelRead)
+@router.put("/labels/{label_id}", response_model=LabelRead, deprecated=True)
 async def update_label_endpoint(
     label_id: str,
     payload: LabelUpdate,
@@ -149,7 +154,8 @@ async def update_label_endpoint(
     return LabelRead.model_validate(label, from_attributes=True)
 
 
-@router.delete("/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
+@labels_router.delete("/{label_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/labels/{label_id}", status_code=status.HTTP_204_NO_CONTENT, deprecated=True)
 async def delete_label_endpoint(
     label_id: str,
     user_id: int | None = Query(default=None, ge=1),
@@ -263,7 +269,8 @@ async def get_task_endpoint(
     return TaskRead.model_validate(task, from_attributes=True)
 
 
-@router.put("/tasks/{task_id}", response_model=TaskRead)
+@router.patch("/tasks/{task_id}", response_model=TaskRead)
+@router.put("/tasks/{task_id}", response_model=TaskRead, deprecated=True)
 async def update_task_endpoint(
     task_id: str,
     payload: TaskUpdate,
@@ -357,7 +364,8 @@ async def get_template_endpoint(
     return TemplateRead.model_validate(template, from_attributes=True)
 
 
-@router.put("/templates/{template_id}", response_model=TemplateRead)
+@router.patch("/templates/{template_id}", response_model=TemplateRead)
+@router.put("/templates/{template_id}", response_model=TemplateRead, deprecated=True)
 async def update_template_endpoint(
     template_id: str,
     payload: TemplateUpdate,

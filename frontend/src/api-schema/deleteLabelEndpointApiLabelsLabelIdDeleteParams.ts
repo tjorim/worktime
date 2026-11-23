@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type UpdateLabelEndpointApiTimeTrackingLabelsLabelIdPutParams = {
+export type DeleteLabelEndpointApiLabelsLabelIdDeleteParams = {
   user_id?: number | null;
 };

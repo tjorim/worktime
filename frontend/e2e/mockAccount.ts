@@ -36,7 +36,13 @@ export async function mockAccount(context: BrowserContext) {
   await context.route("**/api/**", async (route) => {
     const { pathname } = new URL(route.request().url());
     const method = route.request().method();
-    if (method === "GET" && pathname in responses) {
+    if (
+      method === "GET" &&
+      pathname === "/api/preferences" &&
+      route.request().headers().prefer === "return=minimal"
+    ) {
+      await route.fulfill({ status: 204 });
+    } else if (method === "GET" && pathname in responses) {
       await route.fulfill(
         routeJson<(typeof responses)[keyof typeof responses]>(
           responses[pathname as keyof typeof responses],

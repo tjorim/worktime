@@ -6,6 +6,7 @@
  * OpenAPI spec version: snapshot
  */
 
-export type CreateOrUpdateWorkLocationEndpointApiWorkLocationsPostParams = {
-  user_id?: number | null;
+export type WorkLocationPut = {
+  country_code: string;
+  label?: string | null;
 };

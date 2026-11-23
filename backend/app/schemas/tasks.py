@@ -22,7 +22,7 @@ class TaskCreate(RequestModel):
 
 class TaskRead(ResponseModel):
     id: str
-    user_id: int
+    user_id: int = Field(deprecated=True)
     label_id: str | None
     gantt_task_id: str | None
     text: str
@@ -30,6 +30,7 @@ class TaskRead(ResponseModel):
     stop_time: dt_datetime | None
     includes_break: bool
     created_at: dt_datetime
+    updated_at: dt_datetime
 
 
 class TaskUpdate(RequestModel):

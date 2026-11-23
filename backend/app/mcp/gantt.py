@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.mcp.context import WorktimeMcpContext, actor_from_context, validate_arguments
 from app.mcp.formatting import to_iso_date
-from app.schemas import GanttTaskCreate, GanttTaskRead, GanttTaskUpdate
+from app.schemas import GanttTaskCreate, GanttTaskUpdate
+from app.schemas.gantt import LegacyGanttTaskRead
 from app.services.audit import logger as audit
 from app.services.db_service import (
     create_gantt_task as create_gantt_task_service,
@@ -39,7 +40,7 @@ async def get_gantt_tasks(
 ) -> dict[str, Any]:
     if task_id:
         task = await get_gantt_task(db, context.user_id, task_id)
-        payload_tasks = [GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")]
+        payload_tasks = [LegacyGanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")]
         total_tasks = 1
         if active_on is not None:
             payload_tasks = [
@@ -52,7 +53,7 @@ async def get_gantt_tasks(
             db, user_id=context.user_id, active_on=active_on, limit=MAX_GANTT_TASKS_RETURNED
         )
         payload_tasks = [
-            GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks
+            LegacyGanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json") for task in tasks
         ]
 
     truncated = total_tasks > MAX_GANTT_TASKS_RETURNED
@@ -100,7 +101,7 @@ async def create_gantt_task(
         action="create_gantt_task",
         details="via MCP",
     )
-    return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+    return LegacyGanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
 
 async def update_gantt_task(
@@ -151,7 +152,7 @@ async def update_gantt_task(
         action="update_gantt_task",
         details="via MCP",
     )
-    return GanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
+    return LegacyGanttTaskRead.model_validate(task, from_attributes=True).model_dump(mode="json")
 
 
 async def delete_gantt_task(context: WorktimeMcpContext, db: AsyncSession, task_id: str) -> dict[str, Any]:

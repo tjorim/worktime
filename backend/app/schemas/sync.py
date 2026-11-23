@@ -7,7 +7,7 @@ from datetime import datetime as dt_datetime
 from datetime import time as dt_time
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SerializerFunctionWrapHandler, model_serializer, model_validator
 
 from app.schemas.base import NonEmptyText, RequestModel, ResponseModel
 from app.schemas.time_off import EntryFlag, EntryKind, EntryType
@@ -21,6 +21,16 @@ class SyncRecordResult(ResponseModel):
     server_updated_at: dt_datetime | None = None
     conflict_reason: str | None = None
     code: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_legacy_conflict_key(self, handler: SerializerFunctionWrapHandler):
+        data = handler(self)
+        # Older clients received this key for every entity. Its value is meaningful only for tasks.
+        data.setdefault("conflicting_task_id", None)
+        return data
+
+
+class TaskSyncRecordResult(SyncRecordResult):
     conflicting_task_id: str | None = None
 
 
@@ -96,20 +106,36 @@ class TimeOffEntrySyncRead(ResponseModel):
     deleted_at: dt_datetime | None
 
 
-# Sync push request item schemas — one per entity type.
-# For 'create'/'update' actions the entity fields are required in practice;
-# for 'delete' only the identity field is strictly needed.
-class LabelSyncItem(RequestModel):
+# Keep accepting optional payload fields on legacy deletes. For non-Gantt creates,
+# required values are checked per record by the sync service so a rejected create
+# does not invalidate the whole batch.
+class LabelSyncFields(RequestModel):
     id: str
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     name: str | None = None
     color: str | None = None
 
 
-class TaskSyncItem(RequestModel):
+class LabelSyncCreateItem(LabelSyncFields):
+    action: Literal["create"]
+
+
+class LabelSyncUpdateItem(LabelSyncFields):
+    action: Literal["update"]
+
+
+class LabelSyncDeleteItem(LabelSyncFields):
+    action: Literal["delete"]
+
+
+type LabelSyncItem = Annotated[
+    LabelSyncCreateItem | LabelSyncUpdateItem | LabelSyncDeleteItem,
+    Field(discriminator="action"),
+]
+
+
+class TaskSyncFields(RequestModel):
     id: str
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     label_id: str | None = None
     gantt_task_id: str | None = None
@@ -119,9 +145,26 @@ class TaskSyncItem(RequestModel):
     includes_break: bool | None = None
 
 
-class TemplateSyncItem(RequestModel):
+class TaskSyncCreateItem(TaskSyncFields):
+    action: Literal["create"]
+
+
+class TaskSyncUpdateItem(TaskSyncFields):
+    action: Literal["update"]
+
+
+class TaskSyncDeleteItem(TaskSyncFields):
+    action: Literal["delete"]
+
+
+type TaskSyncItem = Annotated[
+    TaskSyncCreateItem | TaskSyncUpdateItem | TaskSyncDeleteItem,
+    Field(discriminator="action"),
+]
+
+
+class TemplateSyncFields(RequestModel):
     id: str
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     label_id: str | None = None
     text: str | None = None
@@ -129,14 +172,49 @@ class TemplateSyncItem(RequestModel):
     stop_time: dt_time | None = None
 
 
-class WorkLocationSyncItem(RequestModel):
+class TemplateSyncCreateItem(TemplateSyncFields):
+    action: Literal["create"]
+
+
+class TemplateSyncUpdateItem(TemplateSyncFields):
+    action: Literal["update"]
+
+
+class TemplateSyncDeleteItem(TemplateSyncFields):
+    action: Literal["delete"]
+
+
+type TemplateSyncItem = Annotated[
+    TemplateSyncCreateItem | TemplateSyncUpdateItem | TemplateSyncDeleteItem,
+    Field(discriminator="action"),
+]
+
+
+class WorkLocationSyncFields(RequestModel):
     """Work locations are identified by date (natural key) rather than an integer PK."""
 
     date: dt_date
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
     country_code: str | None = None
     label: str | None = None
+
+
+class WorkLocationSyncCreateItem(WorkLocationSyncFields):
+    action: Literal["create"]
+
+
+class WorkLocationSyncUpdateItem(WorkLocationSyncFields):
+    action: Literal["update"]
+
+
+class WorkLocationSyncDeleteItem(WorkLocationSyncFields):
+    action: Literal["delete"]
+
+
+type WorkLocationSyncItem = Annotated[
+    WorkLocationSyncCreateItem | WorkLocationSyncUpdateItem | WorkLocationSyncDeleteItem,
+    Field(discriminator="action"),
+]
 
 
 class TimeOffEntrySyncItemBase(RequestModel):
@@ -239,30 +317,52 @@ type TimeOffEntrySyncItem = Annotated[
 ]
 
 
-class GanttTaskSyncItem(RequestModel):
+class GanttTaskSyncBase(RequestModel):
     id: str
-    action: Literal["create", "update", "delete"]
     client_updated_at: dt_datetime
-    name: str | None = None
     label_id: str | None = None
-    start_date: dt_date | None = None
-    end_date: dt_date | None = None
     progress: int | None = Field(default=None, ge=0, le=100)
     dependencies: str | None = None
     notes: str | None = None
 
+
+class GanttTaskSyncFields(GanttTaskSyncBase):
+    name: str | None = None
+    start_date: dt_date | None = None
+    end_date: dt_date | None = None
+
     @model_validator(mode="after")
-    def validate_create_fields(self) -> GanttTaskSyncItem:
-        if self.action == "create":
-            missing = [f for f in ("name", "start_date", "end_date") if getattr(self, f) is None]
-            if missing:
-                raise ValueError(f"Fields required for action 'create': {', '.join(missing)}")
-        # Only catches the create case, since start_date/end_date may each be
-        # provided independently on a partial update — _push_gantt_task
-        # re-checks the merged candidate dates for that case.
+    def validate_date_range(self) -> GanttTaskSyncFields:
         if self.start_date is not None and self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("end_date cannot be earlier than start_date")
         return self
+
+
+class GanttTaskSyncCreateItem(GanttTaskSyncBase):
+    action: Literal["create"]
+    name: str
+    start_date: dt_date
+    end_date: dt_date
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> GanttTaskSyncCreateItem:
+        if self.end_date < self.start_date:
+            raise ValueError("end_date cannot be earlier than start_date")
+        return self
+
+
+class GanttTaskSyncUpdateItem(GanttTaskSyncFields):
+    action: Literal["update"]
+
+
+class GanttTaskSyncDeleteItem(GanttTaskSyncFields):
+    action: Literal["delete"]
+
+
+type GanttTaskSyncItem = Annotated[
+    GanttTaskSyncCreateItem | GanttTaskSyncUpdateItem | GanttTaskSyncDeleteItem,
+    Field(discriminator="action"),
+]
 
 
 class GanttTaskSyncRead(ResponseModel):
@@ -348,7 +448,7 @@ class SyncPushResults(ResponseModel):
     """The six entity collections always returned by a sync push, including empty ones."""
 
     labels: list[SyncRecordResult]
-    tasks: list[SyncRecordResult]
+    tasks: list[TaskSyncRecordResult]
     templates: list[SyncRecordResult]
     work_locations: list[SyncRecordResult]
     time_off_entries: list[SyncRecordResult]

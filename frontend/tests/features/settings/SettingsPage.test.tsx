@@ -595,7 +595,7 @@ describe("SettingsPage Account Section", () => {
 
   it("saves profile changes for authenticated users", async () => {
     server.use(
-      http.put("*/api/users/:id", async ({ params, request }) => {
+      http.patch("*/api/users/:id", async ({ params, request }) => {
         const body = (await request.json()) as { display_name?: string };
         return jsonResponse<UserRead>({
           id: Number(params.id),
@@ -626,7 +626,7 @@ describe("SettingsPage Account Section", () => {
     ["unknown_code", "Could not save your profile changes."],
   ])("translates profile error %s without server diagnostics", async (code, message) => {
     server.use(
-      http.put("*/api/users/:id", () =>
+      http.patch("*/api/users/:id", () =>
         uncheckedJson("error", { code, detail: "private server diagnostic" }, { status: 400 }),
       ),
     );
@@ -643,7 +643,7 @@ describe("SettingsPage Account Section", () => {
 
   it("rejects an overlong display name before sending it", async () => {
     const save = vi.fn();
-    server.use(http.put("*/api/users/:id", save));
+    server.use(http.patch("*/api/users/:id", save));
     mockAuthenticatedUser("Alice");
     const user = userEvent.setup();
     renderWithProviders(<SettingsContent onHide={vi.fn()} activeSection="account" />);
@@ -967,7 +967,7 @@ describe("SettingsPage Admin Section", () => {
   it("does not fetch admin users or render user management for non-admin accounts", async () => {
     let adminUsersRequestCount = 0;
     server.use(
-      http.get("*/api/users/", () => {
+      http.get("*/api/users", () => {
         adminUsersRequestCount += 1;
         return jsonResponse<UserListResponse>({ items: [], total: 0 });
       }),
@@ -1022,11 +1022,11 @@ describe("SettingsPage Admin Section", () => {
       updated_at: "2026-01-01T00:00:00Z",
     } satisfies UserRead;
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
-      if (input === "/api/users/?limit=100") {
+      if (input === "/api/users?limit=100") {
         return jsonResponse<UserListResponse>({ items: [member], total: 1 });
       }
       expect(input).toBe("/api/users/2");
-      expect(init?.method).toBe("PUT");
+      expect(init?.method).toBe("PATCH");
       const body = JSON.parse(String(init?.body));
       if (body.username === "claimed") {
         return uncheckedJson(
@@ -1072,7 +1072,7 @@ describe("SettingsPage Admin Section", () => {
 
   it("deletes another user from the admin user management table after confirmation", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
-      if (input === "/api/users/?limit=100") {
+      if (input === "/api/users?limit=100") {
         return jsonResponse<UserListResponse>({
           items: [
             {
@@ -1129,7 +1129,7 @@ describe("SettingsPage Admin Section", () => {
 
   it("shows an inline error when deleting a managed user fails", async () => {
     const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
-      if (input === "/api/users/?limit=100") {
+      if (input === "/api/users?limit=100") {
         return jsonResponse<UserListResponse>({
           items: [
             {
@@ -1175,7 +1175,7 @@ describe("SettingsPage Admin Section", () => {
 
   it("disables self-delete for the current admin in the user management table", async () => {
     const fetchFn = vi.fn(async (input: string) => {
-      if (input === "/api/users/?limit=100") {
+      if (input === "/api/users?limit=100") {
         return jsonResponse<UserListResponse>({
           items: [
             {

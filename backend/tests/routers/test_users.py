@@ -4,17 +4,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.parametrize("method, collection_path", [("PATCH", "/api/users"), ("PUT", "/api/users/")])
 def test_user_crud_and_settings_roundtrip(
+    method: str,
+    collection_path: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
 
     create_response = db_client.post(
-        "/api/users/",
+        collection_path,
+        follow_redirects=False,
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         headers=admin_headers,
     )
@@ -35,13 +40,15 @@ def test_user_crud_and_settings_roundtrip(
     assert by_username_response.json()["id"] == user_id
 
     list_response = db_client.get(
-        "/api/users/?offset=0&limit=10",
+        f"{collection_path}?offset=0&limit=10",
+        follow_redirects=False,
         headers=admin_headers,
     )
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 1
 
-    update_response = db_client.put(
+    update_response = db_client.request(
+        method,
         f"/api/users/{user_id}",
         json={"display_name": "Updated", "settings": {"theme": "light", "weekStartsOn": "monday"}},
         headers=auth_headers(user_id),
@@ -147,7 +154,8 @@ def test_username_validation(db_client, auth_headers):
     )
 
 
-async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_session):
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
+async def test_legacy_username_and_rename_audit(method, db_client, auth_headers, db_session):
     from sqlalchemy import select
 
     from app.models import AuditEntry, User
@@ -159,15 +167,19 @@ async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_sess
     headers = auth_headers(user.id)
     assert db_client.get(f"/api/users/{user.id}", headers=headers).status_code == 200
     assert (
-        db_client.put(
+        db_client.request(
+            method,
             f"/api/users/{user.id}",
             json={"username": user.username, "display_name": user.display_name, "settings": {}},
             headers=headers,
         ).status_code
         == 200
     )
-    response = db_client.put(
-        f"/api/users/{user.id}", json={"username": " repaired "}, headers=auth_headers(user.id, is_admin=True)
+    denied = db_client.request(method, f"/api/users/{user.id}", json={"username": "repaired"}, headers=headers)
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "username_change_forbidden"
+    response = db_client.request(
+        method, f"/api/users/{user.id}", json={"username": " repaired "}, headers=auth_headers(user.id, is_admin=True)
     )
     assert response.status_code == 200
     entry = (await db_session.execute(select(AuditEntry).where(AuditEntry.action == "rename_user"))).scalar_one()

@@ -7,7 +7,7 @@
  */
 
 export type WorkLocationCreate = {
-  date: string;
   country_code: string;
   label?: string | null;
+  date: string;
 };
