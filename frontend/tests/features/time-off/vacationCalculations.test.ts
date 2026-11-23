@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildTimeOffEntryForRange, createWeeklyTimeOffEntry } from "@/lib/time-off/codecs";
 import {
   calculateVacationStats,
-  formatVacationValue,
   getAvailableYears,
   getHalfDayLabel,
 } from "@/features/time-off/vacationCalculations";
@@ -84,11 +83,24 @@ describe("vacationCalculations", () => {
         2025,
       );
 
-      expect(stats.byType.find((t) => t.key === "holiday")?.days).toBe(0);
-      expect(stats.byType.find((t) => t.key === "business")?.days).toBe(3);
-      expect(stats.byType.find((t) => t.key === "course")?.days).toBe(2);
+      expect(stats.byType.some((t) => t.key === "holiday")).toBe(false);
+      expect(stats.otherByType.find((t) => t.key === "business")?.days).toBe(3);
+      expect(stats.otherByType.find((t) => t.key === "course")?.days).toBe(2);
       expect(stats.byType.find((t) => t.key === "ill")?.days).toBe(1);
     });
+
+    it.each(["in", "birthday", "weekend", "business", "course"] as const)(
+      "shows %s separately and gives overlapping leave precedence",
+      (entryType) => {
+        const stats = calculateVacationStats(
+          [rangeEntry("2025-01-15", "2025-01-16", entryType), dateEntry("2025-01-15", "ill")],
+          2025,
+        );
+        expect(stats.totalDays).toBe(1);
+        expect(stats.byType).toMatchObject([{ key: "ill", days: 1 }]);
+        expect(stats.otherByType).toMatchObject([{ key: entryType, days: 1 }]);
+      },
+    );
 
     it("counts range entries across scheduled working days", () => {
       const stats = calculateVacationStats([rangeEntry("2025-01-15", "2025-01-20")], 2025);
@@ -108,8 +120,8 @@ describe("vacationCalculations", () => {
 
     it("counts weekly recurring entries for the selected year", () => {
       const stats = calculateVacationStats([weeklyEntry(1, "in")], 2025);
-      expect(stats.byType.find((t) => t.key === "in")?.days).toBeGreaterThan(50);
-      expect(stats.byType.find((t) => t.key === "in")?.days).toBeLessThan(54);
+      expect(stats.otherByType.find((t) => t.key === "in")?.days).toBeGreaterThan(50);
+      expect(stats.otherByType.find((t) => t.key === "in")?.days).toBeLessThan(54);
     });
 
     it("clamps range entries to the selected year", () => {
@@ -121,7 +133,7 @@ describe("vacationCalculations", () => {
 
     it("ignores invalid inverted ranges", () => {
       const stats = calculateVacationStats([rangeEntry("2025-01-20", "2025-01-15")], 2025);
-      expect(stats.byType.find((t) => t.key === "holiday")?.days).toBe(0);
+      expect(stats.byType.some((t) => t.key === "holiday")).toBe(false);
     });
   });
 
@@ -144,15 +156,6 @@ describe("vacationCalculations", () => {
         2025,
       );
       expect(years).toEqual([2025, 2024, 2023]);
-    });
-  });
-
-  describe("formatVacationValue", () => {
-    it("formats integers and decimals", () => {
-      expect(formatVacationValue(25)).toBe("25");
-      expect(formatVacationValue(25.5)).toBe("25.5");
-      expect(formatVacationValue(25.66)).toBe("25.7");
-      expect(formatVacationValue(NaN)).toBe("0");
     });
   });
 

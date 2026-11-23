@@ -11,6 +11,7 @@ vi.mock("@/hooks/useStatisticsWorkingDays", () => ({
 
 describe("TimeOffStatsView", () => {
   const currentYear = new Date().getFullYear();
+  const monday = dayjs(`${currentYear}-01-08`).startOf("isoWeek").format("YYYY-MM-DD");
 
   const dateEntry = (
     start: string,
@@ -36,7 +37,7 @@ describe("TimeOffStatsView", () => {
   describe("Rendering", () => {
     it("renders the statistics header", () => {
       render(<TimeOffStatsView entries={[]} />);
-      expect(screen.getByText("Vacation Statistics")).toBeInTheDocument();
+      expect(screen.getByText("Time off statistics")).toBeInTheDocument();
     });
 
     it("shows the current year in the year selector", () => {
@@ -48,7 +49,7 @@ describe("TimeOffStatsView", () => {
     it("shows empty state when no entries", () => {
       render(<TimeOffStatsView entries={[]} />);
       expect(
-        screen.getByText(new RegExp(`No time off recorded for ${currentYear}`)),
+        screen.getByText(new RegExp(`No entries recorded for ${currentYear}`)),
       ).toBeInTheDocument();
     });
 
@@ -58,8 +59,11 @@ describe("TimeOffStatsView", () => {
       const expected = [15, 16, 17].filter(
         (day) => dayjs(`${currentYear}-01-${day}`).isoWeekday() <= 5,
       ).length;
-      expect(screen.getByText(String(expected))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`days logged in ${currentYear}`))).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${expected} ${expected === 1 ? "day" : "days"} of leave in ${currentYear}`,
+        ),
+      ).toBeInTheDocument();
     });
   });
 
@@ -77,8 +81,18 @@ describe("TimeOffStatsView", () => {
       expect(screen.getByText("Sick leave")).toBeInTheDocument();
     });
 
+    it("uses singular units and lists attendance separately", () => {
+      const nextDay = dayjs(monday).add(1, "day").format("YYYY-MM-DD");
+      render(<TimeOffStatsView entries={[dateEntry(monday), dateEntry(nextDay, nextDay, "in")]} />);
+      expect(screen.getByText(`1 day of leave in ${currentYear}`)).toBeInTheDocument();
+      expect(screen.getAllByText("1 day")).toHaveLength(2);
+      expect(
+        screen.getByRole("heading", { name: "Other entries" }).parentElement,
+      ).toHaveTextContent("In office");
+    });
+
     it("only shows categories with recorded days", () => {
-      const entries = [dateEntry(`${currentYear}-01-15`)];
+      const entries = [dateEntry(monday)];
       render(<TimeOffStatsView entries={entries} />);
 
       expect(screen.getByText("Holiday")).toBeInTheDocument();
@@ -94,7 +108,7 @@ describe("TimeOffStatsView", () => {
       render(<TimeOffStatsView entries={entries} />);
 
       // 3 vacation days badge and 3 business days badge
-      const daysBadges = screen.getAllByText(/\d+ days/);
+      const daysBadges = screen.getAllByText(/^\d+ days?$/);
       expect(daysBadges.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -105,17 +119,15 @@ describe("TimeOffStatsView", () => {
       ];
       render(<TimeOffStatsView entries={entries} />);
 
-      const badges = screen.getAllByText(/\d+ days/);
+      const badges = screen.getAllByText(/^\d+ days?$/);
       expect(badges[0]!.className).toContain("bg-wt-event-holiday-full-bg");
       expect(badges[1]!.className).toContain("bg-wt-event-business-full-bg");
     });
 
     it("handles half-day entries", () => {
-      const entries = [
-        dateEntry(`${currentYear}-01-15`, `${currentYear}-01-15`, "vacation", "half_am"),
-      ];
+      const entries = [dateEntry(monday, monday, "vacation", "half_am")];
       render(<TimeOffStatsView entries={entries} />);
-      expect(screen.getByText("0.5")).toBeInTheDocument();
+      expect(screen.getByText(`0.5 days of leave in ${currentYear}`)).toBeInTheDocument();
     });
   });
 
@@ -149,8 +161,11 @@ describe("TimeOffStatsView", () => {
       const expected = [15, 16, 17].filter(
         (day) => dayjs(`${currentYear - 1}-01-${day}`).isoWeekday() <= 5,
       ).length;
-      expect(screen.getByText(String(expected))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`days logged in ${currentYear - 1}`))).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${expected} ${expected === 1 ? "day" : "days"} of leave in ${currentYear - 1}`,
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

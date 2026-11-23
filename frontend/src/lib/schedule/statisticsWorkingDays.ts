@@ -46,6 +46,16 @@ export function timeOffHalves(date: Dayjs, entries: TimeOffEntry[]) {
   );
 }
 
+/** Entries that excuse scheduled work. */
+export function isLeaveEntry(entry: TimeOffEntry): boolean {
+  return (
+    (entry.entryType === "vacation" || entry.entryType === "ill" || entry.entryType === "other") &&
+    entry.entryFlag !== "onsite" &&
+    entry.entryFlag !== "no_fly" &&
+    entry.entryFlag !== "can_fly"
+  );
+}
+
 export function calculateAdjustedWeeklyTarget(
   date: string,
   options: WorkingDayOptions,
@@ -53,12 +63,7 @@ export function calculateAdjustedWeeklyTarget(
 ) {
   const start = dayjs(date).startOf("isoWeek");
   const days = statisticsWorkingDays(start, start.add(6, "day"), options);
-  // Informational entries do not excuse working hours.
-  const leave = entries.filter(
-    (entry) =>
-      !["birthday", "in", "business", "course"].includes(entry.entryType) &&
-      !["onsite", "no_fly", "can_fly"].includes(entry.entryFlag),
-  );
+  const leave = entries.filter(isLeaveEntry);
   let weeklyHours = 0;
   for (const day of days) {
     const fraction = timeOffHalves(day.date, leave).filter(Boolean).length / 2;

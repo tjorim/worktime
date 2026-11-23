@@ -26,6 +26,8 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
+
 - Clarify time-tracking form hints, weekly label charts, calendar indicators and schedule codes. Keep mobile navigation and quick actions clear of the content, and reserve start-up sync notifications for errors.
 - The Gantt timeline opens just before the earliest unfinished task, restores the saved zoom and explains weekend, public holiday and time-off shading. Bar labels update when tasks are renamed.
 - Unified Calendar shows time off on the correct dates, with translated type names, notes, flags and colours that match the other calendars.
