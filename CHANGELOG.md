@@ -40,6 +40,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
 - Validate versioned account preferences and store theme, notification settings and navigation state on the device. Existing browser settings migrate when the app opens.
 
 - Use one request-timing middleware for both timing headers and metrics, align MCP, router and calendar module names, and split sync code into smaller modules. Keep parsed .hday events at the file and helper boundaries.
