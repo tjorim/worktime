@@ -42,6 +42,22 @@ const entries: TimeOffEntry[] = [
     id: "c",
     entryKind: "weekly",
     weekday: 3,
+    entryType: "in",
+    entryFlag: "full_day",
+    note: "In office",
+  },
+  {
+    id: "d",
+    entryKind: "date",
+    date: "2026-11-14",
+    entryType: "business",
+    entryFlag: "full_day",
+    note: "Business trip",
+  },
+  {
+    id: "e",
+    entryKind: "weekly",
+    weekday: 4,
     entryType: "other",
     entryFlag: "half_am",
     note: "Weekly appointment",
@@ -58,7 +74,7 @@ function Fixture() {
       <ToastProvider>
         <TimeOffTableView
           entries={entries}
-          eventCount={3}
+          eventCount={entries.length}
           selectedCount={0}
           selectedIds={new Set()}
           viewMode="table"

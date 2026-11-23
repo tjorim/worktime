@@ -27,6 +27,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- Time Off warnings identify the overlapping entry and dates. The month calendar flags only affected days, and specific dates take priority over date ranges and weekly entries.
 - Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
 
 - Clarify time-tracking form hints, weekly label charts, calendar indicators and schedule codes. Keep mobile navigation and quick actions clear of the content, and reserve start-up sync notifications for errors.
