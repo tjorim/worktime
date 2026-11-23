@@ -83,10 +83,7 @@ interface WorktimeApi {
     ): WorkLocationListResponse
 
     @DELETE("api/labels/{labelId}")
-    suspend fun deleteLabel(
-        @Header("Authorization") authorization: String,
-        @Path("labelId") labelId: String
-    )
+    suspend fun deleteLabel(@Header("Authorization") authorization: String, @Path("labelId") labelId: String)
 
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
@@ -178,10 +175,7 @@ interface WorktimeApi {
     ): TemplateRecord
 
     @DELETE("api/time-tracking/templates/{templateId}")
-    suspend fun deleteTemplate(
-        @Header("Authorization") authorization: String,
-        @Path("templateId") templateId: String
-    )
+    suspend fun deleteTemplate(@Header("Authorization") authorization: String, @Path("templateId") templateId: String)
 
     @GET("api/time-tracking/tasks")
     suspend fun listTasks(
@@ -191,10 +185,7 @@ interface WorktimeApi {
     ): TaskListResponse
 
     @DELETE("api/time-tracking/tasks/{taskId}")
-    suspend fun deleteTask(
-        @Header("Authorization") authorization: String,
-        @Path("taskId") taskId: String
-    )
+    suspend fun deleteTask(@Header("Authorization") authorization: String, @Path("taskId") taskId: String)
 
     @GET("api/work-locations/{valueDate}")
     suspend fun getWorkLocation(
@@ -203,10 +194,7 @@ interface WorktimeApi {
     ): Response<WorkLocationRecord>
 
     @DELETE("api/work-locations/{valueDate}")
-    suspend fun deleteWorkLocation(
-        @Header("Authorization") authorization: String,
-        @Path("valueDate") valueDate: String
-    )
+    suspend fun deleteWorkLocation(@Header("Authorization") authorization: String, @Path("valueDate") valueDate: String)
 
     companion object {
         fun create(

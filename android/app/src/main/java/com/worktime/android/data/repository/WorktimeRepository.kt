@@ -352,10 +352,9 @@ class WorktimeRepository(
             response.body()
         }
 
-    override suspend fun deleteWorkLocation(date: LocalDate): MutationResult<Unit> =
-        withAuthorizedToken { token ->
-            api.deleteWorkLocation(authorization = "Bearer $token", valueDate = date.toString())
-        }
+    override suspend fun deleteWorkLocation(date: LocalDate): MutationResult<Unit> = withAuthorizedToken { token ->
+        api.deleteWorkLocation(authorization = "Bearer $token", valueDate = date.toString())
+    }
 
     override suspend fun createLabel(name: String, color: String): MutationResult<LabelRecord> =
         withAuthorizedToken(conflictMessage = LABEL_NAME_CONFLICT_MESSAGE) { token ->
@@ -425,10 +424,9 @@ class WorktimeRepository(
         )
     }
 
-    override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> =
-        withAuthorizedToken { token ->
-            api.deleteTemplate(authorization = "Bearer $token", templateId = templateId)
-        }
+    override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> = withAuthorizedToken { token ->
+        api.deleteTemplate(authorization = "Bearer $token", templateId = templateId)
+    }
 
     override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
         withAuthorizedToken { token ->

@@ -125,10 +125,7 @@ data class TaskRecord(
 data class TaskListResponse(val items: List<TaskRecord>, val total: Int)
 
 @Serializable
-data class WorkLocationMutationRequest(
-    @SerialName("country_code") val countryCode: String,
-    val label: String? = null
-)
+data class WorkLocationMutationRequest(@SerialName("country_code") val countryCode: String, val label: String? = null)
 
 @Serializable
 data class WorkLocationRecord(
@@ -158,7 +155,4 @@ data class SyncStatusResponse(
 data class UserPreferencesRead(val data: JsonObject)
 
 @Serializable
-data class UserPreferencesWrite(
-    val data: JsonObject,
-    @SerialName("client_updated_at") val clientUpdatedAt: String
-)
+data class UserPreferencesWrite(val data: JsonObject, @SerialName("client_updated_at") val clientUpdatedAt: String)
