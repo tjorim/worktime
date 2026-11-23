@@ -31,6 +31,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- **Android:** App lock is decided before anything is shown: a cold start or resume after the idle timeout no longer flashes your data before the unlock prompt, and the “Waiting for confirmation…” state resets instead of sticking after a rotation or restart.
 - Time Off warnings identify the overlapping entry and dates. The month calendar flags only affected days, and specific dates take priority over date ranges and weekly entries.
 - Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
 

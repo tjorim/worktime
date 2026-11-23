@@ -3,10 +3,12 @@ package com.worktime.android.app
 import android.content.ContextWrapper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -54,19 +57,19 @@ fun WorktimeApp(
         viewModel(factory = BiometricGateViewModel.factory(container.biometricLockPreferencesStore))
     val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
     val dashboardState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
-    val isLocked by biometricGateViewModel.locked.collectAsStateWithLifecycle()
+    val lockState by biometricGateViewModel.lockState.collectAsStateWithLifecycle()
 
     WorktimeAppEffects(container, dashboardViewModel, biometricGateViewModel, sessionState)
     ObserveLogoutRequests(dashboardViewModel)
 
     WorktimeTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            when {
-                isLocked && sessionState is SessionState.Authenticated ->
-                    BiometricGate(biometricGateViewModel)
-                sessionState is SessionState.LoggedOut || dashboardState is DashboardUiState.LoggedOut ->
-                    LoginDestination(container, dashboardViewModel, timeOffViewModel, sessionState)
-                else ->
+            val surface = resolveAppSurface(lockState, sessionState, dashboardState is DashboardUiState.LoggedOut)
+            when (surface) {
+                AppSurface.LockResolving -> LockResolvingPlaceholder()
+                AppSurface.LockGate -> BiometricGate(biometricGateViewModel)
+                AppSurface.Login -> LoginDestination(container, dashboardViewModel, timeOffViewModel, sessionState)
+                AppSurface.Authenticated ->
                     WorktimeAuthenticatedScaffold(
                         container = container,
                         dashboardViewModel = dashboardViewModel,
@@ -139,32 +142,44 @@ private fun ObserveLogoutRequests(viewModel: DashboardViewModel) {
     }
 }
 
+/** Blank frame shown while the lock decision is pending, so no authenticated content is composed. */
+@Composable
+private fun LockResolvingPlaceholder() {
+    Box(modifier = Modifier.fillMaxSize().testTag(LOCK_RESOLVING_TAG))
+}
+
 @Composable
 private fun BiometricGate(viewModel: BiometricGateViewModel) {
     val context = LocalContext.current
-    var isPrompting by rememberSaveable { mutableStateOf(false) }
+    val isPrompting by viewModel.promptInProgress.collectAsStateWithLifecycle()
     val activity =
         remember(context) {
             var current = context
             while (current is ContextWrapper && current !is FragmentActivity) current = current.baseContext
             current as FragmentActivity
         }
-    val authenticator = remember(activity) { BiometricAuthenticator(activity) }
+    val authenticator =
+        remember(activity, viewModel) {
+            BiometricAuthenticator(
+                activity = activity,
+                onSuccess = viewModel::onAuthenticationSucceeded,
+                onError = { viewModel.onPromptFinished() }
+            )
+        }
     val availability = remember(authenticator) { authenticator.checkAvailability() }
+    // The prompt belongs to this host: when it is torn down (rotation, finish) the flag is reset
+    // rather than left claiming a prompt the recreated activity may no longer be showing.
+    DisposableEffect(activity) { onDispose { viewModel.onPromptHostDetached() } }
 
     BiometricGateScreen(
         availability = availability,
         isPrompting = isPrompting,
         onUnlock = {
-            isPrompting = true
-            authenticator.authenticate(
-                onSuccess = {
-                    isPrompting = false
-                    viewModel.onAuthenticationSucceeded()
-                },
-                onError = { isPrompting = false }
-            )
+            viewModel.onPromptStarted()
+            authenticator.authenticate()
         },
         onContinueWithoutLock = viewModel::onAuthenticationSucceeded
     )
 }
+
+internal const val LOCK_RESOLVING_TAG = "app_lock_resolving"
