@@ -919,7 +919,7 @@ export function TimeOffView({ isActive = false, addEventRequest = 0 }: TimeOffVi
       )}
 
       {viewMode === "stats" && (
-        <div role="region" aria-label={m.timeoff_vacation_stats()}>
+        <div role="region" aria-label={m.timeoff_stats()}>
           <TimeOffStatsView entries={entries} />
         </div>
       )}

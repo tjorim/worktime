@@ -134,7 +134,16 @@
   "notifications_unsupported": "Uw browser ondersteunt geen meldingen.",
   "planned_task_reminder_notification_title": "Begint zo",
   "planned_task_reminder_notification_body": "{task} begint om {time}",
-  "timeoff_days_logged_in": "dagen geregistreerd in {year}",
+  "timeoff_leave_days_in_year": [
+    {
+      "declarations": ["input count", "input year", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} verlofdag in {year}",
+        "countPlural=other": "{count} verlofdagen in {year}"
+      }
+    }
+  ],
   "loading": "Laden...",
   "error": "Fout",
   "close": "Sluiten",
@@ -387,7 +396,7 @@
   "timeoff_copy_raw_aria": "Kopieer ruwe .hday-tekst",
   "timeoff_copy_raw_failed": "Kan niet kopiëren naar klembord",
   "timeoff_apply_raw": "Ruwe inhoud toepassen",
-  "timeoff_vacation_stats": "Verlofstatistieken",
+  "timeoff_stats": "Verlofstatistieken",
   "timeoff_year_label": "Jaar:",
   "calendar_heading": "Mijn werkkalender",
   "calendar_select_schedule_hint": "Selecteer uw rooster om uw werkkalender te zien",
@@ -416,8 +425,18 @@
   "work_location_other": "Anders",
   "tt_label_breakdown": "Verdeling per label",
   "timeoff_every_weekday": "Elke {day}",
-  "timeoff_no_time_off_year": "Geen verlof geregistreerd voor {year}",
-  "timeoff_days_unit": "dagen",
+  "timeoff_other_entries": "Overige registraties",
+  "timeoff_no_entries_year": "Geen registraties voor {year}",
+  "timeoff_day_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} dag",
+        "countPlural=other": "{count} dagen"
+      }
+    }
+  ],
   "event_type_holiday": "Vakantie",
   "event_type_business": "Zakenreis",
   "event_type_weekend": "Weekend",
@@ -1015,7 +1034,7 @@
   "generic_status_next_activity": "Volgende activiteit",
   "generic_status_select_team_hint": "Selecteer hierboven uw team voor gepersonaliseerde diensttracking en aftimers",
   "timeoff_view_help_table": "Selecteer gebeurtenissen uit de tabel om te bewerken of te verwijderen.",
-  "timeoff_view_help_stats": "Bekijk uw geregistreerde verlof per jaar en type.",
+  "timeoff_view_help_stats": "Bekijk uw geregistreerde dagen per jaar en type.",
   "timeoff_view_help_team": "Bekijk teamrooster en .hday-schema's voor alle teamleden.",
   "setup_btn_select_schedule": "Rooster selecteren",
   "setup_btn_select_team": "Team selecteren",
@@ -1402,7 +1421,7 @@
   "timeoff_import_invalid_date": "ongeldige datum of omgekeerd datumbereik",
   "timeoff_import_invalid_syntax": "niet-ondersteunde .hday-syntaxis",
   "timeoff_import_more": "en nog {count} andere",
-  "timeoff_statistics_counting_note": "Telt ingeroosterde werkdagen zonder feestdagen, voor het hele jaar inclusief herhalingen. Elke halve dag telt één keer; bij overlap geldt de volgorde van de gebeurtenistypen in het overzicht.",
+  "timeoff_statistics_counting_note": "Telt ingeroosterde werkdagen in het hele jaar, inclusief herhalingen en zonder feestdagen. Elke halve dag telt één keer, met voorrang voor verlof.",
   "tt_no_target_week": "Geen doel deze week: roostervrije dagen, verlof of feestdagen.",
   "stats_holidays_loading": "Feestdagen worden geladen. Totalen en doelen kunnen nog wijzigen.",
   "stats_holidays_unavailable": "Feestdagen konden niet worden geladen. Totalen en doelen kunnen te hoog zijn tot dat lukt.",

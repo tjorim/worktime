@@ -54,7 +54,7 @@ describe("TimeOffView Integration Tests", () => {
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
-      expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: /Time off statistics/i })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: /^Table$/i }));
       expect(screen.getByText(/No time-off events yet/i)).toBeInTheDocument();
@@ -88,7 +88,7 @@ describe("TimeOffView Integration Tests", () => {
 
       renderWithProviders();
 
-      expect(screen.getByRole("region", { name: /Vacation statistics/i })).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: /Time off statistics/i })).toBeInTheDocument();
     });
   });
 
@@ -514,7 +514,7 @@ describe("TimeOffView Integration Tests", () => {
       await user.click(screen.getByRole("button", { name: /Statistics/i }));
 
       // Verify statistics view renders
-      const statsRegion = screen.getByRole("region", { name: /Vacation statistics/i });
+      const statsRegion = screen.getByRole("region", { name: /Time off statistics/i });
       expect(statsRegion).toBeInTheDocument();
 
       // Select the year that has events
