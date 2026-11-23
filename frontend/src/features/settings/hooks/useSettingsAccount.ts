@@ -161,6 +161,10 @@ export function useSettingsAccount({
   return {
     profileLoadFailed,
     retryProfile: () => setLoadAttempt((attempt) => attempt + 1),
+    applyUsername: (user: UserRead) =>
+      setAccountProfile((current) =>
+        current?.id === user.id ? { ...current, username: user.username } : current,
+      ),
     accountProfile,
     profileDraft,
     setProfileDraft,

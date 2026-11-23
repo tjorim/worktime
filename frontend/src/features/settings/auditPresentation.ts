@@ -6,6 +6,7 @@ import type { AuditEntry } from "@/features/settings/hooks/useSettingsAuditTrail
 import * as m from "@/paraglide/messages.js";
 
 export function getAuditActionLabel(action: string): string {
+  if (action === "rename_user") return m.audit_action_username_changed();
   if (action === "create_or_update_work_location") return m.audit_action_updated();
   if (action.startsWith("create") || action.endsWith("_created")) return m.audit_action_created();
   if (action.startsWith("delete")) return m.audit_action_deleted();
@@ -67,6 +68,12 @@ export function isTimeOffAuditEntry(entry: AuditEntry) {
 }
 
 export function getAuditResourceName(entry: AuditEntry): string {
+  if (entry.action === "rename_user") {
+    const { old_username, new_username } = entry.details;
+    if (typeof old_username === "string" && typeof new_username === "string") {
+      return m.audit_username_change({ previous: old_username, current: new_username });
+    }
+  }
   const resource = getAuditResourceLabel(entry.resource_type);
   if (isTimeOffAuditEntry(entry)) {
     const { entry_type, date, start_date, end_date, weekday } = entry.details;

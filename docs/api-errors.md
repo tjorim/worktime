@@ -161,12 +161,14 @@ characters. The API returns `username_invalid`, `username_reserved` or
 `display_name_invalid` (400); the Account form translates profile failures and
 checks display-name length before sending.
 
-Non-admins cannot take `admin`, `administrator`, `root`, `system` or `support`
-(case-insensitive). Admins may assign these names. Existing unchanged usernames
-and display names remain editable, including legacy values outside these rules;
-response schemas and OIDC provisioning remain unrestricted. Renames retain the
-existing permissions pending the owner's decision in #1695 and write a
-transactional `rename_user` audit entry containing old and new usernames.
+Only admins can rename users. Other callers receive
+`username_change_forbidden` (403) for an otherwise valid rename, or
+`username_reserved` (400) for an attempt to take `admin`, `administrator`,
+`root`, `system` or `support` (case-insensitive). Automatic OIDC provisioning uses
+a suffixed username if the claim matches a reserved name. Admins may assign
+reserved names explicitly. Existing legacy usernames and display names remain
+readable and are accepted unchanged. Renames write a transactional `rename_user`
+audit entry with the old and new usernames, visible to admins and the renamed user.
 
 ## Work-location countries
 

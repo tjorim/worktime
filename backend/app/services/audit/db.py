@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import and_, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AuditEntry, TimeOffEntry
@@ -116,7 +116,17 @@ async def list_audit_entries(
 
     statement = select(AuditEntry)
     if effective_target is not None:
-        statement = statement.where(AuditEntry.actor_user_id == effective_target)
+        # Renames belong in the affected user’s trail as well as the actor’s.
+        statement = statement.where(
+            or_(
+                AuditEntry.actor_user_id == effective_target,
+                and_(
+                    AuditEntry.action == "rename_user",
+                    AuditEntry.resource_type == "user",
+                    AuditEntry.resource_id == str(effective_target),
+                ),
+            )
+        )
     if before_id is not None:
         # Use full (created_at, id) keyset cursor for stable pagination
         cursor = await db.get(AuditEntry, before_id)

@@ -6,6 +6,8 @@ from typing import Any
 from app.core.errors import ErrorCode, api_error
 from app.models import User
 
+RESERVED_USERNAMES = frozenset({"admin", "administrator", "root", "system", "support"})
+
 
 def validate_user_fields(data: dict[str, Any], *, current: User | None = None, is_admin: bool = True) -> None:
     """Normalize changed usernames without revalidating legacy stored values."""
@@ -18,8 +20,10 @@ def validate_user_fields(data: dict[str, Any], *, current: User | None = None, i
                 ErrorCode.USERNAME_INVALID,
                 "Username must contain 1–64 ASCII letters, digits, dots, underscores, @, plus or hyphens (starting with a letter or digit)",
             )
-        if not is_admin and username.lower() in {"admin", "administrator", "root", "system", "support"}:
+        if not is_admin and username.lower() in RESERVED_USERNAMES:
             raise api_error(400, ErrorCode.USERNAME_RESERVED, "Username is reserved")
+        if not is_admin and current is not None and username != current.username:
+            raise api_error(403, ErrorCode.USERNAME_CHANGE_FORBIDDEN, "Only admins can change usernames")
         data["username"] = username
     name = data.get("display_name")
     if name is not None and (current is None or name != current.display_name) and len(name) > 150:

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import * as m from "@/paraglide/messages.js";
 import { logger } from "@/lib/logger";
 import { ApiError, getErrorMessage } from "@/lib/api/apiError";
-import { adminUserDeleteErrorMessages } from "@/lib/api/apiErrorCodes";
+import { accountProfileErrorMessages, adminUserDeleteErrorMessages } from "@/lib/api/apiErrorCodes";
 import type { UserRead, UserListResponse } from "@/api-types";
 
 interface UseSettingsAdminUsersParams {
@@ -79,6 +79,32 @@ export function useSettingsAdminUsers({
     };
   }, [isAuthenticated, isAdmin, fetchFn]);
 
+  const handleRenameAdminUser = async (
+    userId: number,
+    username: string,
+    onRenamed?: (user: UserRead) => void,
+  ) => {
+    try {
+      const response = await fetchFn(`/api/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      if (!response.ok) throw await ApiError.fromResponse(response);
+      const updated = (await response.json()) as UserRead;
+      setAdminUsers((current) => current.map((user) => (user.id === userId ? updated : user)));
+      onRenamed?.(updated);
+      return null;
+    } catch (error) {
+      logger.error("Failed to rename admin-managed user:", error);
+      return getErrorMessage(
+        error,
+        m.account_admin_users_rename_failed(),
+        accountProfileErrorMessages,
+      );
+    }
+  };
+
   const handleDeleteAdminUser = async (userId: number) => {
     if (currentAccountId === userId) {
       setAdminUsersDeleteError(m.account_admin_users_delete_self_blocked());
@@ -114,6 +140,7 @@ export function useSettingsAdminUsers({
     adminUsersError,
     adminUsersDeleteError,
     deletingAdminUserId,
+    handleRenameAdminUser,
     handleDeleteAdminUser,
   };
 }

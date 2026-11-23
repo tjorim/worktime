@@ -34,6 +34,7 @@ function renderTable(props: Partial<Parameters<typeof AdminUsersTable>[0]> = {})
       users={users}
       currentAccountId={1}
       deletingAdminUserId={null}
+      onRequestRename={() => {}}
       onRequestDelete={onRequestDelete}
       {...props}
     />,
@@ -46,8 +47,12 @@ const bodyRows = () => within(screen.getAllByRole("rowgroup")[1]!).getAllByRole(
 describe("AdminUsersTable", () => {
   it("keeps the server order until a column is chosen", () => {
     renderTable();
-    const usernames = bodyRows().map((row) => within(row).getAllByRole("cell")[1]?.textContent);
-    expect(usernames).toEqual(["zoe", "adam", "mia"]);
+    const rows = bodyRows();
+    expect(rows).toHaveLength(3);
+    const usernames = ["zoe", "adam", "mia"];
+    rows.forEach((row, index) => {
+      expect(within(row).getByText(usernames[index]!, { exact: true })).toBeInTheDocument();
+    });
   });
 
   it("sorts by username and reverses on a second click", async () => {

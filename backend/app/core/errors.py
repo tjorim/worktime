@@ -67,6 +67,7 @@ class ErrorCode(StrEnum):
 
     # Conflicts / validation
     USERNAME_INVALID = "username_invalid"
+    USERNAME_CHANGE_FORBIDDEN = "username_change_forbidden"
     USERNAME_RESERVED = "username_reserved"
     DISPLAY_NAME_INVALID = "display_name_invalid"
     USERNAME_TAKEN = "username_taken"
