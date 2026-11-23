@@ -19,7 +19,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.models import TimeTrackingTask
-from app.schemas import LabelCreate, TaskSyncItem, UserCreate
+from app.schemas import LabelCreate, UserCreate
+from app.schemas.sync import TaskSyncCreateItem, TaskSyncUpdateItem
 from app.services.db_service import create_label, create_user
 from app.services.sse import SyncEventManager, _redact_credentials
 from app.services.sync_service import _push_task
@@ -2733,7 +2734,7 @@ class TestSyncCorrectnessFixes:
 
         async def racer_b():
             await a_inserted.wait()
-            item = TaskSyncItem(
+            item = TaskSyncCreateItem(
                 id=str(uuid4()),
                 action="create",
                 client_updated_at=datetime.now(UTC),
@@ -2821,7 +2822,7 @@ class TestSyncCorrectnessFixes:
 
         async def racer_b():
             await a_inserted.wait()
-            item = TaskSyncItem(
+            item = TaskSyncUpdateItem(
                 id=completed_task_id,
                 action="update",
                 client_updated_at=datetime.now(UTC),
@@ -3527,7 +3528,7 @@ class TestSyncCorrectnessFixes:
 
     async def test_push_task_update_resets_reminder_on_an_actual_reschedule(self, db_session: AsyncSession) -> None:
         user = await create_user(db_session, UserCreate(username="sync-reschedule-reset", display_name="Reset"))
-        create_item = TaskSyncItem(
+        create_item = TaskSyncCreateItem(
             label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
             id=str(uuid4()),
             action="create",
@@ -3546,7 +3547,7 @@ class TestSyncCorrectnessFixes:
         db_session.add(task)
         await db_session.commit()
 
-        update_item = TaskSyncItem(
+        update_item = TaskSyncUpdateItem(
             id=create_item.id,
             action="update",
             client_updated_at=datetime.now(UTC),
@@ -3570,7 +3571,7 @@ class TestSyncCorrectnessFixes:
         """
         user = await create_user(db_session, UserCreate(username="sync-reschedule-noop", display_name="No Reset"))
         start_time = datetime(2026, 2, 1, 9, 0, tzinfo=UTC)
-        create_item = TaskSyncItem(
+        create_item = TaskSyncCreateItem(
             label_id=(await task_payload(db_session, user.id, text="Fixture", start_time=datetime.now(UTC))).label_id,
             id=str(uuid4()),
             action="create",
@@ -3590,7 +3591,7 @@ class TestSyncCorrectnessFixes:
         db_session.add(task)
         await db_session.commit()
 
-        update_item = TaskSyncItem(
+        update_item = TaskSyncUpdateItem(
             id=create_item.id,
             action="update",
             client_updated_at=datetime.now(UTC),
@@ -3934,7 +3935,7 @@ async def test_work_location_legacy_country_is_preserved_until_changed(db_sessio
     from datetime import date
 
     from app.models import WorkLocation
-    from app.schemas import WorkLocationSyncItem
+    from app.schemas.sync import WorkLocationSyncUpdateItem
     from app.services.sync_service import _push_work_location
 
     user = await create_user(db_session, UserCreate(username="legacy-country", display_name="Legacy"))
@@ -3949,7 +3950,7 @@ async def test_work_location_legacy_country_is_preserved_until_changed(db_sessio
         return await _push_work_location(
             db_session,
             user.id,
-            WorkLocationSyncItem(date=row.date, action="update", client_updated_at=datetime.now(UTC), **fields),
+            WorkLocationSyncUpdateItem(date=row.date, action="update", client_updated_at=datetime.now(UTC), **fields),
         )
 
     assert (await push(country_code="UK", label="New label")).status == "ok"

@@ -5,16 +5,8 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: snapshot
  */
-import type { TaskSyncItemAction } from './taskSyncItemAction';
+import type { TaskSyncCreateItem } from './taskSyncCreateItem';
+import type { TaskSyncDeleteItem } from './taskSyncDeleteItem';
+import type { TaskSyncUpdateItem } from './taskSyncUpdateItem';
 
-export type TaskSyncItem = {
-  id: string;
-  action: TaskSyncItemAction;
-  client_updated_at: string;
-  label_id?: string | null;
-  gantt_task_id?: string | null;
-  text?: string | null;
-  start_time?: string | null;
-  stop_time?: string | null;
-  includes_break?: boolean | null;
-};
+export type TaskSyncItem = TaskSyncCreateItem | TaskSyncUpdateItem | TaskSyncDeleteItem;

@@ -2,7 +2,6 @@ import type {
   SyncPullResponse,
   SyncPushPayload,
   SyncPushResponse,
-  SyncRecordResult,
   SyncStatusResponse,
 } from "@/api-types";
 
@@ -284,21 +283,14 @@ function chunkPushPayload(payload: SyncPushPayload): SyncPushPayload[] {
 
 /** Concatenate the per-entity results of several push responses into one. */
 function mergePushResponses(responses: SyncPushResponse[]): SyncPushResponse {
-  const results: Record<string, SyncRecordResult[]> = {};
-  for (const response of responses) {
-    for (const [entityType, records] of Object.entries(response.results ?? {})) {
-      (results[entityType] ??= []).push(...(records ?? []));
-    }
-  }
   return {
     results: {
-      labels: [],
-      tasks: [],
-      templates: [],
-      work_locations: [],
-      time_off_entries: [],
-      gantt_tasks: [],
-      ...results,
+      labels: responses.flatMap((response) => response.results?.labels ?? []),
+      tasks: responses.flatMap((response) => response.results?.tasks ?? []),
+      templates: responses.flatMap((response) => response.results?.templates ?? []),
+      work_locations: responses.flatMap((response) => response.results?.work_locations ?? []),
+      time_off_entries: responses.flatMap((response) => response.results?.time_off_entries ?? []),
+      gantt_tasks: responses.flatMap((response) => response.results?.gantt_tasks ?? []),
     },
   };
 }

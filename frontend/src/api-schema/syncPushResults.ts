@@ -6,13 +6,14 @@
  * OpenAPI spec version: snapshot
  */
 import type { SyncRecordResult } from './syncRecordResult';
+import type { TaskSyncRecordResult } from './taskSyncRecordResult';
 
 /**
  * The six entity collections always returned by a sync push, including empty ones.
  */
 export type SyncPushResults = {
   labels: SyncRecordResult[];
-  tasks: SyncRecordResult[];
+  tasks: TaskSyncRecordResult[];
   templates: SyncRecordResult[];
   work_locations: SyncRecordResult[];
   time_off_entries: SyncRecordResult[];

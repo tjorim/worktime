@@ -8,9 +8,11 @@
 
 export type WorkLocationRead = {
   id: number;
+  /** @deprecated */
   user_id: number;
   date: string;
   country_code: string;
   label: string | null;
   created_at: string;
+  updated_at: string;
 };

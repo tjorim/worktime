@@ -23,6 +23,7 @@ from app.schemas import (
     GanttTaskRead,
     GanttTaskUpdate,
 )
+from app.schemas.gantt import LegacyGanttTaskRead
 from app.services.db_service import (
     ConflictError,
     NotFoundError,
@@ -109,7 +110,8 @@ async def get_gantt_task_endpoint(
     return GanttTaskRead.model_validate(task, from_attributes=True)
 
 
-@router.put("/{task_id}", response_model=GanttTaskRead)
+@router.patch("/{task_id}", response_model=GanttTaskRead)
+@router.put("/{task_id}", response_model=LegacyGanttTaskRead, deprecated=True)
 async def update_gantt_task_endpoint(
     task_id: str,
     payload: GanttTaskUpdate,
@@ -124,7 +126,7 @@ async def update_gantt_task_endpoint(
         _handle_error(error)
         raise
 
-    return GanttTaskRead.model_validate(task, from_attributes=True)
+    return LegacyGanttTaskRead.model_validate(task, from_attributes=True)
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)

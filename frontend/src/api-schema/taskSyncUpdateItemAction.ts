@@ -6,11 +6,9 @@
  * OpenAPI spec version: snapshot
  */
 
-export type WorkLocationSyncItemAction = typeof WorkLocationSyncItemAction[keyof typeof WorkLocationSyncItemAction];
+export type TaskSyncUpdateItemAction = typeof TaskSyncUpdateItemAction[keyof typeof TaskSyncUpdateItemAction];
 
 
-export const WorkLocationSyncItemAction = {
-  create: 'create',
+export const TaskSyncUpdateItemAction = {
   update: 'update',
-  delete: 'delete',
 } as const;

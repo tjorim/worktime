@@ -26,6 +26,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readPreferences } from "@/lib/sync/syncPreferences";
 import {
   appendToSyncOutbox,
   applyPreferencesPull,
@@ -46,7 +47,6 @@ import {
   syncStatusHasEntityData,
   localSyncPayloadIsComplete,
   type FetchFn,
-  type PreferencesResponse,
   type SyncPullResponse,
   type SyncPushPayload,
   type SyncStatusResponse,
@@ -313,9 +313,7 @@ async function prepareAccountPreferences(
   };
   const first = await withPreferenceLock(() => attempt());
   if (first !== "fetch") return first;
-  const response = await fetch("/api/preferences");
-  if (!response.ok) throw new Error("Account preferences could not be loaded");
-  const prefs = (await response.json()) as PreferencesResponse | null;
+  const prefs = await readPreferences(fetch);
   const result = await withPreferenceLock(() => attempt(prefs?.data ?? {}));
   return result === true;
 }

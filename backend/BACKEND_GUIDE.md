@@ -46,6 +46,45 @@ The app conditionally exposes, when `DATABASE_ENABLED=true`:
   `/api/gantt-tasks/*`, `/api/sync/*`, `/api/preferences`, `/api/read-models/*`, `/api/pebble/*`,
   `/api/time-off/*`, `/api/push/*`
 
+## REST conventions
+
+- Use `PATCH` for partial updates and `PUT` for replacement at a known resource address.
+  Omitted PATCH fields retain their current values. An explicit JSON null clears a nullable field where supported.
+- Use collection paths without trailing slashes. Resources own their paths, so labels shared by time tracking and
+  Gantt live at `/api/labels`. The two users collection paths have explicit handlers and work through reverse proxies
+  without a slash redirect.
+- Mutable database resources with a stored modification timestamp expose the server's `updated_at` in reads.
+  Append-only and provider records expose the timestamps defined by their own contracts.
+- Scope personal records to the authenticated caller. Omit redundant `user_id` in new read shapes.
+  Deprecated owner fields remain where client decoders or legacy wire contracts require them.
+  For time off, use the stable client-generated string `entry_id` in paths and sync writes. The integer `id`
+  is the database row identifier and remains on reads for existing clients.
+- `GET /api/preferences` returns 204 with no body when there is no document and the request sends
+  `Prefer: return=minimal`. It returns 200 with the stored document whenever one exists. Existing clients
+  sending no preference retain the 200 JSON null response for empty accounts.
+- Sync push items discriminate on `action`. Push results expose six typed arrays, including empty arrays.
+  Only the task result schema describes `conflicting_task_id`; the compatibility wire key remains null for
+  other entities.
+- The date identifies a work location within the caller's account. `PUT /api/work-locations/{value_date}`
+  creates or replaces it. Omitting the optional label on PUT clears it. Writes audit
+  `create_work_location` or `update_work_location` according to whether an active record existed.
+
+### Deprecated routes
+
+Remove these aliases after Android and Pebble ship the new paths.
+
+| Old route | Canonical route |
+| --- | --- |
+| `GET/POST /api/users/` | `GET/POST /api/users` |
+| `PUT /api/users/{user_id}` | `PATCH /api/users/{user_id}` |
+| `GET/POST /api/time-tracking/labels` | `GET/POST /api/labels` |
+| `GET/DELETE /api/time-tracking/labels/{label_id}` | `GET/DELETE /api/labels/{label_id}` |
+| `PUT /api/time-tracking/labels/{label_id}` | `PATCH /api/labels/{label_id}` |
+| `PUT /api/time-tracking/tasks/{task_id}` | `PATCH /api/time-tracking/tasks/{task_id}` |
+| `PUT /api/time-tracking/templates/{template_id}` | `PATCH /api/time-tracking/templates/{template_id}` |
+| `PUT /api/gantt-tasks/{task_id}` | `PATCH /api/gantt-tasks/{task_id}` |
+| `POST /api/work-locations` | `PUT /api/work-locations/{value_date}` |
+
 ## Route Groups
 
 ### Core routes
@@ -72,12 +111,12 @@ Auth is OIDC/Keycloak-based, not session-cookie-based:
 
 ### Database user routes
 
-- `POST /api/users/`
-- `GET /api/users/`
+- `POST /api/users`
+- `GET /api/users`
 - `GET /api/users/{user_id}`
 - `GET /api/users/{user_id}/export`
 - `GET /api/users/by-username/{username}`
-- `PUT /api/users/{user_id}`
+- `PATCH /api/users/{user_id}`
 - `DELETE /api/users/{user_id}`
 - `POST /api/users/register` — admin-only pre-provisioning (separate router, same `/api/users` prefix)
 
@@ -106,18 +145,19 @@ app), managed from Settings > Connections > API tokens:
 
 Under `/api/time-tracking`:
 
-- label CRUD under `/labels`
 - task CRUD under `/tasks`
 - running-task lookup under `/tasks/running`
 - template CRUD under `/templates`
+
+Label CRUD lives under `/api/labels`.
 
 ### Database work-location routes
 
 Under `/api/work-locations`:
 
-- `POST /`
-- `GET /`
+- `GET /api/work-locations`
 - `GET /{value_date}`
+- `PUT /{value_date}`
 - `DELETE /{value_date}`
 
 ### Database Gantt routes
@@ -127,7 +167,7 @@ Under `/api/gantt-tasks`:
 - `POST`
 - `GET`
 - `GET /{task_id}`
-- `PUT /{task_id}`
+- `PATCH /{task_id}`
 - `DELETE /{task_id}`
 
 ### Database sync routes
@@ -146,8 +186,8 @@ Under `/api/sync`:
 
 ### Database time-off routes
 
-- `POST /api/time-off/`
-- `GET /api/time-off/`
+- `POST /api/time-off`
+- `GET /api/time-off`
 - `GET /api/time-off/{entry_id}`
 - `PATCH /api/time-off/{entry_id}`
 - `DELETE /api/time-off/{entry_id}`

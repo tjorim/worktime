@@ -52,7 +52,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED, deprecated=True)
 async def create_user_endpoint(
     payload: UserCreate,
     principal: AuthenticatedPrincipal = Depends(get_authenticated_principal),
@@ -77,7 +78,8 @@ async def create_user_endpoint(
     return UserRead.model_validate(user, from_attributes=True)
 
 
-@router.get("/", response_model=UserListResponse)
+@router.get("", response_model=UserListResponse)
+@router.get("/", response_model=UserListResponse, deprecated=True)
 async def list_users_endpoint(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=MAX_USER_LIST_LIMIT),
@@ -167,7 +169,8 @@ async def get_user_by_username_endpoint(
     return UserRead.model_validate(user, from_attributes=True)
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserRead)
+@router.put("/{user_id}", response_model=UserRead, deprecated=True)
 async def update_user_endpoint(
     user_id: int,
     payload: UserUpdate,

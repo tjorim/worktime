@@ -6,7 +6,23 @@
 // (`Record<string, unknown>`) the way the screens pass them; an interface is not.
 export default {
   api: {
-    input: "./openapi.json",
+    input: {
+      target: "./openapi.json",
+      override: {
+        // Keep compatibility operations in OpenAPI and generate web types from canonical routes.
+        transformer: (spec) => {
+          const paths = Object.fromEntries(
+            Object.entries(spec.paths).flatMap(([path, operations]) => {
+              const canonical = Object.entries(operations).filter(
+                ([, operation]) => !operation.deprecated,
+              );
+              return canonical.length ? [[path, Object.fromEntries(canonical)]] : [];
+            }),
+          );
+          return { ...spec, paths };
+        },
+      },
+    },
     output: {
       schemas: process.env.API_SCHEMA_DIR ?? "./src/api-schema",
       override: { useTypeOverInterfaces: true },

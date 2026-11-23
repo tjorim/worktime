@@ -54,7 +54,7 @@ export function useSettingsAdminUsers({
     setAdminUsersError(null);
     setAdminUsersDeleteError(null);
 
-    fetchFn("/api/users/?limit=100")
+    fetchFn("/api/users?limit=100")
       .then(async (response) => {
         if (!response.ok) {
           throw await ApiError.fromResponse(response);

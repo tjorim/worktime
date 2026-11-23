@@ -9,8 +9,8 @@
  *  GET  /api/preferences
  *  PUT  /api/preferences
  *  GET  /api/me
- *  GET  /api/users/
- *  PUT  /api/users/:id
+ *  GET  /api/users
+ *  PATCH /api/users/:id
  *  DELETE /api/users/:id
  */
 
@@ -93,9 +93,12 @@ export const syncHandlers = [
   }),
 
   // GET /api/preferences
-  http.get<never, never, PreferencesResponse | null>("*/api/preferences", () => {
+  http.get<never, never, PreferencesResponse | null>("*/api/preferences", ({ request }) => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
+    if (syncStore.preferences === null && request.headers.get("Prefer") === "return=minimal") {
+      return new HttpResponse(null, { status: 204 });
+    }
     return HttpResponse.json<PreferencesResponse | null>(syncStore.preferences);
   }),
 
@@ -132,8 +135,8 @@ export const syncHandlers = [
     return HttpResponse.json<AuditEntryListResponse>({ items: [], total: 0 });
   }),
 
-  // GET /api/users/
-  http.get<never, never, UserListResponse>("*/api/users/", () => {
+  // GET /api/users
+  http.get<never, never, UserListResponse>("*/api/users", () => {
     const authFailure = buildAuthFailureResponse();
     if (authFailure) return authFailure;
     return HttpResponse.json<UserListResponse>({
@@ -142,20 +145,23 @@ export const syncHandlers = [
     });
   }),
 
-  // PUT /api/users/:id
-  http.put<{ id: string }, UserUpdate, UserRead>("*/api/users/:id", async ({ params, request }) => {
-    const authFailure = buildAuthFailureResponse();
-    if (authFailure) return authFailure;
-    const body = await request.json();
-    return HttpResponse.json<UserRead>({
-      id: Number(params.id),
-      username: "dev-user",
-      display_name: body.display_name ?? "Dev User",
-      settings: {},
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-    });
-  }),
+  // PATCH /api/users/:id
+  http.patch<{ id: string }, UserUpdate, UserRead>(
+    "*/api/users/:id",
+    async ({ params, request }) => {
+      const authFailure = buildAuthFailureResponse();
+      if (authFailure) return authFailure;
+      const body = await request.json();
+      return HttpResponse.json<UserRead>({
+        id: Number(params.id),
+        username: "dev-user",
+        display_name: body.display_name ?? "Dev User",
+        settings: {},
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      });
+    },
+  ),
 
   // DELETE /api/users/:id
   http.delete("*/api/users/:id", () => {

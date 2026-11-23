@@ -5,14 +5,8 @@
  * API server for Worktime shift tracker and time-off management
  * OpenAPI spec version: snapshot
  */
-import type { TemplateSyncItemAction } from './templateSyncItemAction';
+import type { TemplateSyncCreateItem } from './templateSyncCreateItem';
+import type { TemplateSyncDeleteItem } from './templateSyncDeleteItem';
+import type { TemplateSyncUpdateItem } from './templateSyncUpdateItem';
 
-export type TemplateSyncItem = {
-  id: string;
-  action: TemplateSyncItemAction;
-  client_updated_at: string;
-  label_id?: string | null;
-  text?: string | null;
-  start_time?: string | null;
-  stop_time?: string | null;
-};
+export type TemplateSyncItem = TemplateSyncCreateItem | TemplateSyncUpdateItem | TemplateSyncDeleteItem;

@@ -19,6 +19,7 @@ import type { TimeOffEntryReadEntryType } from './timeOffEntryReadEntryType';
 export type TimeOffEntryRead = {
   id: number;
   entry_id: string;
+  /** @deprecated */
   user_id: number;
   entry_kind: TimeOffEntryReadEntryKind;
   date: string | null;

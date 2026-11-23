@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type UpdateTemplateEndpointApiTimeTrackingTemplatesTemplateIdPutParams = {
+export type UpdateLabelEndpointApiLabelsLabelIdPatchParams = {
   user_id?: number | null;
 };

@@ -6,6 +6,9 @@
  * OpenAPI spec version: snapshot
  */
 
-export type GetLabelEndpointApiTimeTrackingLabelsLabelIdGetParams = {
+export type ListLabelsEndpointApiLabelsGetParams = {
   user_id?: number | null;
+  limit?: number | null;
+  /** @minimum 0 */
+  offset?: number;
 };

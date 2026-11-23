@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime as dt_datetime
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from app.schemas.base import ListResponse, RequestModel, ResponseModel
 
@@ -37,10 +37,11 @@ class LabelCreate(RequestModel):
 
 class LabelRead(ResponseModel):
     id: str
-    user_id: int
+    user_id: int = Field(deprecated=True)
     name: str
     color: str
     created_at: dt_datetime
+    updated_at: dt_datetime
 
 
 class LabelUpdate(RequestModel):

@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type UpdateTaskEndpointApiTimeTrackingTasksTaskIdPutParams = {
+export type UpdateTaskEndpointApiTimeTrackingTasksTaskIdPatchParams = {
   user_id?: number | null;
 };

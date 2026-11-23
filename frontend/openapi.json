@@ -1063,6 +1063,7 @@
         "summary": "Create User Endpoint",
         "description": "Admin-only endpoint to pre-create a local user record.\n\nThe ``oidc_subject`` is left unset; it will be populated when the user first\nauthenticates via OIDC.",
         "operationId": "create_user_endpoint_api_users__post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -1107,6 +1108,113 @@
         ],
         "summary": "List Users Endpoint",
         "operationId": "list_users_endpoint_api_users__get",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Create User Endpoint",
+        "description": "Admin-only endpoint to pre-create a local user record.\n\nThe ``oidc_subject`` is left unset; it will be populated when the user first\nauthenticates via OIDC.",
+        "operationId": "create_user_endpoint_api_users_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List Users Endpoint",
+        "operationId": "list_users_endpoint_api_users_get",
         "security": [
           {
             "HTTPBearer": []
@@ -1213,6 +1321,62 @@
         ],
         "summary": "Update User Endpoint",
         "operationId": "update_user_endpoint_api_users__user_id__put",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update User Endpoint",
+        "operationId": "update_user_endpoint_api_users__user_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -1395,6 +1559,344 @@
         }
       }
     },
+    "/api/labels": {
+      "post": {
+        "tags": [
+          "Labels"
+        ],
+        "summary": "Create Label Endpoint",
+        "operationId": "create_label_endpoint_api_labels_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Labels"
+        ],
+        "summary": "List Labels Endpoint",
+        "operationId": "list_labels_endpoint_api_labels_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 500,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/labels/{label_id}": {
+      "get": {
+        "tags": [
+          "Labels"
+        ],
+        "summary": "Get Label Endpoint",
+        "operationId": "get_label_endpoint_api_labels__label_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "label_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Label Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Labels"
+        ],
+        "summary": "Update Label Endpoint",
+        "operationId": "update_label_endpoint_api_labels__label_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "label_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Label Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Labels"
+        ],
+        "summary": "Delete Label Endpoint",
+        "operationId": "delete_label_endpoint_api_labels__label_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "label_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Label Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/time-tracking/labels": {
       "post": {
         "tags": [
@@ -1402,6 +1904,7 @@
         ],
         "summary": "Create Label Endpoint",
         "operationId": "create_label_endpoint_api_time_tracking_labels_post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -1465,6 +1968,7 @@
         ],
         "summary": "List Labels Endpoint",
         "operationId": "list_labels_endpoint_api_time_tracking_labels_get",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -1549,6 +2053,7 @@
         ],
         "summary": "Get Label Endpoint",
         "operationId": "get_label_endpoint_api_time_tracking_labels__label_id__get",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -1611,6 +2116,7 @@
         ],
         "summary": "Update Label Endpoint",
         "operationId": "update_label_endpoint_api_time_tracking_labels__label_id__put",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -1683,6 +2189,7 @@
         ],
         "summary": "Delete Label Endpoint",
         "operationId": "delete_label_endpoint_api_time_tracking_labels__label_id__delete",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -2073,6 +2580,79 @@
         ],
         "summary": "Update Task Endpoint",
         "operationId": "update_task_endpoint_api_time_tracking_tasks__task_id__put",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Time Tracking"
+        ],
+        "summary": "Update Task Endpoint",
+        "operationId": "update_task_endpoint_api_time_tracking_tasks__task_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -2411,6 +2991,79 @@
         ],
         "summary": "Update Template Endpoint",
         "operationId": "update_template_endpoint_api_time_tracking_templates__template_id__put",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Time Tracking"
+        ],
+        "summary": "Update Template Endpoint",
+        "operationId": "update_template_endpoint_api_time_tracking_templates__template_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -2540,6 +3193,7 @@
         ],
         "summary": "Create Or Update Work Location Endpoint",
         "operationId": "create_or_update_work_location_endpoint_api_work_locations_post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -2715,6 +3369,79 @@
       }
     },
     "/api/work-locations/{value_date}": {
+      "put": {
+        "tags": [
+          "Work Locations"
+        ],
+        "summary": "Put Work Location Endpoint",
+        "operationId": "put_work_location_endpoint_api_work_locations__value_date__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "value_date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Value Date"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkLocationPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkLocationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "Work Locations"
@@ -3051,6 +3778,79 @@
         ],
         "summary": "Update Gantt Task Endpoint",
         "operationId": "update_gantt_task_endpoint_api_gantt_tasks__task_id__put",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GanttTaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyGanttTaskRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Gantt Tasks"
+        ],
+        "summary": "Update Gantt Task Endpoint",
+        "operationId": "update_gantt_task_endpoint_api_gantt_tasks__task_id__patch",
         "security": [
           {
             "HTTPBearer": []
@@ -3349,8 +4149,33 @@
           "Preferences"
         ],
         "summary": "Get Preferences Endpoint",
-        "description": "Return the authenticated user's stored preferences, or null if none exist yet.",
+        "description": "Return stored preferences. Older clients receive JSON null when none exist yet.",
         "operationId": "get_preferences_endpoint_api_preferences_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "prefer",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Use return=minimal for 204 when nothing is stored.",
+              "title": "Prefer"
+            },
+            "description": "Use return=minimal for 204 when nothing is stored."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3369,13 +4194,21 @@
                 }
               }
             }
+          },
+          "204": {
+            "description": "No stored preferences"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       },
       "put": {
         "tags": [
@@ -3384,15 +4217,20 @@
         "summary": "Put Preferences Endpoint",
         "description": "Create or update the authenticated user's preferences blob.\n\nUses last-write-wins conflict detection based on ``client_updated_at``.\nIf the stored ``client_updated_at`` is already equal to or newer than the\nsubmitted one, the stored record is returned unchanged (no-op update).",
         "operationId": "put_preferences_endpoint_api_preferences_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UserPreferencesWrite"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -3415,12 +4253,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/api/read-models/dashboard": {
@@ -5363,10 +6196,6 @@
             "type": "string",
             "title": "Id"
           },
-          "user_id": {
-            "type": "integer",
-            "title": "User Id"
-          },
           "label_id": {
             "anyOf": [
               {
@@ -5422,12 +6251,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "user_id",
           "label_id",
           "name",
           "start_date",
@@ -5435,40 +6268,21 @@
           "progress",
           "dependencies",
           "notes",
-          "created_at"
+          "created_at",
+          "updated_at"
         ],
         "title": "GanttTaskRead"
       },
-      "GanttTaskSyncItem": {
+      "GanttTaskSyncCreateItem": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update",
-              "delete"
-            ],
-            "title": "Action"
-          },
           "client_updated_at": {
             "type": "string",
             "format": "date-time",
             "title": "Client Updated At"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
           },
           "label_id": {
             "anyOf": [
@@ -5480,30 +6294,6 @@
               }
             ],
             "title": "Label Id"
-          },
-          "start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Start Date"
-          },
-          "end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "End Date"
           },
           "progress": {
             "anyOf": [
@@ -5539,16 +6329,166 @@
               }
             ],
             "title": "Notes"
+          },
+          "action": {
+            "type": "string",
+            "const": "create",
+            "title": "Action"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
+          "client_updated_at",
           "action",
-          "client_updated_at"
+          "name",
+          "start_date",
+          "end_date"
         ],
-        "title": "GanttTaskSyncItem"
+        "title": "GanttTaskSyncCreateItem"
+      },
+      "GanttTaskSyncDeleteItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "dependencies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependencies"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "action": {
+            "type": "string",
+            "const": "delete",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "GanttTaskSyncDeleteItem"
+      },
+      "GanttTaskSyncItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/GanttTaskSyncCreateItem"
+          },
+          {
+            "$ref": "#/components/schemas/GanttTaskSyncUpdateItem"
+          },
+          {
+            "$ref": "#/components/schemas/GanttTaskSyncDeleteItem"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "create": "#/components/schemas/GanttTaskSyncCreateItem",
+            "delete": "#/components/schemas/GanttTaskSyncDeleteItem",
+            "update": "#/components/schemas/GanttTaskSyncUpdateItem"
+          }
+        }
       },
       "GanttTaskSyncRead": {
         "properties": {
@@ -5656,6 +6596,113 @@
           "deleted_at"
         ],
         "title": "GanttTaskSyncRead"
+      },
+      "GanttTaskSyncUpdateItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "dependencies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependencies"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "action": {
+            "type": "string",
+            "const": "update",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "GanttTaskSyncUpdateItem"
       },
       "GanttTaskUpdate": {
         "properties": {
@@ -6111,7 +7158,8 @@
           },
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "name": {
             "type": "string",
@@ -6125,6 +7173,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -6133,24 +7186,16 @@
           "user_id",
           "name",
           "color",
-          "created_at"
+          "created_at",
+          "updated_at"
         ],
         "title": "LabelRead"
       },
-      "LabelSyncItem": {
+      "LabelSyncCreateItem": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update",
-              "delete"
-            ],
-            "title": "Action"
           },
           "client_updated_at": {
             "type": "string",
@@ -6178,16 +7223,90 @@
               }
             ],
             "title": "Color"
+          },
+          "action": {
+            "type": "string",
+            "const": "create",
+            "title": "Action"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
-          "action",
-          "client_updated_at"
+          "client_updated_at",
+          "action"
         ],
-        "title": "LabelSyncItem"
+        "title": "LabelSyncCreateItem"
+      },
+      "LabelSyncDeleteItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "action": {
+            "type": "string",
+            "const": "delete",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "LabelSyncDeleteItem"
+      },
+      "LabelSyncItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LabelSyncCreateItem"
+          },
+          {
+            "$ref": "#/components/schemas/LabelSyncUpdateItem"
+          },
+          {
+            "$ref": "#/components/schemas/LabelSyncDeleteItem"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "create": "#/components/schemas/LabelSyncCreateItem",
+            "delete": "#/components/schemas/LabelSyncDeleteItem",
+            "update": "#/components/schemas/LabelSyncUpdateItem"
+          }
+        }
       },
       "LabelSyncRead": {
         "properties": {
@@ -6248,6 +7367,54 @@
         ],
         "title": "LabelSyncRead"
       },
+      "LabelSyncUpdateItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "action": {
+            "type": "string",
+            "const": "update",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "LabelSyncUpdateItem"
+      },
       "LabelUpdate": {
         "properties": {
           "name": {
@@ -6276,6 +7443,95 @@
         "additionalProperties": false,
         "type": "object",
         "title": "LabelUpdate"
+      },
+      "LegacyGanttTaskRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "dependencies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependencies"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id",
+            "deprecated": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label_id",
+          "name",
+          "start_date",
+          "end_date",
+          "progress",
+          "dependencies",
+          "notes",
+          "created_at",
+          "updated_at",
+          "user_id"
+        ],
+        "title": "LegacyGanttTaskRead"
       },
       "LivenessResponse": {
         "properties": {
@@ -7331,7 +8587,7 @@
           },
           "tasks": {
             "items": {
-              "$ref": "#/components/schemas/SyncRecordResult"
+              "$ref": "#/components/schemas/TaskSyncRecordResult"
             },
             "type": "array",
             "title": "Tasks"
@@ -7424,17 +8680,6 @@
               }
             ],
             "title": "Code"
-          },
-          "conflicting_task_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conflicting Task Id"
           }
         },
         "type": "object",
@@ -7443,8 +8688,7 @@
           "status",
           "server_updated_at",
           "conflict_reason",
-          "code",
-          "conflicting_task_id"
+          "code"
         ],
         "title": "SyncRecordResult",
         "description": "Result for a single record in a sync push batch."
@@ -7639,7 +8883,8 @@
           },
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "label_id": {
             "anyOf": [
@@ -7692,6 +8937,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -7704,24 +8954,16 @@
           "start_time",
           "stop_time",
           "includes_break",
-          "created_at"
+          "created_at",
+          "updated_at"
         ],
         "title": "TaskRead"
       },
-      "TaskSyncItem": {
+      "TaskSyncCreateItem": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update",
-              "delete"
-            ],
-            "title": "Action"
           },
           "client_updated_at": {
             "type": "string",
@@ -7795,16 +9037,136 @@
               }
             ],
             "title": "Includes Break"
+          },
+          "action": {
+            "type": "string",
+            "const": "create",
+            "title": "Action"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
-          "action",
-          "client_updated_at"
+          "client_updated_at",
+          "action"
         ],
-        "title": "TaskSyncItem"
+        "title": "TaskSyncCreateItem"
+      },
+      "TaskSyncDeleteItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "gantt_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gantt Task Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "stop_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Time"
+          },
+          "includes_break": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includes Break"
+          },
+          "action": {
+            "type": "string",
+            "const": "delete",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "TaskSyncDeleteItem"
+      },
+      "TaskSyncItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TaskSyncCreateItem"
+          },
+          {
+            "$ref": "#/components/schemas/TaskSyncUpdateItem"
+          },
+          {
+            "$ref": "#/components/schemas/TaskSyncDeleteItem"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "create": "#/components/schemas/TaskSyncCreateItem",
+            "delete": "#/components/schemas/TaskSyncDeleteItem",
+            "update": "#/components/schemas/TaskSyncUpdateItem"
+          }
+        }
       },
       "TaskSyncRead": {
         "properties": {
@@ -7907,6 +9269,171 @@
           "deleted_at"
         ],
         "title": "TaskSyncRead"
+      },
+      "TaskSyncRecordResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "conflict"
+            ],
+            "title": "Status"
+          },
+          "server_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Updated At"
+          },
+          "conflict_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict Reason"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "conflicting_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflicting Task Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "server_updated_at",
+          "conflict_reason",
+          "code",
+          "conflicting_task_id"
+        ],
+        "title": "TaskSyncRecordResult"
+      },
+      "TaskSyncUpdateItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "gantt_task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gantt Task Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "stop_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Time"
+          },
+          "includes_break": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Includes Break"
+          },
+          "action": {
+            "type": "string",
+            "const": "update",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "TaskSyncUpdateItem"
       },
       "TaskUpdate": {
         "properties": {
@@ -8103,7 +9630,8 @@
           },
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "label_id": {
             "anyOf": [
@@ -8134,6 +9662,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -8144,24 +9677,16 @@
           "text",
           "start_time",
           "stop_time",
-          "created_at"
+          "created_at",
+          "updated_at"
         ],
         "title": "TemplateRead"
       },
-      "TemplateSyncItem": {
+      "TemplateSyncCreateItem": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update",
-              "delete"
-            ],
-            "title": "Action"
           },
           "client_updated_at": {
             "type": "string",
@@ -8213,16 +9738,114 @@
               }
             ],
             "title": "Stop Time"
+          },
+          "action": {
+            "type": "string",
+            "const": "create",
+            "title": "Action"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
-          "action",
-          "client_updated_at"
+          "client_updated_at",
+          "action"
         ],
-        "title": "TemplateSyncItem"
+        "title": "TemplateSyncCreateItem"
+      },
+      "TemplateSyncDeleteItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "stop_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Time"
+          },
+          "action": {
+            "type": "string",
+            "const": "delete",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "TemplateSyncDeleteItem"
+      },
+      "TemplateSyncItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TemplateSyncCreateItem"
+          },
+          {
+            "$ref": "#/components/schemas/TemplateSyncUpdateItem"
+          },
+          {
+            "$ref": "#/components/schemas/TemplateSyncDeleteItem"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "create": "#/components/schemas/TemplateSyncCreateItem",
+            "delete": "#/components/schemas/TemplateSyncDeleteItem",
+            "update": "#/components/schemas/TemplateSyncUpdateItem"
+          }
+        }
       },
       "TemplateSyncRead": {
         "properties": {
@@ -8301,6 +9924,78 @@
           "deleted_at"
         ],
         "title": "TemplateSyncRead"
+      },
+      "TemplateSyncUpdateItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "label_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "stop_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Time"
+          },
+          "action": {
+            "type": "string",
+            "const": "update",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "TemplateSyncUpdateItem"
       },
       "TemplateUpdate": {
         "properties": {
@@ -8499,7 +10194,8 @@
           },
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "entry_kind": {
             "type": "string",
@@ -9456,7 +11152,8 @@
         "properties": {
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "data": {
             "anyOf": [
@@ -9703,11 +11400,6 @@
       },
       "WorkLocationCreate": {
         "properties": {
-          "date": {
-            "type": "string",
-            "format": "date",
-            "title": "Date"
-          },
           "country_code": {
             "type": "string",
             "title": "Country Code"
@@ -9722,13 +11414,18 @@
               }
             ],
             "title": "Label"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "date",
-          "country_code"
+          "country_code",
+          "date"
         ],
         "title": "WorkLocationCreate"
       },
@@ -9753,6 +11450,31 @@
         ],
         "title": "WorkLocationListResponse"
       },
+      "WorkLocationPut": {
+        "properties": {
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "country_code"
+        ],
+        "title": "WorkLocationPut"
+      },
       "WorkLocationRead": {
         "properties": {
           "id": {
@@ -9761,7 +11483,8 @@
           },
           "user_id": {
             "type": "integer",
-            "title": "User Id"
+            "title": "User Id",
+            "deprecated": true
           },
           "date": {
             "type": "string",
@@ -9787,6 +11510,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
           }
         },
         "type": "object",
@@ -9796,25 +11524,17 @@
           "date",
           "country_code",
           "label",
-          "created_at"
+          "created_at",
+          "updated_at"
         ],
         "title": "WorkLocationRead"
       },
-      "WorkLocationSyncItem": {
+      "WorkLocationSyncCreateItem": {
         "properties": {
           "date": {
             "type": "string",
             "format": "date",
             "title": "Date"
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "create",
-              "update",
-              "delete"
-            ],
-            "title": "Action"
           },
           "client_updated_at": {
             "type": "string",
@@ -9842,17 +11562,91 @@
               }
             ],
             "title": "Label"
+          },
+          "action": {
+            "type": "string",
+            "const": "create",
+            "title": "Action"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "date",
-          "action",
-          "client_updated_at"
+          "client_updated_at",
+          "action"
         ],
-        "title": "WorkLocationSyncItem",
-        "description": "Work locations are identified by date (natural key) rather than an integer PK."
+        "title": "WorkLocationSyncCreateItem"
+      },
+      "WorkLocationSyncDeleteItem": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "action": {
+            "type": "string",
+            "const": "delete",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "WorkLocationSyncDeleteItem"
+      },
+      "WorkLocationSyncItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/WorkLocationSyncCreateItem"
+          },
+          {
+            "$ref": "#/components/schemas/WorkLocationSyncUpdateItem"
+          },
+          {
+            "$ref": "#/components/schemas/WorkLocationSyncDeleteItem"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "action",
+          "mapping": {
+            "create": "#/components/schemas/WorkLocationSyncCreateItem",
+            "delete": "#/components/schemas/WorkLocationSyncDeleteItem",
+            "update": "#/components/schemas/WorkLocationSyncUpdateItem"
+          }
+        }
       },
       "WorkLocationSyncRead": {
         "properties": {
@@ -9925,6 +11719,55 @@
           "deleted_at"
         ],
         "title": "WorkLocationSyncRead"
+      },
+      "WorkLocationSyncUpdateItem": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "client_updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Client Updated At"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "action": {
+            "type": "string",
+            "const": "update",
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "client_updated_at",
+          "action"
+        ],
+        "title": "WorkLocationSyncUpdateItem"
       }
     },
     "securitySchemes": {

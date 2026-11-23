@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type CreateLabelEndpointApiTimeTrackingLabelsPostParams = {
+export type UpdateGanttTaskEndpointApiGanttTasksTaskIdPatchParams = {
   user_id?: number | null;
 };

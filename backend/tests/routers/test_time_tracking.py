@@ -5,10 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.parametrize("method, labels_path", [("PATCH", "/api/labels"), ("PUT", "/api/time-tracking/labels")])
 def test_label_crud_and_delete(
+    method: str,
+    labels_path: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
@@ -18,19 +22,28 @@ def test_label_crud_and_delete(
     headers = auth_headers(user_id)
 
     label_response = db_client.post(
-        f"/api/time-tracking/labels?user_id={user_id}",
+        f"{labels_path}?user_id={user_id}",
         json={"name": "Focus", "color": "#112233"},
         headers=headers,
     )
     assert label_response.status_code == 201
     label_id = label_response.json()["id"]
 
-    update_label_response = db_client.put(
-        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
+    update_label_response = db_client.request(
+        method,
+        f"{labels_path}/{label_id}?user_id={user_id}",
         json={"name": "Deep Focus", "color": "#223344"},
         headers=headers,
     )
     assert update_label_response.status_code == 200
+    assert update_label_response.json()["updated_at"] >= label_response.json()["updated_at"]
+
+    stored = db_client.get(f"{labels_path}/{label_id}", headers=headers)
+    assert stored.status_code == 200
+    assert stored.json() == update_label_response.json()
+    listing = db_client.get(labels_path, headers=headers)
+    assert listing.status_code == 200
+    assert listing.json() == {"items": [stored.json()], "total": 1}
 
     task_response = db_client.post(
         f"/api/time-tracking/tasks?user_id={user_id}",
@@ -48,27 +61,29 @@ def test_label_crud_and_delete(
 
     # Cannot delete a label that is in use
     delete_label_response = db_client.delete(
-        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"{labels_path}/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_label_response.status_code == 409
     assert delete_label_response.json()["code"] == "conflict"
 
     # Required labels cannot be cleared; delete the task before deleting its label
-    rejected = db_client.put(
-        f"/api/time-tracking/tasks/{task_id}?user_id={user_id}", json={"label_id": None}, headers=headers
+    rejected = db_client.request(
+        method, f"/api/time-tracking/tasks/{task_id}?user_id={user_id}", json={"label_id": None}, headers=headers
     )
     assert rejected.status_code == 422
     assert rejected.json()["code"] == "label_required"
     db_client.delete(f"/api/time-tracking/tasks/{task_id}", headers=headers)
     delete_label_response = db_client.delete(
-        f"/api/time-tracking/labels/{label_id}?user_id={user_id}",
+        f"{labels_path}/{label_id}?user_id={user_id}",
         headers=headers,
     )
     assert delete_label_response.status_code == 204
 
 
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
 def test_task_constraints_and_filtering(
+    method: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
@@ -156,7 +171,8 @@ def test_task_constraints_and_filtering(
     assert second_running_task.status_code == 409
     assert second_running_task.json()["code"] == "conflict"
 
-    stop_running_response = db_client.put(
+    stop_running_response = db_client.request(
+        method,
         f"/api/time-tracking/tasks/{running_task_id}?user_id={user_id}",
         json={"stop_time": datetime(2026, 2, 2, 11, 0, tzinfo=UTC).isoformat()},
         headers=headers,
@@ -346,7 +362,9 @@ def test_get_single_resources(
     assert get_template_missing.status_code == 404
 
 
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
 def test_template_crud(
+    method: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
@@ -383,7 +401,8 @@ def test_template_crud(
     assert list_templates_response.status_code == 200
     assert list_templates_response.json()["total"] == 1
 
-    update_template_response = db_client.put(
+    update_template_response = db_client.request(
+        method,
         f"/api/time-tracking/templates/{template_id}?user_id={user_id}",
         json={"text": "Updated daily focus"},
         headers=headers,

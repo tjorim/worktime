@@ -71,6 +71,7 @@ from app.schemas import (
     SyncStatusResponse,
     TaskSyncItem,
     TaskSyncRead,
+    TaskSyncRecordResult,
     TemplateSyncItem,
     TemplateSyncRead,
     TimeOffEntrySyncDeleteItem,
@@ -299,7 +300,7 @@ async def _add_task_or_running_conflict(
     task: TimeTrackingTask,
     item: TaskSyncItem,
     apply: Callable[[], None] | None = None,
-) -> SyncRecordResult | None:
+) -> TaskSyncRecordResult | None:
     """Stage *task* and flush it inside a savepoint, catching a running-task race.
 
     `_user_has_other_running_task` closes the ordinary case (offline devices
@@ -339,7 +340,7 @@ async def _add_task_or_running_conflict(
         # never landed), and expiring a non-persistent instance raises.
         if sa_inspect(task).persistent:
             session.expire(task)
-        return SyncRecordResult(
+        return TaskSyncRecordResult(
             id=item.id,
             status="conflict",
             conflict_reason="only one running task is allowed per user",
@@ -459,16 +460,16 @@ async def _push_label(session: AsyncSession, user_id: int, item: LabelSyncItem) 
     return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
-async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) -> SyncRecordResult:
+async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) -> TaskSyncRecordResult:
     await lock_task_writes(session, user_id)
     now = _now()
     task: TimeTrackingTask | None = await session.get(TimeTrackingTask, item.id)
 
     if item.action == "delete":
         if task is None or task.user_id != user_id or task.deleted_at is not None:
-            return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+            return TaskSyncRecordResult(id=item.id, status="ok", server_updated_at=now)
         if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
-            return SyncRecordResult(
+            return TaskSyncRecordResult(
                 id=item.id,
                 status="conflict",
                 server_updated_at=task.updated_at,
@@ -478,7 +479,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
         task.deleted_at = now
         task.updated_at = now
         session.add(task)
-        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+        return TaskSyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task is None:
         from app.services.db_service import validate_task
@@ -488,7 +489,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
 
             raise ValidationError("text and start_time are required for task create")
         if item.stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=None):
-            return SyncRecordResult(
+            return TaskSyncRecordResult(
                 id=item.id,
                 status="conflict",
                 conflict_reason="only one running task is allowed per user",
@@ -513,20 +514,20 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
                 return conflict
         else:
             session.add(task)
-        return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+        return TaskSyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
     if task.user_id != user_id:
         # See the equivalent check in _push_label: a per-record conflict
         # keeps the rest of the batch processing and avoids an id-ownership
         # oracle, rather than raising and 400ing the whole batch.
-        return SyncRecordResult(
+        return TaskSyncRecordResult(
             id=item.id,
             status="conflict",
             conflict_reason="server version is newer",
         )
 
     if _clamp_client_timestamp(item.client_updated_at) <= as_utc(task.client_updated_at):
-        return SyncRecordResult(
+        return TaskSyncRecordResult(
             id=item.id,
             status="conflict",
             server_updated_at=task.updated_at,
@@ -538,7 +539,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
     )
     candidate_stop_time = item.stop_time if "stop_time" in provided_fields else task.stop_time
     if candidate_stop_time is None and await _user_has_other_running_task(session, user_id, exclude_id=task.id):
-        return SyncRecordResult(
+        return TaskSyncRecordResult(
             id=item.id,
             status="conflict",
             server_updated_at=task.updated_at,
@@ -603,7 +604,7 @@ async def _push_task(session: AsyncSession, user_id: int, item: TaskSyncItem) ->
     else:
         apply_task_update()
         session.add(task)
-    return SyncRecordResult(id=item.id, status="ok", server_updated_at=now)
+    return TaskSyncRecordResult(id=item.id, status="ok", server_updated_at=now)
 
 
 async def _push_template(session: AsyncSession, user_id: int, item: TemplateSyncItem) -> SyncRecordResult:
@@ -1012,14 +1013,7 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
     an explicit exclusion from the "no mutation without an audit trail"
     contract described on ``AuditEntry``, not an oversight.
     """
-    results: dict[str, list[SyncRecordResult]] = {
-        "labels": [],
-        "tasks": [],
-        "templates": [],
-        "work_locations": [],
-        "time_off_entries": [],
-        "gantt_tasks": [],
-    }
+    results = SyncPushResults(labels=[], tasks=[], templates=[], work_locations=[], time_off_entries=[], gantt_tasks=[])
 
     # Checked before anything is mutated so a refused batch leaves no partial
     # state behind.
@@ -1031,7 +1025,7 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
     # so processing tasks before gantt tasks would reject any task carrying a
     # gantt_task_id link with "gantt task not found".
     for item in changes.labels:
-        results["labels"].append(await _push_label(session, user_id, item))
+        results.labels.append(await _push_label(session, user_id, item))
 
     # Retry unavailable targets after other records have been accepted, so a
     # first upload does not depend on the client's array order. Rejected creates
@@ -1069,7 +1063,7 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
                     )
             break
         pending_gantt = retry
-    results["gantt_tasks"] = [gantt_results[index] for index in range(len(changes.gantt_tasks))]
+    results.gantt_tasks = [gantt_results[index] for index in range(len(changes.gantt_tasks))]
 
     # Apply cleanup after queued graph edits, so its server timestamp cannot
     # make another edit in this same batch appear stale.
@@ -1088,32 +1082,32 @@ async def push_changes(session: AsyncSession, user_id: int, changes: SyncPushReq
                 and await session.get(GanttTask, item.gantt_task_id) is None
             ):
                 raise TaskValidationError(ErrorCode.GANTT_DEPENDENCY_UNKNOWN, "linked Gantt task was rejected")
-            result = await _push_task(session, user_id, item)
+            task_result = await _push_task(session, user_id, item)
         except TaskValidationError as error:
-            result = SyncRecordResult(
+            task_result = TaskSyncRecordResult(
                 id=item.id,
                 status="conflict",
                 conflict_reason=str(error),
                 code=error.code.value,
                 conflicting_task_id=error.conflicting_task_id,
             )
-        results["tasks"].append(result)
+        results.tasks.append(task_result)
 
     for item in changes.templates:
         try:
             result = await _push_template(session, user_id, item)
         except TaskValidationError as error:
             result = SyncRecordResult(id=item.id, status="conflict", conflict_reason=str(error), code=error.code.value)
-        results["templates"].append(result)
+        results.templates.append(result)
 
     for item in changes.work_locations:
-        results["work_locations"].append(await _push_work_location(session, user_id, item))
+        results.work_locations.append(await _push_work_location(session, user_id, item))
 
     for item in changes.time_off_entries:
-        results["time_off_entries"].append(await _push_time_off_entry(session, user_id, item))
+        results.time_off_entries.append(await _push_time_off_entry(session, user_id, item))
 
     await session.commit()
-    return SyncPushResponse(results=SyncPushResults(**results))
+    return SyncPushResponse(results=results)
 
 
 async def pull_changes(session: AsyncSession, user_id: int, since: datetime) -> SyncPullResponse:

@@ -4,17 +4,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.parametrize("method, collection_path", [("PATCH", "/api/users"), ("PUT", "/api/users/")])
 def test_user_crud_and_settings_roundtrip(
+    method: str,
+    collection_path: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
 ) -> None:
     admin_headers = auth_headers(1, is_admin=True)
 
     create_response = db_client.post(
-        "/api/users/",
+        collection_path,
+        follow_redirects=False,
         json={"username": "api-user", "display_name": "API User", "settings": {"theme": "dark"}},
         headers=admin_headers,
     )
@@ -35,13 +40,15 @@ def test_user_crud_and_settings_roundtrip(
     assert by_username_response.json()["id"] == user_id
 
     list_response = db_client.get(
-        "/api/users/?offset=0&limit=10",
+        f"{collection_path}?offset=0&limit=10",
+        follow_redirects=False,
         headers=admin_headers,
     )
     assert list_response.status_code == 200
     assert list_response.json()["total"] == 1
 
-    update_response = db_client.put(
+    update_response = db_client.request(
+        method,
         f"/api/users/{user_id}",
         json={"display_name": "Updated", "settings": {"theme": "light", "weekStartsOn": "monday"}},
         headers=auth_headers(user_id),

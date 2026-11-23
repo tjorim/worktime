@@ -6,11 +6,9 @@
  * OpenAPI spec version: snapshot
  */
 
-export type GanttTaskSyncItemAction = typeof GanttTaskSyncItemAction[keyof typeof GanttTaskSyncItemAction];
+export type TemplateSyncDeleteItemAction = typeof TemplateSyncDeleteItemAction[keyof typeof TemplateSyncDeleteItemAction];
 
 
-export const GanttTaskSyncItemAction = {
-  create: 'create',
-  update: 'update',
+export const TemplateSyncDeleteItemAction = {
   delete: 'delete',
 } as const;

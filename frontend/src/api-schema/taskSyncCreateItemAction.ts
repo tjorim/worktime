@@ -6,11 +6,9 @@
  * OpenAPI spec version: snapshot
  */
 
-export type TemplateSyncItemAction = typeof TemplateSyncItemAction[keyof typeof TemplateSyncItemAction];
+export type TaskSyncCreateItemAction = typeof TaskSyncCreateItemAction[keyof typeof TaskSyncCreateItemAction];
 
 
-export const TemplateSyncItemAction = {
+export const TaskSyncCreateItemAction = {
   create: 'create',
-  update: 'update',
-  delete: 'delete',
 } as const;

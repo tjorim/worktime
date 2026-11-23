@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
 def test_gantt_task_crud_and_validation(
+    method: str,
     db_client: TestClient,
     auth_headers: Callable[..., dict[str, str]],
     create_user_factory: Callable[..., int],
@@ -39,7 +42,7 @@ def test_gantt_task_crud_and_validation(
     assert create_resp.json()["end_date"] == "2026-03-15"
     assert create_resp.json()["progress"] == 10
     assert create_resp.json()["notes"] == "Initial design work"
-    assert create_resp.json()["user_id"] == owner_id
+    assert "user_id" not in create_resp.json()
 
     # List → 200, item appears in list
     list_resp = db_client.get(
@@ -61,12 +64,14 @@ def test_gantt_task_crud_and_validation(
     assert get_resp.json()["name"] == "Design phase"
 
     # Update → 200, fields changed
-    update_resp = db_client.put(
+    update_resp = db_client.request(
+        method,
         f"/api/gantt-tasks/{task_id}?user_id={owner_id}",
         json={"name": "Design & prototyping", "progress": 50},
         headers=owner_headers,
     )
     assert update_resp.status_code == 200
+    assert ("user_id" in update_resp.json()) == (method == "PUT")
     assert update_resp.json()["name"] == "Design & prototyping"
     assert update_resp.json()["progress"] == 50
     assert update_resp.json()["end_date"] == "2026-03-15"  # unchanged
@@ -74,7 +79,8 @@ def test_gantt_task_crud_and_validation(
     persisted_end_date = update_resp.json()["end_date"]
 
     # 400 for end_date < start_date on partial update against existing persisted dates
-    bad_update_resp = db_client.put(
+    bad_update_resp = db_client.request(
+        method,
         f"/api/gantt-tasks/{task_id}?user_id={owner_id}",
         json={"start_date": "2026-03-20"},
         headers=owner_headers,
@@ -90,7 +96,8 @@ def test_gantt_task_crud_and_validation(
     assert after_bad_update_resp.json()["end_date"] == persisted_end_date
 
     # 422 for end_date < start_date when both dates are invalid in the request payload
-    bad_update_payload_resp = db_client.put(
+    bad_update_payload_resp = db_client.request(
+        method,
         f"/api/gantt-tasks/{task_id}?user_id={owner_id}",
         json={"start_date": "2026-03-20", "end_date": "2026-03-10"},
         headers=owner_headers,
@@ -138,7 +145,8 @@ def test_gantt_task_crud_and_validation(
     )
     assert impersonate_resp.status_code == 403
 
-    impersonate_update_resp = db_client.put(
+    impersonate_update_resp = db_client.request(
+        method,
         f"/api/gantt-tasks/{other_task_id}?user_id={other_id}",
         json={"name": "Hijacked"},
         headers=owner_headers,

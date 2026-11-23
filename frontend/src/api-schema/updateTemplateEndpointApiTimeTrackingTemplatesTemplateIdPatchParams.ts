@@ -6,6 +6,6 @@
  * OpenAPI spec version: snapshot
  */
 
-export type DeleteLabelEndpointApiTimeTrackingLabelsLabelIdDeleteParams = {
+export type UpdateTemplateEndpointApiTimeTrackingTemplatesTemplateIdPatchParams = {
   user_id?: number | null;
 };

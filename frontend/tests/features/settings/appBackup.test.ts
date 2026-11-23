@@ -816,7 +816,6 @@ describe("appBackup", () => {
                     {
                       conflict_reason: null,
                       code: null,
-                      conflicting_task_id: null,
                       id: "l1",
                       status: "conflict",
                       server_updated_at: "2026-01-03T00:00:00.000Z",

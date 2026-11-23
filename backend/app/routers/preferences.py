@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,15 +15,20 @@ from app.services.db_service import get_user_preferences, upsert_user_preference
 router = APIRouter(prefix="/preferences", tags=["Preferences"])
 
 
-@router.get("", response_model=UserPreferencesRead | None)
+@router.get("", response_model=UserPreferencesRead | None, responses={204: {"description": "No stored preferences"}})
 async def get_preferences_endpoint(
+    prefer: str | None = Header(default=None, description="Use return=minimal for 204 when nothing is stored."),
     authenticated_user_id: int = Depends(get_authenticated_user_id),
     session: AsyncSession = Depends(get_session),
-) -> JSONResponse:
-    """Return the authenticated user's stored preferences, or null if none exist yet."""
+) -> Response:
+    """Return stored preferences. Older clients receive JSON null when none exist yet."""
     timings: dict[str, float] = {}
     with time_operation("query", timings):
         prefs = await get_user_preferences(session, authenticated_user_id)
+
+    headers = {"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}", "Vary": "Prefer"}
+    if prefs is None and prefer == "return=minimal":
+        return Response(status_code=status.HTTP_204_NO_CONTENT, headers={**headers, "Preference-Applied": prefer})
 
     content = (
         UserPreferencesRead.model_validate(prefs, from_attributes=True).model_dump(mode="json")
@@ -33,7 +38,7 @@ async def get_preferences_endpoint(
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=content,
-        headers={"X-Db-Query-Ms": f"{timings.get('query', 0):.3f}"},
+        headers=headers,
     )
 
 

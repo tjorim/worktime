@@ -28,7 +28,6 @@ class GanttTaskCreate(RequestModel):
 
 class GanttTaskRead(ResponseModel):
     id: str
-    user_id: int
     label_id: str | None
     name: str
     start_date: dt_date
@@ -37,6 +36,11 @@ class GanttTaskRead(ResponseModel):
     dependencies: str | None
     notes: str | None
     created_at: dt_datetime
+    updated_at: dt_datetime
+
+
+class LegacyGanttTaskRead(GanttTaskRead):
+    user_id: int = Field(deprecated=True)
 
 
 class GanttTaskUpdate(RequestModel):

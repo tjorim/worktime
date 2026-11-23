@@ -8,7 +8,6 @@
 
 export type GanttTaskRead = {
   id: string;
-  user_id: number;
   label_id: string | null;
   name: string;
   start_date: string;
@@ -17,4 +16,5 @@ export type GanttTaskRead = {
   dependencies: string | null;
   notes: string | null;
   created_at: string;
+  updated_at: string;
 };

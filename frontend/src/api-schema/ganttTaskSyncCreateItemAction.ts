@@ -6,11 +6,9 @@
  * OpenAPI spec version: snapshot
  */
 
-export type LabelSyncItemAction = typeof LabelSyncItemAction[keyof typeof LabelSyncItemAction];
+export type GanttTaskSyncCreateItemAction = typeof GanttTaskSyncCreateItemAction[keyof typeof GanttTaskSyncCreateItemAction];
 
 
-export const LabelSyncItemAction = {
+export const GanttTaskSyncCreateItemAction = {
   create: 'create',
-  update: 'update',
-  delete: 'delete',
 } as const;

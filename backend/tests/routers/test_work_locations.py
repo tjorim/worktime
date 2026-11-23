@@ -135,3 +135,24 @@ def test_work_location_upsert_rejects_non_iso_and_null(db_client, auth_headers, 
     response = db_client.post(url, headers=headers, json={"date": "2026-02-02", "country_code": "gb"})
     assert response.status_code == 201
     assert response.json()["country_code"] == "GB"
+
+
+def test_put_work_location_upserts_by_path_date_and_audits(db_client, auth_headers, create_user_factory):
+    user_id = create_user_factory(db_client, auth_headers(1, is_admin=True), "put-location")
+    headers = auth_headers(user_id)
+    path = "/api/work-locations/2026-02-01"
+
+    created = db_client.put(path, json={"country_code": "nl", "label": "Home"}, headers=headers)
+    assert created.status_code == 200
+    assert created.json()["country_code"] == "NL"
+    assert created.json()["date"] == "2026-02-01"
+
+    updated = db_client.put(path, json={"country_code": "BE"}, headers=headers)
+    assert updated.status_code == 200
+    assert updated.json()["id"] == created.json()["id"]
+    assert updated.json()["label"] is None
+    assert updated.json()["updated_at"] >= created.json()["updated_at"]
+    assert db_client.get(path, headers=headers).json() == updated.json()
+
+    audit = db_client.get("/api/audit", headers=headers).json()["items"]
+    assert {entry["action"] for entry in audit} >= {"create_work_location", "update_work_location"}
