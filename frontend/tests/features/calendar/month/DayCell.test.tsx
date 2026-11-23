@@ -79,7 +79,7 @@ describe("DayCell", () => {
 
     it("should have accessible description with full date", () => {
       render(<DayCell {...defaultProps} />);
-      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/January 15, 2025/i);
+      expect(screen.getByRole("gridcell")).toHaveAccessibleDescription(/15 January 2025/i);
     });
 
     it("includes the visible shift code and event text in the accessible name", () => {

@@ -54,6 +54,14 @@ const entries: TimeOffEntry[] = [
     entryFlag: "full_day",
     note: "Business trip",
   },
+  {
+    id: "e",
+    entryKind: "weekly",
+    weekday: 4,
+    entryType: "other",
+    entryFlag: "half_am",
+    note: "Weekly appointment",
+  },
 ];
 const noop = () => {};
 function Fixture() {

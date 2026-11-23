@@ -10,7 +10,7 @@ import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   EVENT_TYPE_ICONS,
   calculateVacationStats,
-  formatVacationValue,
+  type VacationTypeTotals,
   getAvailableYears,
 } from "@/features/time-off/vacationCalculations";
 import * as m from "@/paraglide/messages.js";
@@ -42,15 +42,13 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
     [entries, selectedYear, workingDays],
   );
 
-  const filteredTypes = useMemo(() => stats.byType.filter((type) => type.days > 0), [stats.byType]);
-
   return (
     <Card className="mb-3">
       <CardHeader className="border-b border-border">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-semibold">
             <Icon icon={TrendingUpIcon} className="mr-2" />
-            {m.timeoff_vacation_stats()}
+            {m.timeoff_stats()}
           </span>
           <div className="flex items-center gap-2">
             <small className="text-muted-foreground">{m.timeoff_year_label()}</small>
@@ -71,40 +69,50 @@ export function TimeOffStatsView({ entries }: TimeOffStatsViewProps) {
       <CardContent>
         <p className="text-sm text-muted-foreground">{m.timeoff_statistics_counting_note()}</p>
         <HolidayStatusNotice status={workingDays.holidayStatus} />
-        <div className="mb-4 flex items-baseline gap-2">
-          <span className="text-2xl font-bold">{formatVacationValue(stats.totalDays)}</span>
-          <span className="text-sm text-muted-foreground">
-            {m.timeoff_days_logged_in({ year: selectedYear })}
-          </span>
-        </div>
+        <p className="mb-4 text-2xl font-bold">
+          {m.timeoff_leave_days_in_year({ count: stats.totalDays, year: selectedYear })}
+        </p>
 
-        {filteredTypes.length === 0 ? (
+        {stats.byType.length === 0 && stats.otherByType.length === 0 ? (
           <p className="m-0 text-center text-muted-foreground">
-            {m.timeoff_no_time_off_year({ year: selectedYear })}
+            {m.timeoff_no_entries_year({ year: selectedYear })}
           </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {filteredTypes.map((type) => {
-              const colors = getEventColorUtilities([type.key]);
-              return (
-                <div key={type.key} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex size-6 items-center justify-center rounded-full ${colors}`}
-                    >
-                      <Icon icon={EVENT_TYPE_ICONS[type.key]} />
-                    </span>
-                    <span>{type.label}</span>
-                  </div>
-                  <Badge className={colors}>
-                    {formatVacationValue(type.days)} {m.timeoff_days_unit()}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
+          <>
+            <TypeBreakdown types={stats.byType} />
+            {stats.otherByType.length > 0 && (
+              <section className="mt-4 border-t border-border pt-3">
+                <h3 className="mb-2 text-sm font-semibold">{m.timeoff_other_entries()}</h3>
+                <TypeBreakdown types={stats.otherByType} />
+              </section>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function TypeBreakdown({ types }: { types: VacationTypeTotals[] }) {
+  if (types.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {types.map((type) => {
+        const colors = getEventColorUtilities([type.key]);
+        return (
+          <div key={type.key} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex size-6 items-center justify-center rounded-full ${colors}`}
+              >
+                <Icon icon={EVENT_TYPE_ICONS[type.key]} />
+              </span>
+              <span>{type.label}</span>
+            </div>
+            <Badge className={colors}>{m.timeoff_day_count({ count: type.days })}</Badge>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -1,3 +1,9 @@
+import {
+  dayjs,
+  formatDisplayDate,
+  formatHdayDate,
+  getWeekdayName,
+} from "@/lib/dates/dateTimeUtils";
 import { entriesOverlap } from "@/lib/time-off/overlap";
 import {
   BuildingIcon,
@@ -14,7 +20,6 @@ import { Icon } from "@/components/Icon";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, useCallback, useRef, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { dayjs, getWeekdayName } from "@/lib/dates/dateTimeUtils";
 import type { PublicHolidayInfo } from "@/types/publicHolidays";
 import type { SchoolHolidayInfo } from "@/features/calendar/month/schoolHolidays";
 import type { PaydayInfo } from "@/features/calendar/month/paydays";
@@ -486,7 +491,7 @@ export function MonthCalendar({
     <div className="month-calendar">
       <div className="month-calendar-header flex items-center justify-between mb-4">
         <div className="month-calendar-title" data-testid="month-title" aria-live="polite">
-          <span>{month.format("MMMM YYYY")}</span>
+          <span>{formatDisplayDate(month, "month")}</span>
         </div>
         <div className="flex gap-2">
           <Button
@@ -524,7 +529,7 @@ export function MonthCalendar({
       <div
         className="month-calendar-grid"
         role="grid"
-        aria-label={m.calendar_grid_label({ month: month.format("MMMM YYYY") })}
+        aria-label={m.calendar_grid_label({ month: formatDisplayDate(month, "month") })}
         aria-describedby={keyboardHintId}
         onFocus={handleGridFocus}
         onKeyDown={handleGridKeyDown}
@@ -545,7 +550,7 @@ export function MonthCalendar({
               const globalIndex = rowIndex * 7 + row.indexOf(day);
               const key = day.format(DAY_FORMAT);
               const dayKey = day.format("YYYY-MM-DD");
-              const hdayKey = day.format("YYYY/MM/DD");
+              const hdayKey = formatHdayDate(day);
               const cellEvents = dayEvents.get(key) ?? [];
               return (
                 <DayCell

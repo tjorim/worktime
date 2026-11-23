@@ -125,8 +125,8 @@ describe("TimeTrackingView Integration Tests", () => {
       expect(screen.getAllByText(/Morning work/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Afternoon support/i).length).toBeGreaterThan(0);
 
-      // Verify total hours (3.00h displayed in progress bar)
-      expect(screen.getByText(/3\.00/i)).toBeInTheDocument();
+      // Verify total hours (3h displayed in progress bar)
+      expect(screen.getByText(/3h/i)).toBeInTheDocument();
     });
   });
 
@@ -189,8 +189,8 @@ describe("TimeTrackingView Integration Tests", () => {
       renderWithSettings();
 
       // Category totals are always visible, once each.
-      expect(screen.getByText(/6\.0 hours/i)).toBeInTheDocument(); // Development total
-      expect(screen.getByText(/3\.0 hours/i)).toBeInTheDocument(); // Support total
+      expect(screen.getByText(/^6h$/i)).toBeInTheDocument(); // Development total
+      expect(screen.getAllByText(/^3h$/i).length).toBeGreaterThan(0); // Support total
 
       // The per-day table and its totals row open on demand.
       fireEvent.click(screen.getByRole("button", { name: "Detailed Breakdown" }));
@@ -423,7 +423,7 @@ describe("TimeTrackingView Integration Tests", () => {
       renderWithSettings();
 
       // Verify weekly summary shows Support in the initial week (new format)
-      const hoursElements = screen.getAllByText(/2\.0 hours/i);
+      const hoursElements = screen.getAllByText(/^2h$/i);
       expect(hoursElements.length).toBeGreaterThan(0);
       // Week 3 has Support task (appears in multiple places)
       const supportElements = screen.getAllByText(/Support/i);
@@ -432,7 +432,7 @@ describe("TimeTrackingView Integration Tests", () => {
       fireEvent.click(screen.getByRole("button", { name: /Go to previous week/i }));
 
       // After navigating to week 2, we should see Development task
-      const hoursElements2 = screen.getAllByText(/2\.0 hours/i);
+      const hoursElements2 = screen.getAllByText(/^2h$/i);
       expect(hoursElements2.length).toBeGreaterThan(0);
       const devElements = screen.getAllByText(/Development/i);
       expect(devElements.length).toBeGreaterThan(0);

@@ -319,7 +319,7 @@ describe("TimeTrackingDailyView", () => {
           selector: "[data-slot=task-label]",
         }),
       ).toHaveLength(2);
-      expect(screen.queryByText(/Started 2025-01-01 10:00/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Started 1 Jan 2025 10:00/)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Stop Timer · 00:00:05/i })).toBeInTheDocument();
       expect(
         screen.getByText("Running", { selector: "[data-slot=badge], [data-slot=running-status]" }),
@@ -342,7 +342,7 @@ describe("TimeTrackingDailyView", () => {
       expect(
         screen.getByText("Support", { selector: "[data-slot=task-label]" }),
       ).toBeInTheDocument();
-      expect(screen.getByText("Started 2025-01-01 23:30")).toBeInTheDocument();
+      expect(screen.getByText("Started 1 Jan 2025 23:30")).toBeInTheDocument();
       expect(
         screen.queryByText("Night handover", { selector: "[data-slot=task-row] *" }),
       ).not.toBeInTheDocument();

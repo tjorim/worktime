@@ -1,3 +1,4 @@
+import { formatDuration } from "@/lib/dates/dateTimeUtils";
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { useLiveTime } from "@/hooks/useLiveTime";
@@ -62,16 +63,11 @@ function calculateTimeLeft(targetDate: Dayjs | null, currentTime: Dayjs): Countd
   const minutes = Math.floor((diff % (60 * 60)) / 60);
   const seconds = diff % 60;
 
-  let formatted = "";
-  if (days > 0) {
-    formatted = `${days}d ${hours}h ${minutes}m`;
-  } else if (hours > 0) {
-    formatted = `${hours}h ${minutes}m`;
-  } else if (minutes > 0) {
-    formatted = `${minutes}m ${seconds}s`;
-  } else {
-    formatted = `${seconds}s`;
-  }
+  const showSeconds = days === 0 && hours === 0;
+  const formatted = formatDuration(showSeconds ? diff : diff - seconds, {
+    largestUnit: "day",
+    precision: showSeconds ? "second" : "minute",
+  });
 
   return {
     days,

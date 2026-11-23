@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatDuration } from "@/lib/dates/dateTimeUtils";
 import { ChartNoAxesColumnIncreasingIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Icon } from "@/components/Icon";
@@ -33,7 +34,7 @@ export function WeeklyHoursChart({
   const definition = useMemo(() => {
     const rows: DayHoursRow[] = weekDays.map((day, index) => ({
       iso: day.iso,
-      label: day.label.substring(0, 3),
+      label: formatDisplayDate(day.iso, "shortWeekday"),
       hours: dailyHourTotals[index] ?? 0,
     }));
 
@@ -90,7 +91,7 @@ export function WeeklyHoursChart({
             aria-hidden="true"
             className="mr-1 inline-block w-3 border-0 border-t-2 border-dashed border-success-solid align-middle"
           />
-          {m.tt_target_label()}: {targetDaily.toFixed(1)} {m.tt_hours_unit()}
+          {m.tt_target_label()}: {formatDuration(targetDaily * 3600)}
         </div>
       )}
     </div>

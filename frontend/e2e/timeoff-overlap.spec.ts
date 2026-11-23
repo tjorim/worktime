@@ -16,7 +16,7 @@ for (const theme of ["light", "dark"]) {
       await expect(warned).toHaveCount(6);
       for (const [index, entry] of (await warned.all()).entries()) {
         const day = 11 + Math.floor(index / 2);
-        const description = new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(
+        const description = new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(
           new Date(2026, 10, day),
         );
         const cell = entry.locator('xpath=ancestor::*[@role="gridcell"]');

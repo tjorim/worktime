@@ -23,10 +23,13 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Changed
 
 - Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
+- Dates and durations across the web app follow the selected language, with UK date order in English and consistent hour and minute units.
 
 ### Fixed
 
 - Time Off warnings identify the overlapping entry and dates. The month calendar flags only affected days, and specific dates take priority over date ranges and weekly entries.
+- Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
+
 - Clarify time-tracking form hints, weekly label charts, calendar indicators and schedule codes. Keep mobile navigation and quick actions clear of the content, and reserve start-up sync notifications for errors.
 - The Gantt timeline opens just before the earliest unfinished task, restores the saved zoom and explains weekend, public holiday and time-off shading. Bar labels update when tasks are renamed.
 - Unified Calendar shows time off on the correct dates, with translated type names, notes, flags and colours that match the other calendars.

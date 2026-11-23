@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { NativeSelect } from "@/components/ui/native-select";
 import { TriangleAlertIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -13,9 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import type { LongWeekend } from "@/api-types";
-import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 
 interface LongWeekendModalProps {
   show: boolean;
@@ -45,14 +44,7 @@ export function LongWeekendModal({
   onHide,
   onBridgeDaysChange,
 }: LongWeekendModalProps) {
-  const locale = getLocale();
-
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-    }).format(dayjs(iso).toDate());
+  const formatDate = (iso: string) => formatDisplayDate(iso, "weekdayDate");
 
   return (
     <Dialog

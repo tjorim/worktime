@@ -60,17 +60,17 @@ describe("DailyTaskList", () => {
     );
 
   describe("break deduction badge", () => {
-    it("renders -30min badge when task has includesBreak", () => {
+    it("renders -30m badge when task has includesBreak", () => {
       renderList([makeTask({ includesBreak: true })]);
 
-      expect(screen.getByText("-30min")).toBeInTheDocument();
-      expect(screen.getByLabelText("30 minute break deducted")).toBeInTheDocument();
+      expect(screen.getByText("-30m")).toBeInTheDocument();
+      expect(screen.getByLabelText("30 minutes deducted for break")).toBeInTheDocument();
     });
 
-    it("does not render -30min badge when task has no break", () => {
+    it("does not render -30m badge when task has no break", () => {
       renderList([makeTask()]);
 
-      expect(screen.queryByText("-30min")).not.toBeInTheDocument();
+      expect(screen.queryByText("-30m")).not.toBeInTheDocument();
     });
   });
 
@@ -129,7 +129,7 @@ describe("DailyTaskList", () => {
   });
 
   describe("context menu break item", () => {
-    it("shows 'Includes 30min break' for eligible task", () => {
+    it("shows 'Includes 30m break' for eligible task", () => {
       renderList([makeTask()]);
 
       // Use a safer query for the task item
@@ -137,7 +137,7 @@ describe("DailyTaskList", () => {
       expect(taskItem).toBeInTheDocument();
       fireEvent.contextMenu(taskItem);
 
-      expect(screen.getByText("Includes 30min break")).toBeInTheDocument();
+      expect(screen.getByText("Includes 30m break")).toBeInTheDocument();
     });
 
     it("shows 'Remove break deduction' when task already has break", () => {
@@ -161,7 +161,7 @@ describe("DailyTaskList", () => {
       const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
 
-      const menuItem = screen.getByText("Too short for 30min break");
+      const menuItem = screen.getByText("Too short for 30m break");
       const buttonAncestor = menuItem.closest("[role=menuitem]");
       expect(buttonAncestor).not.toBeNull(); // Fail clearly if missing
       expect(buttonAncestor).toHaveAttribute("aria-disabled", "true");
@@ -174,9 +174,9 @@ describe("DailyTaskList", () => {
       const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
 
-      expect(screen.getByText("Includes 30min break")).toBeInTheDocument();
+      expect(screen.getByText("Includes 30m break")).toBeInTheDocument();
       // Should not be disabled
-      expect(screen.getByRole("menuitem", { name: "Includes 30min break" })).not.toHaveAttribute(
+      expect(screen.getByRole("menuitem", { name: "Includes 30m break" })).not.toHaveAttribute(
         "aria-disabled",
         "true",
       );
@@ -188,7 +188,7 @@ describe("DailyTaskList", () => {
 
       const taskItem = container.querySelector("[data-slot=task-row]")!;
       fireEvent.contextMenu(taskItem);
-      await user.click(screen.getByText("Includes 30min break"));
+      await user.click(screen.getByText("Includes 30m break"));
 
       expect(onToggleBreak).toHaveBeenCalledWith("task-1", true);
     });
@@ -220,7 +220,7 @@ describe("DailyTaskList", () => {
       // Right-click on task B
       const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
-      await user.click(screen.getByText("Includes 30min break"));
+      await user.click(screen.getByText("Includes 30m break"));
 
       // Confirmation dialog should appear
       expect(screen.getByText(/The break deduction is currently on "Task A"/)).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe("DailyTaskList", () => {
 
       const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
-      await user.click(screen.getByText("Includes 30min break"));
+      await user.click(screen.getByText("Includes 30m break"));
       await user.click(screen.getByText("Move Break"));
 
       // Should remove break from task A and add to task B, in order
@@ -261,7 +261,7 @@ describe("DailyTaskList", () => {
 
       const taskItems = container.querySelectorAll("[data-slot=task-row]");
       fireEvent.contextMenu(taskItems[1]!);
-      await user.click(screen.getByText("Includes 30min break"));
+      await user.click(screen.getByText("Includes 30m break"));
       await user.click(screen.getByText("Cancel"));
 
       expect(onToggleBreak).not.toHaveBeenCalled();
@@ -281,7 +281,7 @@ describe("DailyTaskList", () => {
     it("shows gap indicator between tasks with a gap >= 5 minutes", () => {
       renderList([task1, task2]);
       expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
-      expect(screen.getByText("120min gap")).toBeInTheDocument();
+      expect(screen.getByText("2h gap")).toBeInTheDocument();
     });
 
     it("does not show gap indicator when tasks are adjacent (no gap)", () => {
@@ -304,7 +304,7 @@ describe("DailyTaskList", () => {
       });
       renderList([task1, exactlyFive]);
       expect(screen.getByTestId("gap-indicator")).toBeInTheDocument();
-      expect(screen.getByText("5min gap")).toBeInTheDocument();
+      expect(screen.getByText("5m gap")).toBeInTheDocument();
     });
 
     it("shows gap indicator even when gap is below 5 minutes", () => {
@@ -365,7 +365,7 @@ describe("DailyTaskList", () => {
       expect(screen.getByText("Planned")).toBeInTheDocument();
       expect(screen.getByText(/Starts 14:30 · in 2h 15m/)).toBeInTheDocument();
       expect(screen.getByText(/Stop: 15:30/)).toBeInTheDocument();
-      expect(screen.getByText("135min until next")).toBeInTheDocument();
+      expect(screen.getByText("2h 15m until next")).toBeInTheDocument();
     });
 
     it("shows time until a planned entry after a running task", () => {
@@ -387,7 +387,7 @@ describe("DailyTaskList", () => {
         isToday: true,
       });
 
-      expect(screen.getByText("60min until next")).toBeInTheDocument();
+      expect(screen.getByText("1h until next")).toBeInTheDocument();
     });
 
     it("keeps an entry marked as planned when a running task overruns its start", () => {

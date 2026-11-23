@@ -13,7 +13,7 @@ for (const theme of ["light", "dark"]) {
         path: `test-results/review-screenshots/1700/${theme}-${width}-form.png`,
       });
       await page.getByRole("button", { name: "Add Task", exact: true }).click();
-      await expect(page.getByText(/Stop: 06:30 \(2026-01-05\)/)).toBeVisible();
+      await expect(page.getByText(/Stop: 06:30 \(5 Jan 2026\)/)).toBeVisible();
       await page.mouse.move(0, 0);
       await page.screenshot({
         path: `test-results/review-screenshots/1700/${theme}-${width}-saved.png`,
@@ -33,7 +33,7 @@ for (const theme of ["light", "dark"]) {
         path: `test-results/review-screenshots/1700/${theme}-${width}-edit.png`,
       });
       await dialog.getByRole("button", { name: "Save Changes", exact: true }).click();
-      await expect(page.getByText(/Stop: 07:00 \(2026-01-05\)/)).toBeVisible();
+      await expect(page.getByText(/Stop: 07:00 \(5 Jan 2026\)/)).toBeVisible();
       await page.goto(`/e2e/fixtures/dialog-pickers.html?mode=template&theme=${theme}`);
       await page.getByLabel("Start", { exact: true }).fill("23:00");
       await page.getByLabel("Stop", { exact: true }).fill("06:30");
@@ -51,5 +51,5 @@ test("overnight timer stops with one action", async ({ page }) => {
   await page.goto("/e2e/fixtures/overnight-tasks.html?timer");
   await page.getByRole("button", { name: /Stop Timer/ }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByText(/Stop: 06:30 \(2026-01-05\)/)).toBeVisible();
+  await expect(page.getByText(/Stop: 06:30 \(5 Jan 2026\)/)).toBeVisible();
 });

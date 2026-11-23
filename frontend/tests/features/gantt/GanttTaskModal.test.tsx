@@ -169,9 +169,9 @@ describe("GanttTaskModal", () => {
     );
 
     expect(screen.getByText("Logged time")).toBeInTheDocument();
-    expect(screen.getByText("4 h 30 min logged")).toBeInTheDocument();
+    expect(screen.getByText("4h 30m logged")).toBeInTheDocument();
     expect(screen.getByText("Document API")).toBeInTheDocument();
-    expect(screen.getByText("Client · 2026-03-01")).toBeInTheDocument();
+    expect(screen.getByText("Client · 1 Mar 2026")).toBeInTheDocument();
   });
 
   it("navigates to the entry in Time Tracking and closes the modal", async () => {

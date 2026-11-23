@@ -1,3 +1,4 @@
+import { dayjs, formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { Input } from "@/components/ui/input";
 import {
   BuildingIcon,
@@ -21,7 +22,6 @@ import { DetailsHeader, PopoverBody } from "@/components/ui/popover";
 import { useHdayHelper } from "@/app/providers/HdayHelperContext";
 import { getPrimaryTypeFlag } from "@/lib/hday/flags";
 import { getEventColorUtilities } from "@/lib/hday/presentation";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import { MonthNavigationButtonGroup } from "@/components/NavigationButtonGroup";
 import { useDevicePreferences } from "@/hooks/useDevicePreferences";
 import * as m from "@/paraglide/messages.js";
@@ -324,7 +324,7 @@ export function TeamScheduleView() {
     let count = 0;
 
     dateRange.forEach((date) => {
-      const monthName = date.format("MMMM YYYY");
+      const monthName = formatDisplayDate(date, "month");
       if (monthName !== currentMonth) {
         if (count > 0) {
           groups.push({ month: currentMonth, colspan: count });
@@ -494,7 +494,7 @@ export function TeamScheduleView() {
                   setStartMonth(startMonth.add(1, "month"));
                   setEndMonth(endMonth.add(1, "month"));
                 }}
-                displayLabel={`${startMonth.format("MMM YYYY")} - ${endMonth.format("MMM YYYY")}`}
+                displayLabel={`${formatDisplayDate(startMonth, "shortMonth")} - ${formatDisplayDate(endMonth, "shortMonth")}`}
               />
             )}
           </div>
@@ -583,10 +583,10 @@ export function TeamScheduleView() {
                             <th
                               key={date.format("YYYY-MM-DD")}
                               className={`min-w-7 border-l border-team-day-divider p-1 text-center text-xs${isToday ? " bg-team-today text-team-today-foreground font-bold" : isWeekend ? " bg-team-header-weekend font-medium" : " font-medium"}`}
-                              title={date.format("ddd, MMM D")}
+                              title={formatDisplayDate(date, "weekdayDate")}
                               aria-current={isToday ? "date" : undefined}
                             >
-                              {date.format("D")}
+                              {formatDisplayDate(date, "day")}
                             </th>
                           );
                         })}
@@ -737,7 +737,7 @@ export function TeamScheduleView() {
                                         key={dateKey}
                                         className={cellClass}
                                         data-date={dateKey}
-                                        title={date.format("MMM D")}
+                                        title={formatDisplayDate(date, "monthDay")}
                                       >
                                         {content}
                                       </td>
@@ -747,7 +747,7 @@ export function TeamScheduleView() {
                                   // Cells with events are focusable and open a popover on hover,
                                   // focus or tap, so the details don't depend on color or a mouse.
                                   const described = events.map(describeEvent);
-                                  const dateLabel = date.format("ddd, MMM D YYYY");
+                                  const dateLabel = formatDisplayDate(date);
                                   return (
                                     <Hint
                                       key={dateKey}

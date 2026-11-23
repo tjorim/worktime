@@ -1,4 +1,10 @@
 import {
+  formatDuration,
+  formatDecimalHours,
+  formatDisplayDate,
+  formatPercentage,
+} from "@/lib/dates/dateTimeUtils";
+import {
   CalendarDaysIcon,
   CalendarRangeIcon,
   ChartColumnStackedIcon,
@@ -79,7 +85,6 @@ interface WeeklyDataViewProps {
   crossBorderEnabled: boolean;
   workLocationMap: WorkLocationMap;
   onSwitchToDaily?: (date: string) => void;
-  pluralRules: Intl.PluralRules;
   labelNames: string[];
   dailyTotals: Record<string, WeeklySummary>;
   copiedCellId: string | null;
@@ -102,7 +107,6 @@ export function WeeklyDataView({
   crossBorderEnabled,
   workLocationMap,
   onSwitchToDaily,
-  pluralRules,
   labelNames,
   dailyTotals,
   copiedCellId,
@@ -131,16 +135,17 @@ export function WeeklyDataView({
               <div className="mb-2 flex items-center justify-between">
                 <span className="font-semibold">{m.tt_weekly_progress()}</span>
                 <span className="text-muted-foreground">
-                  {m.tt_hours_value({ hours: weekTotal.toFixed(1) })} /{" "}
-                  {m.tt_hours_value({ hours: weeklyTargetHours.toFixed(1) })}
+                  {formatDuration(weekTotal * 3600)} / {formatDuration(weeklyTargetHours * 3600)}
                   <Badge
                     variant={weekTotal >= weeklyTargetHours ? "success" : "secondary"}
                     className="ml-2"
                   >
                     {weekTotal >= weeklyTargetHours
-                      ? m.tt_hours_delta({ hours: (weekTotal - weeklyTargetHours).toFixed(1) })
+                      ? m.tt_hours_delta({
+                          duration: formatDuration((weekTotal - weeklyTargetHours) * 3600),
+                        })
                       : m.tt_hours_remaining({
-                          hours: (weeklyTargetHours - weekTotal).toFixed(1),
+                          duration: formatDuration((weeklyTargetHours - weekTotal) * 3600),
                         })}
                   </Badge>
                 </span>
@@ -156,7 +161,7 @@ export function WeeklyDataView({
                   }
                 />
                 <span className="w-10 shrink-0 text-right text-sm font-medium tabular-nums">
-                  {weeklyProgressPercent.toFixed(0)}%
+                  {formatPercentage(weeklyProgressPercent)}
                 </span>
               </div>
             </>
@@ -177,15 +182,9 @@ export function WeeklyDataView({
         )}
       >
         {showTotalTile && (
-          <MetricCard
-            label={m.tt_total_hours()}
-            value={m.tt_hours_value({ hours: weekTotal.toFixed(1) })}
-          />
+          <MetricCard label={m.tt_total_hours()} value={formatDuration(weekTotal * 3600)} />
         )}
-        <MetricCard
-          label={m.tt_avg_daily_hours()}
-          value={m.tt_hours_value({ hours: avgDailyHours.toFixed(1) })}
-        />
+        <MetricCard label={m.tt_avg_daily_hours()} value={formatDuration(avgDailyHours * 3600)} />
         <MetricCard
           label={m.tt_days_tracked()}
           value={String(dailyHourTotals.filter((h) => h > 0).length)}
@@ -221,11 +220,9 @@ export function WeeklyDataView({
                         <div className="mr-2 size-3 rounded-xs bg-label" aria-hidden="true" />
                         <span className="font-semibold">{item.label}</span>
                       </div>
-                      <Badge variant="secondary">{item.percentage.toFixed(0)}%</Badge>
+                      <Badge variant="secondary">{formatPercentage(item.percentage)}</Badge>
                     </div>
-                    <div className="mb-2 text-xl">
-                      {item.hours.toFixed(1)} {m.tt_hours_unit()}
-                    </div>
+                    <div className="mb-2 text-xl">{formatDuration(item.hours * 3600)}</div>
                     <Progress
                       value={Math.min(Math.max(item.percentage, 0), 100)}
                       aria-label={item.label}
@@ -307,7 +304,7 @@ export function WeeklyDataView({
                           isToday ? "font-bold text-primary" : "text-muted-foreground",
                         )}
                       >
-                        {day.label.substring(0, 3)}
+                        {formatDisplayDate(day.iso, "shortWeekday")}
                         {isToday && (
                           <Badge className="mx-auto mt-0.5 flex sm:mt-0 sm:ml-1 sm:inline-flex">
                             {m.today()}
@@ -319,30 +316,26 @@ export function WeeklyDataView({
                           className="progress-ring mx-auto flex size-10 items-center justify-center rounded-full"
                           role="img"
                           data-complete={percentage >= 100}
-                          aria-label={
-                            pluralRules.select(dayTotal) === "one"
-                              ? m.tt_weekly_chart_aria_one({
-                                  day: day.label,
-                                  hours: dayTotal.toFixed(1),
-                                  percent: percentage.toFixed(0),
-                                })
-                              : m.tt_weekly_chart_aria({
-                                  day: day.label,
-                                  hours: dayTotal.toFixed(1),
-                                  percent: percentage.toFixed(0),
-                                })
-                          }
+                          aria-label={m.tt_weekly_chart_aria({
+                            day: day.label,
+                            duration: formatDuration(dayTotal * 3600, { style: "long" }),
+                            percent: formatPercentage(percentage),
+                          })}
                           style={{ "--ring-pct": percent(percentage) } as CSSProperties}
                         >
                           <div
                             className="flex size-8 items-center justify-center rounded-full bg-background"
                             aria-hidden="true"
                           >
-                            <small className="font-semibold">{dayTotal.toFixed(1)}</small>
+                            <small className="font-semibold">
+                              {formatDecimalHours(dayTotal, 1)}
+                            </small>
                           </div>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{percentage.toFixed(0)}%</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatPercentage(percentage)}
+                      </div>
                       {location && (
                         <div className="mt-1 text-xs text-muted-foreground">
                           <Icon icon={WORK_LOCATION_ICONS[location.location]} />{" "}

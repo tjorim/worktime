@@ -81,6 +81,19 @@ describe("schedule-based statistics", () => {
       0,
     );
   });
+  it.each(["in", "birthday", "weekend", "business", "course"] as const)(
+    "keeps the weekly target for %s",
+    (entryType) => {
+      const day = "2026-11-09";
+      const entry = buildTimeOffEntryForRange({
+        start: day,
+        end: day,
+        entryType,
+        entryFlag: "full_day",
+      });
+      expect(calculateAdjustedWeeklyTarget(day, options, [entry]).weeklyHours).toBe(40);
+    },
+  );
   it("reduces targets for full leave, holidays and half days without double subtraction", () => {
     expect(calculateAdjustedWeeklyTarget("2026-11-09", options, []).weeklyHours).toBe(40);
     expect(

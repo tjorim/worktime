@@ -1,3 +1,4 @@
+import { dayjs, formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { ganttDependencyError } from "@/features/gantt/ganttDependencies";
 import { ganttDependencyErrorMessages } from "@/lib/api/apiErrorCodes";
 import { CircleXIcon, PencilIcon } from "lucide-react";
@@ -16,7 +17,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import type { GanttTask, RawGanttTask } from "@/types/gantt";
 import { useTimeTrackingStorage } from "@/hooks/useTimeTrackingStorage";
 import { useSelectedLabelOption } from "@/hooks/useSelectedLabelOption";
@@ -438,7 +438,7 @@ export function GanttTaskModal({
                         <span className="block break-words">{entry.text}</span>
                         <span className="text-sm text-muted-foreground">
                           {timeTrackingLabelNames.get(entry.label) ?? m.tt_unknown_label()} ·{" "}
-                          {dayjs(entry.startTime).format("YYYY-MM-DD")}
+                          {formatDisplayDate(entry.startTime)}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
