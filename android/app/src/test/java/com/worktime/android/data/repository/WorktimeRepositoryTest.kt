@@ -749,23 +749,14 @@ internal class FakeApi(
         return sampleTask(text = payload.text ?: "Task")
     }
 
-    override suspend fun updateTask(
-        authorization: String,
-        taskId: String,
-        payload: TaskMutationRequest
-    ): TaskRecord {
+    override suspend fun updateTask(authorization: String, taskId: String, payload: TaskMutationRequest): TaskRecord {
         taskThrowable?.let { throw it }
         return sampleTask(id = taskId, text = payload.text ?: "Task")
     }
 
-    override suspend fun getRunningTask(authorization: String): Response<TaskRecord> =
-        Response.success(sampleTask())
+    override suspend fun getRunningTask(authorization: String): Response<TaskRecord> = Response.success(sampleTask())
 
-    override suspend fun listTasks(
-        authorization: String,
-        startDate: String?,
-        endDate: String?
-    ): TaskListResponse {
+    override suspend fun listTasks(authorization: String, startDate: String?, endDate: String?): TaskListResponse {
         taskThrowable?.let { throw it }
         return taskListResponse
     }
@@ -795,10 +786,7 @@ internal class FakeApi(
         total = 0
     )
 
-    override suspend fun getWorkLocation(
-        authorization: String,
-        valueDate: String
-    ): Response<WorkLocationRecord> {
+    override suspend fun getWorkLocation(authorization: String, valueDate: String): Response<WorkLocationRecord> {
         workLocationThrowable?.let { throw it }
         if (workLocationNotFound) {
             return Response.error(404, "".toResponseBody("text/plain".toMediaType()))
@@ -828,11 +816,7 @@ internal class FakeApi(
         return labelListResponse
     }
 
-    override suspend fun updateLabel(
-        authorization: String,
-        labelId: String,
-        payload: LabelPatchRequest
-    ): LabelRecord {
+    override suspend fun updateLabel(authorization: String, labelId: String, payload: LabelPatchRequest): LabelRecord {
         labelThrowable?.let { throw it }
         return sampleLabel(id = labelId, name = payload.name ?: "Label")
     }
@@ -841,10 +825,7 @@ internal class FakeApi(
         labelThrowable?.let { throw it }
     }
 
-    override suspend fun createTemplate(
-        authorization: String,
-        payload: TemplateMutationRequest
-    ): TemplateRecord {
+    override suspend fun createTemplate(authorization: String, payload: TemplateMutationRequest): TemplateRecord {
         templateThrowable?.let { throw it }
         return sampleTemplate(text = payload.text)
     }
