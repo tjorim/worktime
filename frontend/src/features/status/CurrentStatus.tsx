@@ -1,3 +1,4 @@
+import { formatDisplayDate, formatTimeByPreference, formatYYWWD } from "@/lib/dates/dateTimeUtils";
 import {
   CalendarIcon,
   InfoIcon,
@@ -12,8 +13,6 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 
 import { useSettings } from "@/app/providers/SettingsContext";
 import { useLiveTime } from "@/hooks/useLiveTime";
-import { formatTimeByPreference, formatYYWWD } from "@/lib/dates/dateTimeUtils";
-import { getLocale } from "@/paraglide/runtime.js";
 import { getEffectiveTeam } from "@/lib/schedule/scheduleUtils";
 import { getCurrentShiftDay, getCurrentWorkingTeam } from "@/lib/schedule/shiftCalculations";
 import { PersonalizedStatusContent } from "@/features/status/PersonalizedStatus";
@@ -53,7 +52,6 @@ export function CurrentStatus({
   const { settings, scheduleType } = useSettings();
   const liveTime = useLiveTime({ precision: "minute" });
   const today = liveTime;
-  const locale = getLocale();
   const [isMobile, setIsMobile] = useState(
     () => variant === "responsive" && window.matchMedia("(max-width: 767.98px)").matches,
   );
@@ -88,20 +86,7 @@ export function CurrentStatus({
     return getCurrentShiftDay(liveTime, scheduleType);
   }, [liveTime, scheduleType]);
 
-  const localizedDateLabel = useMemo(() => {
-    const liveTimeWithDate = liveTime as {
-      toDate?: () => Date;
-      format: (pattern: string) => string;
-    };
-    if (typeof liveTimeWithDate.toDate === "function") {
-      return new Intl.DateTimeFormat(locale, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }).format(liveTimeWithDate.toDate());
-    }
-    return liveTime.format("dddd, MMM D");
-  }, [liveTime, locale]);
+  const localizedDateLabel = formatDisplayDate(liveTime, "currentDay");
 
   // Find which team is currently working (for timeline)
   const currentWorkingTeam = useMemo(() => {

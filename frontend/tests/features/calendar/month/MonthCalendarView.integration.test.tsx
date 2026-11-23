@@ -419,14 +419,14 @@ describe("MonthCalendarView Integration Tests", () => {
       renderMonthCalendarView({ myTeam: 1 });
 
       // Verify we're in February
-      expect(screen.getByText(/February 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("February 2025");
 
       // Click previous month button using fireEvent
       const prevButton = screen.getByRole("button", { name: /Previous month/i });
       fireEvent.click(prevButton);
 
       // Verify we're now in January
-      expect(screen.getByText(/January 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("January 2025");
     });
 
     it("navigates to next month and updates display", async () => {
@@ -438,14 +438,14 @@ describe("MonthCalendarView Integration Tests", () => {
       renderMonthCalendarView({ myTeam: 1 });
 
       // Verify we're in January
-      expect(screen.getByText(/January 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("January 2025");
 
       // Click next month button using fireEvent
       const nextButton = screen.getByRole("button", { name: /Next month/i });
       fireEvent.click(nextButton);
 
       // Verify we're now in February
-      expect(screen.getByText(/February 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("February 2025");
     });
 
     it("navigates to current month when clicking Today button", async () => {
@@ -459,14 +459,14 @@ describe("MonthCalendarView Integration Tests", () => {
       // Navigate away from current month
       const nextButton = screen.getByRole("button", { name: /Next month/i });
       fireEvent.click(nextButton);
-      expect(screen.getByText(/February 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("February 2025");
 
       // Click Today button (labeled as "This Month" in MonthCalendar) using fireEvent
       const todayButton = screen.getByRole("button", { name: /This Month/i });
       fireEvent.click(todayButton);
 
       // Verify we're back in January
-      expect(screen.getByText(/January 2025/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("January 2025");
     });
 
     it("navigates across year boundary correctly", async () => {
@@ -482,7 +482,7 @@ describe("MonthCalendarView Integration Tests", () => {
       fireEvent.click(prevButton);
 
       // Verify we're in December 2024
-      expect(screen.getByText(/December 2024/i)).toBeInTheDocument();
+      expect(screen.getByTestId("month-title")).toHaveTextContent("December 2024");
     });
   });
 

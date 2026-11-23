@@ -1,3 +1,9 @@
+import {
+  formatDisplayDate,
+  formatDuration,
+  formatTimeByPreference,
+  setTimeFromFractionalHour,
+} from "@/lib/dates/dateTimeUtils";
 import { Grid, GridItem } from "@/components/ui/grid";
 import {
   CalendarXIcon,
@@ -23,9 +29,7 @@ import { useFormattedShiftTime } from "@/hooks/useFormattedShiftTime";
 import { useLiveShiftStatus } from "@/features/status/useLiveShiftStatus";
 import { useTodayActualStart } from "@/features/status/useTodayActualStart";
 import { useFlexStartOverride } from "@/features/status/useFlexStartOverride";
-import { formatTimeByPreference, setTimeFromFractionalHour } from "@/lib/dates/dateTimeUtils";
 import { getFlexEndFromStart, getFlexEndRange, getFlexWindow } from "@/features/status/flexShift";
-import { getLocale } from "@/paraglide/runtime.js";
 import { FlexStartEditor } from "@/features/status/FlexStartEditor";
 import { ShiftTimeDisplay } from "@/features/status/ShiftTimeDisplay";
 import { CountdownBadge } from "@/features/status/CountdownBadge";
@@ -55,12 +59,7 @@ export function PersonalizedStatusContent({
   compact = false,
 }: PersonalizedStatusContentProps) {
   const teamTooltipId = useId();
-  const locale = getLocale();
   const { settings } = useSettings();
-  const weekdayDateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
-    [locale],
-  );
 
   if (!isValidScheduleType(scheduleType)) {
     return (
@@ -292,7 +291,7 @@ export function PersonalizedStatusContent({
                   {m.personalized_status_flex_window({
                     earliest: flexHourLabel(flexWindow.earliestStart),
                     latest: flexHourLabel(flexWindow.latestStart),
-                    hours: String(flexWindow.presenceHours),
+                    duration: formatDuration(flexWindow.presenceHours * 3600),
                   })}
                 </div>
               )}
@@ -436,12 +435,7 @@ export function PersonalizedStatusContent({
                           ? m.today()
                           : nextShift.date.isSame(today.add(1, "day"), "day")
                             ? m.personalized_status_tomorrow()
-                            : typeof (nextShift.date as { toDate?: () => Date }).toDate ===
-                                "function"
-                              ? weekdayDateFormatter.format(
-                                  (nextShift.date as { toDate: () => Date }).toDate(),
-                                )
-                              : nextShift.date.format("ddd, MMM D")}{" "}
+                            : formatDisplayDate(nextShift.date, "weekdayDate")}{" "}
                       - {nextShift.shift.name}
                     </div>
                     <ShiftTimeDisplay

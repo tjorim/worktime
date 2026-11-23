@@ -19,7 +19,7 @@ for (const theme of ["light", "dark"]) {
             await expect(page.getByText("Alex Taylor")).toBeVisible();
             await expect(page.getByText(/a8ff-Ae1d1c24/)).toBeVisible();
             await expect(page.locator("time").first()).toHaveText(
-              lang === "en" ? "2 Nov 2026 22:24" : "2 nov 2026 22:24",
+              lang === "en" ? "2 Nov 2026, 22:24" : "2 nov 2026, 22:24",
             );
             await page.locator("summary").first().click();
           }

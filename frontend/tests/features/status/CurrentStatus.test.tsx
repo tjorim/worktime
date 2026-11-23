@@ -88,7 +88,7 @@ vi.mock("@/features/status/useCountdown", () => ({
 }));
 
 vi.mock("@/lib/dates/dateTimeUtils", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("@/lib/dates/dateTimeUtils")>();
   const mockDayjsObj: Record<string, ReturnType<typeof vi.fn>> = {
     startOf: vi.fn(() => ({
       toISOString: vi.fn(() => "2024-01-15T00:00:00.000Z"),
@@ -114,7 +114,12 @@ vi.mock("@/lib/dates/dateTimeUtils", async (importOriginal) => {
   mockDayjsObj.add!.mockReturnValue(mockDayjsObj);
   mockDayjsObj.subtract!.mockReturnValue(mockDayjsObj);
   return {
-    ...(actual && typeof actual === "object" ? actual : {}),
+    ...actual,
+    formatDisplayDate: (
+      value: Parameters<typeof actual.formatDisplayDate>[0],
+      format: Parameters<typeof actual.formatDisplayDate>[1],
+    ) =>
+      actual.formatDisplayDate(value === (mockDayjsObj as unknown) ? "2024-01-15" : value, format),
     dayjs: vi.fn(() => mockDayjsObj),
     formatYYWWD: vi.fn(() => "2430.1"),
     formatTimeByPreference: vi.fn(() => "17:01"),
@@ -136,7 +141,7 @@ describe("CurrentStatus Component", () => {
     vi.clearAllMocks();
 
     // Setup default mocks
-    vi.mocked(formatYYWWD).mockReturnValue("Mon 15 Jan");
+    vi.mocked(formatYYWWD).mockReturnValue("2403.1");
     vi.mocked(shiftCalculations.getCurrentShiftDay).mockReturnValue(dayjs("2024-01-15"));
     vi.mocked(shiftCalculations.calculateShift).mockReturnValue({
       code: "M",
@@ -351,7 +356,7 @@ describe("CurrentStatus Component", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
       expect(screen.getByText("Up Next")).toBeInTheDocument();
-      expect(screen.getByText(/2024-01-15.*Evening/)).toBeInTheDocument();
+      expect(screen.getByText(/Mon 15 Jan.*Evening/)).toBeInTheDocument();
       expect(screen.getByText("15:00–23:00")).toBeInTheDocument();
     });
   });
@@ -625,7 +630,8 @@ describe("CurrentStatus Component", () => {
     it("should display formatted date code", () => {
       renderWithProviders(<CurrentStatus myTeam={1} onChangeTeam={mockOnChangeTeam} />);
 
-      expect(screen.getByText(/Mon 15 Jan/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Date code: 2403\.1/i })).toBeInTheDocument();
+      expect(screen.getByText(/Monday 15 Jan/)).toBeInTheDocument();
       expect(formatYYWWD).toHaveBeenCalledWith(expect.any(Object));
     });
   });

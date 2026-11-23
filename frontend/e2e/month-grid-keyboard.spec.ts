@@ -19,18 +19,18 @@ for (const theme of ["light", "dark"] as const) {
       await expect(grid.locator('[role="gridcell"][tabindex="0"]')).toHaveCount(1);
       await today.focus();
       await page.keyboard.press("ArrowDown");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 11, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/11 November 2026/);
       await page.keyboard.press("ArrowUp");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 4, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/4 November 2026/);
       await page.keyboard.press("Home");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 2, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/2 November 2026/);
       await page.keyboard.press("End");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 8, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/8 November 2026/);
       await page.keyboard.press("PageDown");
       await expect(page.getByTestId("month-title")).toContainText("December 2026");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/December 8, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/8 December 2026/);
       await page.keyboard.press("PageUp");
-      await expect(page.locator(":focus")).toHaveAccessibleDescription(/November 8, 2026/);
+      await expect(page.locator(":focus")).toHaveAccessibleDescription(/8 November 2026/);
       await page.screenshot({
         path: `test-results/review-screenshots/1699/${theme}-${width}-grid.png`,
       });

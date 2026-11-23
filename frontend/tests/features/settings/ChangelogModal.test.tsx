@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChangelogModal } from "@/features/settings/ChangelogModal";
@@ -52,7 +53,7 @@ describe("ChangelogModal", () => {
       // Test that dates are displayed (some may be duplicated)
       const uniqueDates = [...new Set(changelogData.map((v) => v.date))];
       uniqueDates.forEach((date) => {
-        expect(screen.getAllByText(date).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(formatDisplayDate(date)).length).toBeGreaterThan(0);
       });
     });
 

@@ -28,10 +28,10 @@ describe("ProgressBar Component", () => {
       expect(progressElement).toHaveAttribute("style", expect.stringContaining("50%"));
     });
 
-    it("displays formatted hour value with precision", () => {
+    it("displays formatted hour value in hours and minutes", () => {
       const { container } = render(<ProgressBar hours={6.789} />);
 
-      expect(container.textContent).toContain("6.79");
+      expect(container.textContent).toContain("6h 47m");
     });
 
     it("shows percentage value alongside hours", () => {
@@ -76,14 +76,14 @@ describe("ProgressBar Component", () => {
     it("handles zero hours correctly", () => {
       const { container } = render(<ProgressBar hours={0} />);
 
-      expect(container.textContent).toContain("0.00");
+      expect(container.textContent).toContain("0m");
       expect(container.textContent).toContain("0.0%");
     });
 
     it("displays very small hour amounts", () => {
       const { container } = render(<ProgressBar hours={0.05} targetHours={8.5} />);
 
-      expect(container.textContent).toContain("0.05");
+      expect(container.textContent).toContain("3m");
     });
 
     it("handles complete day at 100 percent", () => {
@@ -139,10 +139,10 @@ describe("ProgressBar Component", () => {
   });
 
   describe("Precision and Rounding", () => {
-    it("rounds hours to two decimal places", () => {
+    it("rounds to the nearest minute", () => {
       const { container } = render(<ProgressBar hours={3.14159} />);
 
-      expect(container.textContent).toContain("3.14");
+      expect(container.textContent).toContain("3h 8m");
     });
 
     it("rounds percentage to one decimal place", () => {
@@ -152,10 +152,10 @@ describe("ProgressBar Component", () => {
       expect(container.textContent).toContain("33.3%");
     });
 
-    it("preserves trailing zeros in hour display", () => {
+    it("omits minutes for whole hours", () => {
       const { container } = render(<ProgressBar hours={5} />);
 
-      expect(container.textContent).toContain("5.00");
+      expect(container.textContent).toContain("5h");
     });
   });
 
@@ -170,7 +170,7 @@ describe("ProgressBar Component", () => {
       const { container } = render(<ProgressBar hours={6.25} />);
 
       const wrapper = container.querySelector(".my-3");
-      expect(wrapper?.textContent).toContain("6.25h");
+      expect(wrapper?.textContent).toContain("6h 15m");
       expect(wrapper?.textContent).toContain("%");
     });
   });

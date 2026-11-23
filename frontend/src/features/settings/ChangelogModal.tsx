@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@/lib/dates/dateTimeUtils";
 import type { LucideIcon } from "lucide-react";
 import {
   BugIcon,
@@ -195,7 +196,9 @@ export function ChangelogModal({ show, onHide }: ChangelogModalProps) {
                   <div className="flex justify-between items-center w-full me-2">
                     <div>
                       <strong>{m.changelog_version_label({ version: version.version })}</strong>
-                      <small className="text-muted-foreground ms-2">{version.date}</small>
+                      <small className="text-muted-foreground ms-2">
+                        <time dateTime={version.date}>{formatDisplayDate(version.date)}</time>
+                      </small>
                     </div>
                     {getStatusBadge(version.status)}
                   </div>

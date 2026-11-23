@@ -200,7 +200,7 @@ describe("GanttTableView", () => {
     render(<GanttTableView tasks={tasks} onTaskClick={vi.fn()} onDeleteTask={vi.fn()} />);
 
     const rows = within(screen.getByRole("table", { name: "Gantt tasks" })).getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("1 h 30 min");
+    expect(rows[1]).toHaveTextContent("1h 30m");
     expect(rows[2]).toHaveTextContent("—");
   });
 

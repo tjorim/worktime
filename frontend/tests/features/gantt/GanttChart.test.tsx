@@ -323,7 +323,7 @@ describe("GanttChart", () => {
 
     expect(setTitle).toHaveBeenCalledWith("My Task");
     expect(setSubtitle).toHaveBeenCalledWith("Some notes");
-    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
+    expect(setDetails).toHaveBeenCalledWith("1 Mar 2026 – 5 Mar 2026 · 4 days · 50%");
   });
 
   it("popup function includes logged time when available for the task", async () => {
@@ -367,7 +367,9 @@ describe("GanttChart", () => {
       set_details: setDetails,
     });
 
-    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50% · 1 h 30 min logged");
+    expect(setDetails).toHaveBeenCalledWith(
+      "1 Mar 2026 – 5 Mar 2026 · 4 days · 50% · 1h 30m logged",
+    );
   });
 
   it("popup function omits logged time when none has been recorded for the task", async () => {
@@ -404,7 +406,7 @@ describe("GanttChart", () => {
       set_details: setDetails,
     });
 
-    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 5 · 4 days · 50%");
+    expect(setDetails).toHaveBeenCalledWith("1 Mar 2026 – 5 Mar 2026 · 4 days · 50%");
   });
 
   it("popup function pluralizes duration details", async () => {
@@ -441,7 +443,7 @@ describe("GanttChart", () => {
       set_details: setDetails,
     });
 
-    expect(setDetails).toHaveBeenCalledWith("Mar 1 – Mar 2 · 1 day · 50%");
+    expect(setDetails).toHaveBeenCalledWith("1 Mar 2026 – 2 Mar 2026 · 1 day · 50%");
   });
 
   it("popup function uses empty string when notes is absent", async () => {

@@ -1,3 +1,4 @@
+import { formatLongDate } from "@/lib/dates/dateTimeUtils";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Input } from "@/components/ui/input";
 import { useLayoutEffect, useRef } from "react";
@@ -13,7 +14,6 @@ import type { Dayjs } from "dayjs";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { isIsoCountryCode } from "@/types/countries";
 import type { WorkLocationInfo } from "@/types/workLocation";
-import { getLocale } from "@/paraglide/runtime.js";
 import * as m from "@/paraglide/messages.js";
 
 // Helper to get initial values for countryCode and label
@@ -93,12 +93,7 @@ export function OtherLocationModal({
           <DialogHeader>
             <DialogTitle>
               {m.calendar_other_location_title({
-                date: new Intl.DateTimeFormat(getLocale(), {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                }).format(date.toDate()),
+                date: formatLongDate(date),
               })}
             </DialogTitle>
           </DialogHeader>

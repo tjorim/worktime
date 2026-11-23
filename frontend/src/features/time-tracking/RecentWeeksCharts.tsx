@@ -1,3 +1,4 @@
+import { dayjs, formatDisplayDate, formatDuration } from "@/lib/dates/dateTimeUtils";
 import { CalendarRangeIcon } from "lucide-react";
 import { useMemo, type CSSProperties } from "react";
 import { Icon } from "@/components/Icon";
@@ -6,7 +7,6 @@ import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import * as m from "@/paraglide/messages.js";
 import { chartRenderer } from "./chartRenderer";
 import type { RecentWeek } from "./hooks/useRecentWeeks";
@@ -109,9 +109,7 @@ function RecentWeeksHeatmap({
 }: Pick<RecentWeeksChartsProps, "weeks" | "targetDaily">) {
   const definition = useMemo(() => {
     const weekdays = Array.from({ length: 7 }, (_, index) =>
-      dayjs()
-        .isoWeekday(index + 1)
-        .format("ddd"),
+      formatDisplayDate(dayjs().isoWeekday(index + 1), "shortWeekday"),
     );
     const weekLabels = weeks.map((week) => m.tt_week_short({ week: week.isoWeek }));
     const rows: DayHeatRow[] = weeks.flatMap((week, weekIndex) =>
@@ -148,7 +146,7 @@ function RecentWeeksHeatmap({
         use: tooltip,
         format: (point) => {
           const row = point.datum as DayHeatRow;
-          return `${dayjs(row.iso).format("ddd D MMM")}: ${m.tt_hours_value({ hours: row.hours.toFixed(1) })}`;
+          return `${formatDisplayDate(dayjs(row.iso), "weekdayDate")}: ${formatDuration(row.hours * 3600)}`;
         },
       },
     });

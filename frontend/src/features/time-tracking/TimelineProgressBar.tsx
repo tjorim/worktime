@@ -1,3 +1,4 @@
+import { dayjs, formatDuration, formatPercentage } from "@/lib/dates/dateTimeUtils";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState, type CSSProperties } from "react";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
@@ -5,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import * as m from "@/paraglide/messages.js";
-import { dayjs } from "@/lib/dates/dateTimeUtils";
 import {
   buildLabelColorMap,
   getContrastingTextColor,
@@ -289,10 +289,10 @@ export function TimelineProgressBar({
         <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
           {renderSegments.map((rs) => {
             if (rs.type === "gap") {
-              const minutes = Math.round(rs.durationHours * 60);
+              const duration = formatDuration(rs.durationHours * 3600, { style: "long" });
               const gapLabel = rs.untilNext
-                ? m.tt_until_next_aria({ minutes })
-                : m.tt_gap_aria({ minutes });
+                ? m.tt_until_next_aria({ duration })
+                : m.tt_gap_aria({ duration });
               return (
                 <Segment
                   key={rs.id}
@@ -304,7 +304,7 @@ export function TimelineProgressBar({
               );
             }
 
-            const tooltipText = `${rs.text}: ${rs.durationHours.toFixed(2)}h`;
+            const tooltipText = `${rs.text}: ${formatDuration(rs.durationHours * 3600)}`;
 
             if (
               rs.includesBreak &&
@@ -317,7 +317,9 @@ export function TimelineProgressBar({
               const breakPct = (rs.breakHours / sanitizedTargetHours) * 100 * normalizationFactor;
               const afterPct =
                 (rs.afterBreakHours / sanitizedTargetHours) * 100 * normalizationFactor;
-              const breakTooltipText = m.tt_break_deducted({ minutes: BREAK_DURATION_MINUTES });
+              const breakTooltipText = m.tt_break_deducted({
+                duration: formatDuration(BREAK_DURATION_MINUTES * 60, { style: "long" }),
+              });
 
               const showLabelOnBefore = beforePct >= afterPct;
               const labelOnBefore = showLabelOnBefore && beforePct > 10;
@@ -347,7 +349,9 @@ export function TimelineProgressBar({
                   color={rs.color}
                   planned={rs.isPlanned}
                   dim
-                  label={m.tt_break_deduction_label({ minutes: BREAK_DURATION_MINUTES })}
+                  label={m.tt_break_deduction_label({
+                    duration: formatDuration(BREAK_DURATION_MINUTES * 60, { style: "long" }),
+                  })}
                   testId={`break-segment-${rs.id}`}
                   onEnter={showTooltip(breakTooltipText)}
                   onLeave={hideTooltip}
@@ -406,18 +410,20 @@ export function TimelineProgressBar({
       <div className="mt-2 flex items-center justify-between text-muted-foreground">
         <span data-testid="timeline-total-duration">
           {m.tt_hours_percentage({
-            hours: totalHours.toFixed(2),
-            percentage: totalPercentage.toFixed(1),
+            duration: formatDuration(totalHours * 3600),
+            percentage: formatPercentage(totalPercentage, 1),
           })}
         </span>
         {plannedHours > 0 && (
           <span className="text-sm" data-testid="timeline-planned-duration">
-            {m.tt_planned_total({ hours: plannedHours.toFixed(2) })}
+            {m.tt_planned_total({ duration: formatDuration(plannedHours * 3600) })}
           </span>
         )}
         {isOvertime && (
           <Badge variant="warning">
-            {m.tt_overtime_badge({ hours: (totalHours - sanitizedTargetHours).toFixed(2) })}
+            {m.tt_overtime_badge({
+              duration: formatDuration((totalHours - sanitizedTargetHours) * 3600),
+            })}
           </Badge>
         )}
       </div>
