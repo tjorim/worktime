@@ -40,6 +40,7 @@ import io.mockk.mockk
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -384,7 +385,9 @@ class WorktimeRepositoryTest {
             MutationResult.Success(WorkLocationPreferences(homeCountry = "BE")),
             repository.updateWorkLocationPreferences(homeCountry = "be", officeCountry = null)
         )
-        val data = requireNotNull(api.lastPreferencesWritePayload).data
+        val write = requireNotNull(api.lastPreferencesWritePayload)
+        assertEquals(true, OffsetDateTime.parse(write.clientUpdatedAt).isBefore(OffsetDateTime.now().plusMinutes(1)))
+        val data = write.data
         assertEquals("BE", data["settings"]?.jsonObject?.get("homeCountry")?.jsonPrimitive?.content)
     }
 

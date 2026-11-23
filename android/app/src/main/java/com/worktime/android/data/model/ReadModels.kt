@@ -158,4 +158,7 @@ data class SyncStatusResponse(
 data class UserPreferencesRead(val data: JsonObject)
 
 @Serializable
-data class UserPreferencesWrite(val data: JsonObject)
+data class UserPreferencesWrite(
+    val data: JsonObject,
+    @SerialName("client_updated_at") val clientUpdatedAt: String
+)

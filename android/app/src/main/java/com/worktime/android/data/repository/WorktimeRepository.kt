@@ -483,7 +483,14 @@ class WorktimeRepository(
     ): MutationResult<WorkLocationPreferences> = withAuthorizedToken { token ->
         val existing = getPreferencesData(token) ?: JsonObject(emptyMap())
         val updated = existing.withWorkLocationPreferences(homeCountry, officeCountry)
-        api.putPreferences(authorization = "Bearer $token", payload = UserPreferencesWrite(data = updated))
+        api.putPreferences(
+            authorization = "Bearer $token",
+            payload =
+            UserPreferencesWrite(
+                data = updated,
+                clientUpdatedAt = OffsetDateTime.now(ZoneOffset.UTC).toString()
+            )
+        )
         updated.toWorkLocationPreferences()
     }
 

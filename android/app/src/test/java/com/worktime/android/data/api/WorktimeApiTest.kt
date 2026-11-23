@@ -378,7 +378,8 @@ class WorktimeApiTest {
                             "work_location_home_country" to JsonPrimitive("BE"),
                             "work_location_office_country" to JsonPrimitive("NL")
                         )
-                    )
+                    ),
+                    clientUpdatedAt = "2026-11-23T12:00:00Z"
                 )
             )
 
@@ -387,6 +388,7 @@ class WorktimeApiTest {
         assertEquals("PUT", request.method)
         assertEquals("/api/preferences", request.requestLine.substringAfter(' ').substringBefore(' '))
         assertEquals(true, body.contains(""""work_location_home_country":"BE""""))
+        assertEquals(true, body.contains(""""client_updated_at":"2026-11-23T12:00:00Z""""))
         assertEquals(JsonPrimitive("NL"), response.data["work_location_office_country"])
     }
 }
