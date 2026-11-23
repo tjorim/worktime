@@ -23,6 +23,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Changed
 
 - Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.
+- Administrators can rename users in Settings. Recent activity shows the previous and new username, and members can still edit their own display name.
 
 - Settings gives connections and recent activity their own sections and groups account data, device backups and .hday exports under Data. Activity shows time-off types and dates when available and distinguishes new work locations from updates.
 - Dates and durations across the web app follow the selected language, with UK date order in English and consistent hour and minute units.
@@ -41,6 +42,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Internal
 
 - Standardise REST routes, use PATCH for partial updates and expose typed sync items and results. Keep deprecated routes available for native clients. (#1988)
+- Reject member username changes with a stable API error and skip reserved usernames when provisioning new OIDC accounts.
 
 - Validate versioned account preferences and store theme, notification settings and navigation state on the device. Existing browser settings migrate when the app opens.
 

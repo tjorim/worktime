@@ -195,8 +195,8 @@ async def create_user(session: AsyncSession, payload: UserCreate, *, oidc_subjec
     return user
 
 
-async def get_user(session: AsyncSession, user_id: int) -> User:
-    user = await session.get(User, user_id)
+async def get_user(session: AsyncSession, user_id: int, *, for_update: bool = False) -> User:
+    user = await session.get(User, user_id, with_for_update=for_update or None, populate_existing=for_update)
     if user is None:
         raise NotFoundError("user not found")
     return user

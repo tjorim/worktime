@@ -222,6 +222,7 @@ function renderSettingsAdminUsersHarness({
       adminUsersError,
       adminUsersDeleteError,
       deletingAdminUserId,
+      handleRenameAdminUser,
       handleDeleteAdminUser,
     } = useSettingsAdminUsers({
       isAuthenticated: true,
@@ -239,6 +240,7 @@ function renderSettingsAdminUsersHarness({
         adminUsersError={adminUsersError}
         adminUsersDeleteError={adminUsersDeleteError}
         deletingAdminUserId={deletingAdminUserId}
+        onRenameAdminUser={handleRenameAdminUser}
         onDeleteAdminUser={(userId) => void handleDeleteAdminUser(userId)}
       />
     );
@@ -1008,6 +1010,64 @@ describe("SettingsPage Admin Section", () => {
     await waitFor(() => {
       expect(usersCalled).toBe(true);
     });
+  });
+
+  it("translates rename failures and updates the row after saving", async () => {
+    const member = {
+      id: 2,
+      username: "member-user",
+      display_name: "Member User",
+      settings: {},
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    } satisfies UserRead;
+    const fetchFn = vi.fn(async (input: string, init?: RequestInit) => {
+      if (input === "/api/users?limit=100") {
+        return jsonResponse<UserListResponse>({ items: [member], total: 1 });
+      }
+      expect(input).toBe("/api/users/2");
+      expect(init?.method).toBe("PATCH");
+      const body = JSON.parse(String(init?.body));
+      if (body.username === "claimed") {
+        return uncheckedJson(
+          "error",
+          { code: "username_taken", detail: "Server diagnostic" },
+          { status: 409 },
+        );
+      }
+      if (body.username === "unavailable") {
+        return uncheckedJson(
+          "error",
+          { code: "unexpected_code", detail: "Server diagnostic" },
+          { status: 500 },
+        );
+      }
+      expect(body).toEqual({ username: "new-name" });
+      return jsonResponse<UserRead>({ ...member, username: "new-name" });
+    });
+
+    const user = userEvent.setup();
+    renderSettingsAdminUsersHarness({ fetchFn, currentAccountId: 1 });
+    await user.click(await screen.findByRole("button", { name: "Rename member-user" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const input = dialog.getByRole("textbox", { name: "Username" });
+    await user.clear(input);
+    await user.type(input, "claimed");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(await dialog.findByRole("alert")).toHaveTextContent("This username is already in use.");
+    expect(dialog.queryByText("Server diagnostic")).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, "unavailable");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Could not change the username.");
+    expect(dialog.queryByText("Server diagnostic")).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, "new-name");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("button", { name: "Rename new-name" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("deletes another user from the admin user management table after confirmation", async () => {

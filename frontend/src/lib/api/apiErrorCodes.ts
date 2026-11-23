@@ -51,6 +51,8 @@ export const taskValidationErrorMessages: ErrorCodeMessages = {
 };
 
 export const accountProfileErrorMessages: ErrorCodeMessages = {
+  username_change_forbidden: () => m.error_code_username_change_forbidden(),
+  username_taken: () => m.error_code_username_taken(),
   username_invalid: () => m.error_code_username_invalid(),
   username_reserved: () => m.error_code_username_reserved(),
   display_name_invalid: () => m.error_code_display_name_invalid(),

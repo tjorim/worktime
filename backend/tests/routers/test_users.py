@@ -134,10 +134,8 @@ def test_username_validation(db_client, auth_headers):
         ("   ", "username_invalid"),
         ("a b", "username_invalid"),
         ("a" * 65, "username_invalid"),
-        ("ADMIN", "username_reserved"),
-        ("root", "username_reserved"),
     ]:
-        response = db_client.put(f"/api/users/{user['id']}", json={"username": name}, headers=auth_headers(user["id"]))
+        response = db_client.put(f"/api/users/{user['id']}", json={"username": name}, headers=admin)
         assert response.status_code == 400
         assert response.json()["code"] == code
     response = db_client.put(f"/api/users/{user['id']}", json={"username": "admin"}, headers=admin)
@@ -156,7 +154,8 @@ def test_username_validation(db_client, auth_headers):
     )
 
 
-async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_session):
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
+async def test_legacy_username_and_rename_audit(method, db_client, auth_headers, db_session):
     from sqlalchemy import select
 
     from app.models import AuditEntry, User
@@ -168,15 +167,19 @@ async def test_legacy_username_and_rename_audit(db_client, auth_headers, db_sess
     headers = auth_headers(user.id)
     assert db_client.get(f"/api/users/{user.id}", headers=headers).status_code == 200
     assert (
-        db_client.put(
+        db_client.request(
+            method,
             f"/api/users/{user.id}",
             json={"username": user.username, "display_name": user.display_name, "settings": {}},
             headers=headers,
         ).status_code
         == 200
     )
-    response = db_client.put(
-        f"/api/users/{user.id}", json={"username": " repaired "}, headers=auth_headers(user.id, is_admin=True)
+    denied = db_client.request(method, f"/api/users/{user.id}", json={"username": "repaired"}, headers=headers)
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "username_change_forbidden"
+    response = db_client.request(
+        method, f"/api/users/{user.id}", json={"username": " repaired "}, headers=auth_headers(user.id, is_admin=True)
     )
     assert response.status_code == 200
     entry = (await db_session.execute(select(AuditEntry).where(AuditEntry.action == "rename_user"))).scalar_one()

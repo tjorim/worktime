@@ -179,7 +179,7 @@ async def update_user_endpoint(
 ) -> UserRead:
     require_user_or_admin_match(user_id, principal)
     try:
-        current = await get_user(session, user_id)
+        current = await get_user(session, user_id, for_update=True)
         data = payload.model_dump(exclude_unset=True)
         validate_user_fields(data, current=current, is_admin=principal.is_admin)
         user = await update_user(session, user_id, UserUpdate(**data), actor=audit_actor_for(principal))
