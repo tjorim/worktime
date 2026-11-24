@@ -29,6 +29,7 @@ import com.worktime.android.feature.teamstatus.TeamStatusScreen
 import com.worktime.android.feature.timeoff.TimeOffSummaryScreen
 import com.worktime.android.feature.timeoff.TimeOffViewModel
 import com.worktime.android.feature.today.TodayScreen
+import com.worktime.android.ui.components.NotificationPermissionCard
 import kotlinx.coroutines.launch
 
 @Composable
@@ -74,7 +75,7 @@ internal fun WorktimeAuthenticatedScaffold(
         NavHost(navController, startDestination, Modifier.fillMaxSize()) {
             composable(WorktimeDestination.Today.route) {
                 Box(Modifier.padding(paddingValues)) {
-                    TodayDestination(dashboardViewModel)
+                    TodayDestination(container, dashboardViewModel)
                 }
             }
             composable(WorktimeDestination.NextShifts.route) {
@@ -122,7 +123,7 @@ private fun WorktimeBottomBar(
 }
 
 @Composable
-private fun TodayDestination(viewModel: DashboardViewModel) {
+private fun TodayDestination(container: WorktimeAppContainer, viewModel: DashboardViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val actionsState by viewModel.actionsState.collectAsStateWithLifecycle()
     TodayScreen(
@@ -134,7 +135,8 @@ private fun TodayDestination(viewModel: DashboardViewModel) {
         onUpdateTask = viewModel::updateTask,
         onSetWorkLocation = viewModel::setWorkLocation,
         onDeleteWorkLocation = viewModel::deleteWorkLocation,
-        onCreateLabel = viewModel::createLabel
+        onCreateLabel = viewModel::createLabel,
+        reminderPermissionPrompt = { ReminderPermissionPrompt(container) }
     )
 }
 
@@ -214,4 +216,23 @@ private fun SettingsDestination(
         onUpdateTemplate = dashboardViewModel::updateTemplate,
         onDeleteTemplate = dashboardViewModel::deleteTemplate
     )
+}
+
+/** Prompts for the notification permission only while a reminder is switched on and would need it. */
+@Composable
+private fun ReminderPermissionPrompt(container: WorktimeAppContainer) {
+    val notifications by container.notificationPreferencesStore.preferences.collectAsStateWithLifecycle(
+        initialValue = NotificationPreferences()
+    )
+    val scope = rememberCoroutineScope()
+    val anyReminderEnabled =
+        notifications.plannedTasksEnabled || notifications.timeTrackingEnabled || notifications.syncConflictsEnabled
+    if (anyReminderEnabled) {
+        NotificationPermissionCard(
+            permissionRequested = notifications.permissionRequested,
+            onPermissionRequested = {
+                scope.launch { container.notificationPreferencesStore.markPermissionRequested() }
+            }
+        )
+    }
 }

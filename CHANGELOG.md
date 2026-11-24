@@ -18,10 +18,12 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Added
 
+- **Android:** Reminders explain the notification permission on Today and link to system settings when notifications are blocked. Previously the app asked for it on launch, before sign-in.
 - **Android:** Read release notes offline from “What’s new” in Settings.
 
 ### Changed
 
+- **Android:** Reminder notifications show only a generic message on the lock screen and reveal the task name after unlocking. Signing out also clears reminders already in the notification shade.
 - **Android:** Use the current API routes for tasks, templates, labels and work locations, and handle empty work-location preferences.
 - Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.
 - Administrators can rename users in Settings. Recent activity shows the previous and new username, and members can still edit their own display name.

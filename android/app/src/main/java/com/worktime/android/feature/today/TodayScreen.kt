@@ -75,7 +75,8 @@ fun TodayScreen(
     onUpdateTask: (String, String?, String?) -> Unit,
     onSetWorkLocation: (LocalDate, String, String?) -> Unit,
     onDeleteWorkLocation: (LocalDate) -> Unit,
-    onCreateLabel: (String, String) -> Unit
+    onCreateLabel: (String, String) -> Unit,
+    reminderPermissionPrompt: @Composable () -> Unit = {}
 ) {
     ReadModelScreen(title = "Today", uiState = uiState, onRetry = onRetry) { dashboard ->
         var taskText by
@@ -122,6 +123,7 @@ fun TodayScreen(
                     )
                 }
             }
+            item { reminderPermissionPrompt() }
             item {
                 SummaryCard(title = "Time tracking") {
                     Column(
