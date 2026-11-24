@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,19 +25,17 @@ import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardViewModel
 import com.worktime.android.feature.nextshifts.NextShiftsScreen
 import com.worktime.android.feature.session.BiometricGateViewModel
-import com.worktime.android.feature.settings.SettingsScreen
+import com.worktime.android.feature.settings.AccountScreen
 import com.worktime.android.feature.teamstatus.TeamStatusScreen
-import com.worktime.android.feature.timeoff.TimeOffSummaryScreen
-import com.worktime.android.feature.timeoff.TimeOffViewModel
 import com.worktime.android.feature.today.TodayScreen
 import com.worktime.android.ui.components.NotificationPermissionCard
+import com.worktime.android.ui.components.openNotificationSettings
 import kotlinx.coroutines.launch
 
 @Composable
 internal fun WorktimeAuthenticatedScaffold(
     container: WorktimeAppContainer,
     dashboardViewModel: DashboardViewModel,
-    timeOffViewModel: TimeOffViewModel,
     biometricGateViewModel: BiometricGateViewModel,
     initialDestination: String,
     pendingDestination: String?,
@@ -44,19 +43,16 @@ internal fun WorktimeAuthenticatedScaffold(
 ) {
     val navController = rememberNavController()
     val destinations = remember { WorktimeDestination.entries.toList() }
-    val startDestination = destinations.firstOrNull { it.route == initialDestination }?.route
-        ?: WorktimeDestination.Today.route
+    val startDestination = WorktimeDestination.fromRoute(initialDestination).route
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: WorktimeDestination.Today.route
 
     LaunchedEffect(pendingDestination, navController) {
         val destination = pendingDestination ?: return@LaunchedEffect
-        if (destinations.any { it.route == destination }) {
-            navController.navigate(destination) {
-                launchSingleTop = true
-                restoreState = true
-                popUpTo(navController.graph.startDestinationId) { saveState = true }
-            }
+        navController.navigate(WorktimeDestination.fromRoute(destination).route) {
+            launchSingleTop = true
+            restoreState = true
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
         }
         onPendingDestinationConsumed()
     }
@@ -90,14 +86,9 @@ internal fun WorktimeAuthenticatedScaffold(
                     TeamStatusScreen(uiState, dashboardViewModel::refresh)
                 }
             }
-            composable(WorktimeDestination.TimeOff.route) {
+            composable(WorktimeDestination.Account.route) {
                 Box(Modifier.padding(paddingValues)) {
-                    TimeOffDestination(timeOffViewModel)
-                }
-            }
-            composable(WorktimeDestination.Settings.route) {
-                Box(Modifier.padding(paddingValues)) {
-                    SettingsDestination(container, dashboardViewModel, biometricGateViewModel)
+                    AccountDestination(container, dashboardViewModel, biometricGateViewModel)
                 }
             }
         }
@@ -142,29 +133,13 @@ private fun TodayDestination(container: WorktimeAppContainer, viewModel: Dashboa
 }
 
 @Composable
-private fun TimeOffDestination(viewModel: TimeOffViewModel) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val formState by viewModel.formState.collectAsStateWithLifecycle()
-    TimeOffSummaryScreen(
-        uiState = uiState,
-        formState = formState,
-        onRetry = viewModel::refresh,
-        onAdd = viewModel::openCreateForm,
-        onEdit = viewModel::openEditForm,
-        onDismissForm = viewModel::closeForm,
-        onSubmit = viewModel::submit,
-        onDelete = viewModel::delete
-    )
-}
-
-@Composable
-private fun SettingsDestination(
+private fun AccountDestination(
     container: WorktimeAppContainer,
     dashboardViewModel: DashboardViewModel,
     biometricGateViewModel: BiometricGateViewModel
 ) {
     val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
-    val actionsState by dashboardViewModel.actionsState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val notifications by container.notificationPreferencesStore.preferences.collectAsStateWithLifecycle(
         initialValue = NotificationPreferences()
     )
@@ -174,7 +149,7 @@ private fun SettingsDestination(
     val biometricPreferences by biometricGateViewModel.preferences.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    SettingsScreen(
+    AccountScreen(
         uiState = uiState,
         appConfig = container.appConfig,
         oidcConfig = container.oidcConfig,
@@ -204,18 +179,8 @@ private fun SettingsDestination(
         biometricLockPreferences = biometricPreferences,
         onBiometricLockEnabledChanged = biometricGateViewModel::setLockEnabled,
         onBiometricIdleTimeoutChanged = biometricGateViewModel::setIdleTimeoutMinutes,
-        onLogout = dashboardViewModel::logout,
-        isDeletingAccount = actionsState.isDeletingAccount,
-        deleteAccountError = actionsState.deleteAccountError,
-        onDeleteAccount = dashboardViewModel::deleteAccount,
-        actionsState = actionsState,
-        onUpdateWorkLocationPreferences = dashboardViewModel::updateWorkLocationPreferences,
-        onCreateLabel = dashboardViewModel::createLabel,
-        onUpdateLabel = dashboardViewModel::updateLabel,
-        onDeleteLabel = dashboardViewModel::deleteLabel,
-        onCreateTemplate = dashboardViewModel::createTemplate,
-        onUpdateTemplate = dashboardViewModel::updateTemplate,
-        onDeleteTemplate = dashboardViewModel::deleteTemplate
+        onOpenNotificationSettings = { openNotificationSettings(context) },
+        onLogout = dashboardViewModel::logout
     )
 }
 

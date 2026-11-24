@@ -19,11 +19,12 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 ### Added
 
 - **Android:** Reminders explain the notification permission on Today and link to system settings when notifications are blocked. Previously the app asked for it on launch, before sign-in.
-- **Android:** Read release notes offline from “What’s new” in Settings.
+- **Android:** Read release notes offline from “What’s new” on the Account tab.
 
 ### Changed
 
 - **Android:** Screen readers hear each tab once, can jump between screen and card headings, and are told when a loading, error or offline message appears. Error, sign-in and lock screens scroll and the offline banner wraps at large font sizes, so Retry stays reachable.
+- **Android:** The app keeps Today, Next and Team, and Settings becomes an Account tab with sign-out, app lock, reminder and notification controls. Time off, work location defaults, labels, templates, settings, administration and account deletion are managed on the web, with links from the Account tab. Reminders and links from older versions that open Settings or Time Off land on Account or Today.
 - **Android:** Reminder notifications show only a generic message on the lock screen and reveal the task name after unlocking. Signing out also clears reminders already in the notification shade.
 - **Android:** Use the current API routes for tasks, templates, labels and work locations, and handle empty work-location preferences.
 - Time Off uses entry, note and vacation consistently. The Flags column shows only modifiers, and calendar chips use readable labels for their details.

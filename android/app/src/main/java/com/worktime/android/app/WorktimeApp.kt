@@ -31,7 +31,6 @@ import com.worktime.android.feature.dashboard.DashboardViewModel
 import com.worktime.android.feature.login.LoginScreen
 import com.worktime.android.feature.session.BiometricGateScreen
 import com.worktime.android.feature.session.BiometricGateViewModel
-import com.worktime.android.feature.timeoff.TimeOffViewModel
 import com.worktime.android.ui.theme.WorktimeTheme
 import kotlinx.coroutines.launch
 
@@ -51,8 +50,6 @@ fun WorktimeApp(
                 container.syncSignalTransport
             )
         )
-    val timeOffViewModel: TimeOffViewModel =
-        viewModel(factory = TimeOffViewModel.factory(container.dashboardRepository))
     val biometricGateViewModel: BiometricGateViewModel =
         viewModel(factory = BiometricGateViewModel.factory(container.biometricLockPreferencesStore))
     val sessionState by container.sessionManager.sessionState.collectAsStateWithLifecycle()
@@ -68,12 +65,11 @@ fun WorktimeApp(
             when (surface) {
                 AppSurface.LockResolving -> LockResolvingPlaceholder()
                 AppSurface.LockGate -> BiometricGate(biometricGateViewModel)
-                AppSurface.Login -> LoginDestination(container, dashboardViewModel, timeOffViewModel, sessionState)
+                AppSurface.Login -> LoginDestination(container, dashboardViewModel, sessionState)
                 AppSurface.Authenticated ->
                     WorktimeAuthenticatedScaffold(
                         container = container,
                         dashboardViewModel = dashboardViewModel,
-                        timeOffViewModel = timeOffViewModel,
                         biometricGateViewModel = biometricGateViewModel,
                         initialDestination = initialDestination,
                         pendingDestination = pendingDestination,
@@ -88,7 +84,6 @@ fun WorktimeApp(
 private fun LoginDestination(
     container: WorktimeAppContainer,
     dashboardViewModel: DashboardViewModel,
-    timeOffViewModel: TimeOffViewModel,
     sessionState: SessionState
 ) {
     val context = LocalContext.current
@@ -103,7 +98,6 @@ private fun LoginDestination(
                     .onSuccess {
                         loginError = null
                         dashboardViewModel.refresh()
-                        timeOffViewModel.refresh()
                     }.onFailure {
                         loginError =
                             (it as? IllegalStateException)?.message

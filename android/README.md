@@ -14,7 +14,7 @@ cd android
 
 Android builds require Node.js on `PATH`. The `generateChangelog` Gradle task runs
 `node scripts/release.mjs export --audience app --platform android` and bundles the
-JSON as a generated asset for every variant. Settings → What’s new displays released
+JSON as a generated asset for every variant. Account → What’s new displays released
 versions and planned entries offline. Category headings stay in English to match the
 Android interface; the web app translates its labels independently.
 
