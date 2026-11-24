@@ -111,7 +111,8 @@ class ReadModelScreenAccessibilityTest {
     }
 
     @Test
-    fun staleBanner_reflowsAtLargeFontScaleOnANarrowWindow() {
+    fun staleBanner_keepsRetryReachableAtLargeFontScaleOnAShortWindow() {
+        var retries = 0
         composeTestRule.setContent {
             LargeFontShortWindow {
                 ReadModelScreen(
@@ -122,12 +123,13 @@ class ReadModelScreenAccessibilityTest {
                         staleAsOf = "2026-05-26T10:00:00Z",
                         refreshError = "Can't reach Worktime. Check your connection."
                     ),
-                    onRetry = {}
+                    onRetry = { retries++ }
                 ) {}
             }
         }
 
-        composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Retry").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(1, retries)
     }
 
     @Test
