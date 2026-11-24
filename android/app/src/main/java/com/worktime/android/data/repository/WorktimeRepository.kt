@@ -245,6 +245,9 @@ class WorktimeRepository(
             when {
                 token == null ->
                     if (sessionEnded(scope)) DashboardLoadResult.LoggedOut else DashboardLoadResult.Superseded
+                // The token was issued after a sign-out/sign-in (or an environment change) that
+                // happened while this request waited for it: never send it as the old session.
+                !isCurrent(scope) -> DashboardLoadResult.Superseded
                 else -> fetchDashboard(scope, cacheKey, token)
             }
         } catch (error: HttpException) {
@@ -257,17 +260,13 @@ class WorktimeRepository(
                 else -> DashboardLoadResult.Error("Unable to load Worktime data (${error.code()})")
             }
         } catch (_: IOException) {
-            if (isCurrent(scope)) {
+            unlessSuperseded(scope, DashboardLoadResult.Superseded) {
                 DashboardLoadResult.Error("Unable to reach the Worktime backend")
-            } else {
-                DashboardLoadResult.Superseded
             }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
-            if (isCurrent(scope)) {
+            unlessSuperseded(scope, DashboardLoadResult.Superseded) {
                 DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
-            } else {
-                DashboardLoadResult.Superseded
             }
         }
     }
@@ -307,6 +306,10 @@ class WorktimeRepository(
 
     /** Whether [scope] is still the active session and environment, so a response may be applied. */
     private fun isCurrent(scope: RequestScope?): Boolean = currentScope() == scope
+
+    /** [outcome] while [scope] is still current, otherwise [superseded]: a stale failure is not worth reporting. */
+    private inline fun <R> unlessSuperseded(scope: RequestScope?, superseded: R, outcome: () -> R): R =
+        if (isCurrent(scope)) outcome() else superseded
 
     /** Key for the persisted dashboard: the principal plus the environment, null when there is no identity. */
     private fun currentCacheKey(): String? {
@@ -612,11 +615,18 @@ class WorktimeRepository(
     ): MutationResult<T> {
         val scope = currentScope()
         return try {
-            val token =
-                sessionController.getFreshAccessToken()
-                    ?: return if (sessionEnded(scope)) MutationResult.LoggedOut else MutationResult.Superseded
-            val value = block(token)
-            if (isCurrent(scope)) MutationResult.Success(value) else MutationResult.Superseded
+            val token = sessionController.getFreshAccessToken()
+            when {
+                token == null ->
+                    if (sessionEnded(scope)) MutationResult.LoggedOut else MutationResult.Superseded
+                // A token issued after the session changed belongs to the new session: an action
+                // started under the old one must not be sent with it.
+                !isCurrent(scope) -> MutationResult.Superseded
+                else -> {
+                    val value = block(token)
+                    if (isCurrent(scope)) MutationResult.Success(value) else MutationResult.Superseded
+                }
+            }
         } catch (error: HttpException) {
             when {
                 !isCurrent(scope) -> MutationResult.Superseded
@@ -627,17 +637,13 @@ class WorktimeRepository(
                 else -> mapHttpError(error, conflictMessage)
             }
         } catch (_: IOException) {
-            if (isCurrent(scope)) {
+            unlessSuperseded(scope, MutationResult.Superseded) {
                 MutationResult.Error("Unable to reach the Worktime backend")
-            } else {
-                MutationResult.Superseded
             }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
-            if (isCurrent(scope)) {
+            unlessSuperseded(scope, MutationResult.Superseded) {
                 MutationResult.Error(error.message ?: "Request failed")
-            } else {
-                MutationResult.Superseded
             }
         }
     }

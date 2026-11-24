@@ -745,14 +745,20 @@ internal class FakeApi(
 
     /** When set, dashboard loads and task creation wait for it, so a test can change session mid-flight. */
     var gate: CompletableDeferred<Unit>? = null
+    var createTaskCallCount = 0
+        private set
+    var getDashboardCallCount = 0
+        private set
 
     override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
+        getDashboardCallCount++
         gate?.await()
         dashboardThrowable?.let { throw it }
         return response
     }
 
     override suspend fun createTask(authorization: String, payload: TaskMutationRequest): TaskRecord {
+        createTaskCallCount++
         gate?.await()
         taskThrowable?.let { throw it }
         return sampleTask(text = payload.text ?: "Task")
@@ -935,6 +941,9 @@ internal class FakeSessionController(
         private set
     var logoutCallCount = 0
         private set
+
+    /** When set, token requests wait for it and then read the session current at that point. */
+    var tokenGate: CompletableDeferred<Unit>? = null
     override val sessionState =
         MutableStateFlow<SessionState>(
             if (token == null) {
@@ -955,7 +964,10 @@ internal class FakeSessionController(
 
     override suspend fun handleAuthorizationResponse(intent: android.content.Intent?) = Result.success(Unit)
 
-    override suspend fun getFreshAccessToken(): String? = currentToken
+    override suspend fun getFreshAccessToken(): String? {
+        tokenGate?.await()
+        return currentToken
+    }
 
     override suspend fun logout() {
         logoutCallCount++

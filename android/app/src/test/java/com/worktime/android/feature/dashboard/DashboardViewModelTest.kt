@@ -601,6 +601,29 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun loadSupersededByAnEnvironmentChangeIsRetried() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                loadDashboardProvider = { callNumber ->
+                    if (callNumber ==
+                        1
+                    ) {
+                        DashboardLoadResult.Superseded
+                    } else {
+                        DashboardLoadResult.Success(sampleDashboard())
+                    }
+                }
+            )
+
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+    }
+
+    @Test
     fun accountSwitchDropsPreviousAccountsDashboardAndActionState() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()
         val repository =

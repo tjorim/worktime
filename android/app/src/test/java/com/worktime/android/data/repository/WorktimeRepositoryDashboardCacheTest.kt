@@ -306,6 +306,36 @@ class WorktimeRepositoryDashboardCacheTest {
     }
 
     @Test
+    fun actionWaitingForATokenIsNotSentAsTheNextAccount() = runTest {
+        val api = FakeApi()
+        val session = FakeSessionController(token = "token-a").apply { tokenGate = CompletableDeferred() }
+        val repository = repository(api, session, FakeDashboardCache())
+        val action = async { repository.startTimeTracking("Task") }
+        runCurrent()
+
+        session.signIn(token = "token-b", sessionId = 2, accountKey = ACCOUNT_B)
+        session.tokenGate?.complete(Unit)
+
+        assertEquals(MutationResult.Superseded, action.await())
+        assertEquals(0, api.createTaskCallCount)
+    }
+
+    @Test
+    fun loadWaitingForATokenIsNotSentAsTheNextAccount() = runTest {
+        val api = FakeApi()
+        val session = FakeSessionController(token = "token-a").apply { tokenGate = CompletableDeferred() }
+        val repository = repository(api, session, FakeDashboardCache())
+        val load = async { repository.loadDashboard() }
+        runCurrent()
+
+        session.signIn(token = "token-b", sessionId = 2, accountKey = ACCOUNT_B)
+        session.tokenGate?.complete(Unit)
+
+        assertEquals(DashboardLoadResult.Superseded, load.await())
+        assertEquals(0, api.getDashboardCallCount)
+    }
+
+    @Test
     fun environmentChangeDuringALoadDiscardsTheResponse() = runTest {
         val cache = FakeDashboardCache()
         val api = FakeApi().apply { gate = CompletableDeferred() }

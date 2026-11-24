@@ -214,9 +214,10 @@ class DashboardViewModel(
                         _uiState.value = DashboardUiState.Success(result.dashboard)
                     }
                     DashboardLoadResult.LoggedOut -> _uiState.value = DashboardUiState.LoggedOut
-                    // The session or API environment changed under this request; a refresh for the
-                    // new one is already on its way (or is the caller's to start).
-                    DashboardLoadResult.Superseded -> Unit
+                    // Still the same session (a changed one was dropped above), so only the API
+                    // environment moved under this request -- e.g. a saved override restored just
+                    // after start-up. Load again against the new one.
+                    DashboardLoadResult.Superseded -> refresh()
                     is DashboardLoadResult.Error -> {
                         // A cached (possibly stale) dashboard is still more useful than a hard
                         // error, so only surface the error when there is nothing to show instead.
