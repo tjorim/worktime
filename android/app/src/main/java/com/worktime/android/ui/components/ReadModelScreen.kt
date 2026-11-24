@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +18,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.ui.theme.WorktimeSpacing
 
@@ -70,13 +73,13 @@ private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: ()
             .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
     ) {
-        Row(
+        // Stacked rather than side by side so a long message and the button reflow at large font scales.
+        Column(
             modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.tight)
         ) {
             Text(
                 text =
@@ -85,11 +88,11 @@ private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: ()
                 } else {
                     "Showing saved data from ${formatInstant(cachedAt)}. Refreshing…"
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            TextButton(onClick = onRetry) {
+            TextButton(onClick = onRetry, modifier = Modifier.align(Alignment.End)) {
                 Text("Retry")
             }
         }
@@ -106,6 +109,7 @@ fun ScreenList(title: String, body: LazyListScope.() -> Unit) {
         item {
             Text(
                 text = title,
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -126,15 +130,12 @@ fun EmptyPane(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxSize()
-            .padding(WorktimeSpacing.section),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = title, style = MaterialTheme.typography.headlineSmall)
+    CenteredScrollPane(contentPadding = WorktimeSpacing.section) {
+        Text(
+            text = title,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall
+        )
         Card(modifier = Modifier.padding(top = WorktimeSpacing.standard)) {
             Column(
                 modifier =
@@ -143,8 +144,14 @@ fun EmptyPane(
                     .padding(WorktimeSpacing.standard),
                 verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
             ) {
-                Text(text = headline, style = MaterialTheme.typography.titleMedium)
-                Text(text = body, style = MaterialTheme.typography.bodyMedium)
+                // One announcement for the state, so a loading pane that turns into an error is read out.
+                Column(
+                    modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                    verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
+                ) {
+                    Text(text = headline, style = MaterialTheme.typography.titleMedium)
+                    Text(text = body, style = MaterialTheme.typography.bodyMedium)
+                }
                 if (actionLabel != null && onAction != null) {
                     Button(onClick = onAction) {
                         Text(actionLabel)

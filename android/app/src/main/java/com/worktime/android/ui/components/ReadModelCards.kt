@@ -12,6 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import com.worktime.android.data.model.ShiftSummary
 import com.worktime.android.ui.theme.WorktimeSpacing
@@ -27,7 +29,11 @@ fun SummaryCard(title: String, body: @Composable ColumnScopeShim.() -> Unit) {
             modifier = Modifier.padding(WorktimeSpacing.standard),
             verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.inline)
         ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = title,
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleMedium
+            )
             ColumnScopeShim(this).body()
         }
     }

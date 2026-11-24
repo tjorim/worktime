@@ -105,7 +105,7 @@ internal fun WorktimeAuthenticatedScaffold(
 }
 
 @Composable
-private fun WorktimeBottomBar(
+internal fun WorktimeBottomBar(
     destinations: List<WorktimeDestination>,
     currentRoute: String,
     onNavigate: (String) -> Unit
@@ -115,7 +115,8 @@ private fun WorktimeBottomBar(
             NavigationBarItem(
                 selected = currentRoute == destination.route,
                 onClick = { onNavigate(destination.route) },
-                icon = { Icon(destination.icon, contentDescription = destination.label) },
+                // Decorative: the visible label already names the tab, so a description would be read twice.
+                icon = { Icon(destination.icon, contentDescription = null) },
                 label = { Text(destination.label) }
             )
         }
