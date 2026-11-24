@@ -1,6 +1,7 @@
 package com.worktime.android.core.notifications
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -28,12 +29,22 @@ class WorktimeNotifications(private val context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val channels =
             listOf(
-                NotificationChannel(CHANNEL_PLANNED_TASKS, "Planned tasks", NotificationManager.IMPORTANCE_DEFAULT),
-                NotificationChannel(CHANNEL_TIME_TRACKING, "Time tracking", NotificationManager.IMPORTANCE_DEFAULT),
-                NotificationChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts", NotificationManager.IMPORTANCE_DEFAULT),
+                privateChannel(CHANNEL_PLANNED_TASKS, "Planned tasks"),
+                privateChannel(CHANNEL_TIME_TRACKING, "Time tracking"),
+                privateChannel(CHANNEL_SYNC_CONFLICTS, "Sync/conflicts"),
                 NotificationChannel(CHANNEL_BACKGROUND_SYNC, "Background sync", NotificationManager.IMPORTANCE_MIN)
             )
         manager.createNotificationChannels(channels)
+    }
+
+    /**
+     * Removes the reminders this app has posted. Called on sign-out so task names don't outlive the
+     * session in the shade. Cancels by id rather than `cancelAll()` so the WorkManager foreground
+     * notification used by the background reconcile isn't torn down underneath it.
+     */
+    fun cancelAll() {
+        val manager = NotificationManagerCompat.from(context)
+        REMINDER_NOTIFICATION_IDS.forEach(manager::cancel)
     }
 
     fun showPlannedTaskReminder(message: String) {
@@ -42,7 +53,8 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_PLANNED_TASKS,
             title = "Starting soon",
             message = message,
-            destination = "today"
+            destination = "today",
+            publicText = PUBLIC_TEXT_PLANNED_TASK
         )
     }
 
@@ -52,7 +64,8 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_TIME_TRACKING,
             title = "Running timer reminder",
             message = message,
-            destination = "today"
+            destination = "today",
+            publicText = PUBLIC_TEXT_TIMER
         )
     }
 
@@ -62,17 +75,27 @@ class WorktimeNotifications(private val context: Context) {
             channelId = CHANNEL_SYNC_CONFLICTS,
             title = "Sync status",
             message = message,
-            destination = "today"
+            destination = "today",
+            publicText = PUBLIC_TEXT_SYNC_STATUS
         )
     }
 
-    private fun show(id: Int, channelId: String, title: String, message: String, destination: String) {
-        val intent =
-            Intent()
-                .setClass(context, MainActivity::class.java)
-                .setPackage(context.packageName)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                .putExtra(EXTRA_DESTINATION, destination)
+    @Suppress("LongParameterList")
+    private fun show(
+        id: Int,
+        channelId: String,
+        title: String,
+        message: String,
+        destination: String,
+        publicText: String
+    ) {
+        // Statements, not a fluent chain: under the non-Robolectric unit-test stubs Intent's
+        // setters return null, which would NPE (see WorktimeNotificationsTest).
+        // The tap always opens MainActivity, so the session and app-lock gates run before any content.
+        val intent = Intent(context, MainActivity::class.java)
+        intent.setPackage(context.packageName)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        intent.putExtra(EXTRA_DESTINATION, destination)
         val pendingIntent =
             PendingIntent.getActivity(
                 context,
@@ -80,12 +103,23 @@ class WorktimeNotifications(private val context: Context) {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
+        // Task names are personal, so while the device is locked the shade shows only this generic
+        // version; the full text appears once the user unlocks.
+        val publicVersion =
+            NotificationCompat
+                .Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(PUBLIC_TITLE)
+                .setContentText(publicText)
+                .build()
         val notification =
             NotificationCompat
                 .Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(title)
                 .setContentText(message)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                .setPublicVersion(publicVersion)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()
@@ -98,10 +132,21 @@ class WorktimeNotifications(private val context: Context) {
         }
     }
 
+    private fun privateChannel(id: String, name: String): NotificationChannel =
+        NotificationChannel(id, name, NotificationManager.IMPORTANCE_DEFAULT).apply {
+            lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+        }
+
     companion object {
         const val EXTRA_DESTINATION = "destination"
+        internal const val PUBLIC_TITLE = "Worktime"
+        internal const val PUBLIC_TEXT_PLANNED_TASK = "A planned task starts soon"
+        internal const val PUBLIC_TEXT_TIMER = "A running timer needs your attention"
+        internal const val PUBLIC_TEXT_SYNC_STATUS = "Sync status updated"
         private const val NOTIFICATION_ID_PLANNED_TASK_REMINDER = 1001
         private const val NOTIFICATION_ID_TIMER_REMINDER = 1002
         private const val NOTIFICATION_ID_SYNC_STATUS = 1003
+        internal val REMINDER_NOTIFICATION_IDS =
+            listOf(NOTIFICATION_ID_PLANNED_TASK_REMINDER, NOTIFICATION_ID_TIMER_REMINDER, NOTIFICATION_ID_SYNC_STATUS)
     }
 }

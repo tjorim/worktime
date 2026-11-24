@@ -1,8 +1,5 @@
 package com.worktime.android.app
 
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -10,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -32,26 +28,11 @@ internal fun WorktimeAppEffects(
     biometricGateViewModel: BiometricGateViewModel,
     sessionState: SessionState
 ) {
-    RequestNotificationPermission()
     ReconcileNotifications(container, dashboardViewModel, sessionState)
     LaunchedEffect(sessionState) {
         if (sessionState is SessionState.Authenticated) registerFcmTokenIfNeeded(container)
     }
     ObserveAppLifecycle(dashboardViewModel, biometricGateViewModel)
-}
-
-@Composable
-private fun RequestNotificationPermission() {
-    val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) !=
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
 }
 
 @Composable
@@ -87,7 +68,10 @@ private fun ReconcileNotifications(
         }
     }
     LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.LoggedOut) scheduler.cancelAll()
+        if (sessionState is SessionState.LoggedOut) {
+            scheduler.cancelAll()
+            notifications.cancelAll()
+        }
     }
 }
 

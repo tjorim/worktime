@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.map
 data class NotificationPreferences(
     val plannedTasksEnabled: Boolean = true,
     val timeTrackingEnabled: Boolean = true,
-    val syncConflictsEnabled: Boolean = true
+    val syncConflictsEnabled: Boolean = true,
+    // Whether the OS notification permission prompt has been shown; see resolveNotificationPermissionState.
+    val permissionRequested: Boolean = false
 )
 
 class NotificationPreferencesStore(context: Context) {
@@ -36,7 +38,8 @@ class NotificationPreferencesStore(context: Context) {
                     // new key and this fallback stops mattering for them.
                     plannedTasksEnabled = prefs[KEY_PLANNED_TASKS_ENABLED] ?: prefs[KEY_SHIFTS_ENABLED_LEGACY] ?: true,
                     timeTrackingEnabled = prefs[KEY_TIME_TRACKING_ENABLED] ?: true,
-                    syncConflictsEnabled = prefs[KEY_SYNC_CONFLICTS_ENABLED] ?: true
+                    syncConflictsEnabled = prefs[KEY_SYNC_CONFLICTS_ENABLED] ?: true,
+                    permissionRequested = prefs[KEY_PERMISSION_REQUESTED] ?: false
                 )
             }
 
@@ -52,6 +55,10 @@ class NotificationPreferencesStore(context: Context) {
         dataStore.edit { it[KEY_SYNC_CONFLICTS_ENABLED] = value }
     }
 
+    suspend fun markPermissionRequested() {
+        dataStore.edit { it[KEY_PERMISSION_REQUESTED] = true }
+    }
+
     private companion object {
         const val PREFERENCES_FILE = "notification_preferences.pb"
         val KEY_PLANNED_TASKS_ENABLED = booleanPreferencesKey("planned_tasks_enabled")
@@ -60,5 +67,6 @@ class NotificationPreferencesStore(context: Context) {
         val KEY_SHIFTS_ENABLED_LEGACY = booleanPreferencesKey("shifts_enabled")
         val KEY_TIME_TRACKING_ENABLED = booleanPreferencesKey("time_tracking_enabled")
         val KEY_SYNC_CONFLICTS_ENABLED = booleanPreferencesKey("sync_conflicts_enabled")
+        val KEY_PERMISSION_REQUESTED = booleanPreferencesKey("permission_requested")
     }
 }
