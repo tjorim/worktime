@@ -76,6 +76,7 @@ suspend fun fetchPlannedTask(repository: DashboardRepository): MutationResult<Ta
     when (val result = listNearTermTasks(repository)) {
         is MutationResult.Success -> MutationResult.Success(nextPlannedTask(result.value))
         MutationResult.LoggedOut -> MutationResult.LoggedOut
+        MutationResult.Superseded -> MutationResult.Superseded
         is MutationResult.ValidationError -> result
         is MutationResult.Error -> result
     }

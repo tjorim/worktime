@@ -55,6 +55,7 @@ class DashboardViewModelRefreshFailureTest {
     fun setUp() {
         kotlinx.coroutines.Dispatchers.setMain(dispatcher)
         every { repository.sessionState } returns MutableStateFlow(SessionState.Authenticated(hasRefreshToken = true))
+        every { repository.apiEnvironment } returns "test"
         coEvery { repository.loadCachedDashboard() } returns null
         coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard())
         coEvery { repository.getRunningTask() } returns MutationResult.Success(sampleTask())
