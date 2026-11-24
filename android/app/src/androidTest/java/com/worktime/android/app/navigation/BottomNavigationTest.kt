@@ -116,9 +116,9 @@ class BottomNavigationTest {
 
         composeTestRule.onNodeWithText("Today screen").assertIsDisplayed()
 
-        composeTestRule.onNodeWithText(WorktimeDestination.TimeOff.label).performClick()
+        composeTestRule.onNodeWithText(WorktimeDestination.Account.label).performClick()
 
-        composeTestRule.onNodeWithText("Time Off screen").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Account screen").assertIsDisplayed()
     }
 
     @Test

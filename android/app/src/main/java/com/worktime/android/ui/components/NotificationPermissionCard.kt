@@ -119,7 +119,8 @@ private fun currentNotificationPermissionState(
     )
 }
 
-private fun openNotificationSettings(context: Context) {
+/** Opens the system notification page for Worktime, falling back to the app details page. */
+fun openNotificationSettings(context: Context) {
     val appNotificationSettings =
         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)

@@ -22,8 +22,7 @@ class MainActivity : FragmentActivity() {
         val container = (application as WorktimeAndroidApplication).container
         WorktimeNotifications(this).createChannels()
         val destination =
-            intent?.getStringExtra(WorktimeNotifications.EXTRA_DESTINATION)
-                ?: WorktimeDestination.Today.route
+            WorktimeDestination.fromRoute(intent?.getStringExtra(WorktimeNotifications.EXTRA_DESTINATION)).route
         setContent {
             WorktimeApp(
                 container = container,
