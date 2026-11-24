@@ -15,6 +15,9 @@ import com.worktime.android.data.repository.TimeOffDraft
 import com.worktime.android.data.repository.WorkLocationPreferences
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -141,8 +144,99 @@ class TimeOffViewModelTest {
         assertNull(viewModel.formState.value.target)
     }
 
+    @Test
+    fun accountSwitchDropsPreviousAccountsEntriesAndFormAndReloads() = runTest(dispatcher) {
+        val repository = FakeRepository(listResult = MutationResult.Success(listOf(sampleEntry())))
+        val viewModel = TimeOffViewModel(repository)
+        advanceUntilIdle()
+        viewModel.openEditForm("entry-1")
+        assertTrue(viewModel.uiState.value is TimeOffUiState.Success)
+        repository.listProvider = { MutationResult.Success(emptyList()) }
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+
+        assertEquals(TimeOffUiState.Success(emptyList()), viewModel.uiState.value)
+        assertNull(viewModel.formState.value.target)
+    }
+
+    @Test
+    fun revokedRefreshDropsEntriesAndForm() = runTest(dispatcher) {
+        val repository = FakeRepository(listResult = MutationResult.Success(listOf(sampleEntry())))
+        val viewModel = TimeOffViewModel(repository)
+        advanceUntilIdle()
+        viewModel.openCreateForm()
+
+        repository.sessionState.value = SessionState.LoggedOut
+        advanceUntilIdle()
+
+        assertEquals(TimeOffUiState.LoggedOut, viewModel.uiState.value)
+        assertNull(viewModel.formState.value.target)
+    }
+
+    @Test
+    fun staleListResponseAfterAccountSwitchIsIgnored() = runTest(dispatcher) {
+        val response = UncancellableGate()
+        val repository =
+            FakeRepository(
+                listProvider = {
+                    response.await()
+                    MutationResult.Success(listOf(sampleEntry()))
+                }
+            )
+        val viewModel = TimeOffViewModel(repository)
+        advanceUntilIdle()
+        repository.listProvider = { MutationResult.Success(emptyList()) }
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+        response.release()
+        advanceUntilIdle()
+
+        assertEquals(TimeOffUiState.Success(emptyList()), viewModel.uiState.value)
+    }
+
+    @Test
+    fun staleDeleteResponseAfterAccountSwitchIsIgnored() = runTest(dispatcher) {
+        val response = UncancellableGate()
+        val repository =
+            FakeRepository(
+                listResult = MutationResult.Success(listOf(sampleEntry())),
+                deleteProvider = {
+                    response.await()
+                    MutationResult.LoggedOut
+                }
+            )
+        val viewModel = TimeOffViewModel(repository)
+        advanceUntilIdle()
+        viewModel.delete("entry-1")
+        advanceUntilIdle()
+        repository.listProvider = { MutationResult.Success(listOf(sampleEntry())) }
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+        response.release()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is TimeOffUiState.Success)
+        assertEquals(false, viewModel.formState.value.isSubmitting)
+    }
+
+    /** A suspension point that keeps running when its caller is cancelled, like AppAuth's token refresh. */
+    private class UncancellableGate {
+        private var continuation: Continuation<Unit>? = null
+
+        suspend fun await() = suspendCoroutine { continuation = it }
+
+        fun release() {
+            continuation?.resume(Unit)
+        }
+    }
+
     private class FakeRepository(
         private val listResult: MutationResult<List<TimeOffEntryRecord>> = MutationResult.Success(emptyList()),
+        var listProvider: (suspend () -> MutationResult<List<TimeOffEntryRecord>>)? = null,
+        private val deleteProvider: (suspend () -> MutationResult<Unit>)? = null,
         private val createResult: MutationResult<TimeOffEntryRecord> = MutationResult.Success(sampleEntry()),
         private val updateResult: MutationResult<TimeOffEntryRecord> = MutationResult.Success(sampleEntry()),
         private val deleteResult: MutationResult<Unit> = MutationResult.Success(Unit)
@@ -217,7 +311,7 @@ class TimeOffViewModelTest {
         override suspend fun listTimeOffEntries(
             startDate: LocalDate?,
             endDate: LocalDate?
-        ): MutationResult<List<TimeOffEntryRecord>> = listResult
+        ): MutationResult<List<TimeOffEntryRecord>> = listProvider?.invoke() ?: listResult
 
         override suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord> =
             throw UnsupportedOperationException()
@@ -227,7 +321,8 @@ class TimeOffViewModelTest {
             draft: TimeOffDraft
         ): MutationResult<TimeOffEntryRecord> = updateResult
 
-        override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> = deleteResult
+        override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> =
+            deleteProvider?.invoke() ?: deleteResult
 
         override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> =
             throw UnsupportedOperationException()

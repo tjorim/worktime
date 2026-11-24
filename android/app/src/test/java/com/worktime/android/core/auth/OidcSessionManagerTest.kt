@@ -9,6 +9,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import java.io.IOException
+import java.security.MessageDigest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.runTest
 import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationService
+import net.openid.appauth.IdToken
 import net.openid.appauth.browser.BrowserSelector
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -32,6 +34,12 @@ class OidcSessionManagerTest {
     private val state = mockk<AuthState>(relaxed = true)
     private lateinit var manager: OidcSessionManager
     private lateinit var callback: AuthState.AuthStateAction
+    private val restoredSession =
+        SessionState.Authenticated(
+            hasRefreshToken = true,
+            sessionId = 1,
+            accountKey = sha256Hex("https://issuer.example\nuser-a")
+        )
 
     @Before
     fun setUp() {
@@ -45,6 +53,7 @@ class OidcSessionManagerTest {
         every { store.readAuthStateJson() } returns "saved"
         every { AuthState.jsonDeserialize("saved") } returns state
         every { state.refreshToken } returns "refresh"
+        every { state.parsedIdToken } returns idToken(issuer = "https://issuer.example", subject = "user-a")
         every { state.jsonSerializeString() } returns "rotated"
         every { state.performActionWithFreshTokens(any(), any<AuthState.AuthStateAction>()) } answers {
             callback = secondArg()
@@ -78,7 +87,7 @@ class OidcSessionManagerTest {
             runCurrent()
             callback.execute(null, null, error)
             assertTrue(result.await().exceptionOrNull() is IOException)
-            assertEquals(SessionState.Authenticated(true), manager.sessionState.value)
+            assertEquals(restoredSession, manager.sessionState.value)
         }
         verify(exactly = 0) { store.clear() }
         verify(exactly = 0) { store.writeAuthStateJson(any()) }
@@ -135,4 +144,50 @@ class OidcSessionManagerTest {
         assertNull(result.await())
         verify(exactly = 0) { store.writeAuthStateJson(any()) }
     }
+
+    @Test
+    fun `restoring a saved session identifies the principal without exposing it`() {
+        val session = manager.sessionState.value as SessionState.Authenticated
+        assertEquals(restoredSession, session)
+        assertTrue(
+            "https://issuer.example" !in session.accountKey.orEmpty() && "user-a" !in session.accountKey.orEmpty()
+        )
+    }
+
+    @Test
+    fun `token refresh keeps the same session`() = runTest {
+        val result = async { manager.getFreshAccessToken() }
+        runCurrent()
+        callback.execute("fresh", null, null)
+        assertEquals("fresh", result.await())
+        assertEquals(restoredSession, manager.sessionState.value)
+    }
+
+    @Test
+    fun `a token without an identity yields no account key`() {
+        every { state.parsedIdToken } returns null
+        val withoutIdentity = OidcSessionManager(mockk(relaxed = true), mockk(), mockk(), store, mockk(), mockk())
+        assertEquals(
+            SessionState.Authenticated(hasRefreshToken = true, sessionId = 1, accountKey = null),
+            withoutIdentity.sessionState.value
+        )
+    }
+
+    @Test
+    fun `different principals get different account keys`() {
+        every { state.parsedIdToken } returns idToken(issuer = "https://issuer.example", subject = "user-b")
+        val other = OidcSessionManager(mockk(relaxed = true), mockk(), mockk(), store, mockk(), mockk())
+        val keyB = (other.sessionState.value as SessionState.Authenticated).accountKey
+        assertTrue(keyB != null && keyB != restoredSession.accountKey)
+    }
+
+    private fun idToken(issuer: String, subject: String): IdToken = mockk<IdToken>(relaxed = true).also { token ->
+        IdToken::class.java.getField("issuer").apply { isAccessible = true }.set(token, issuer)
+        IdToken::class.java.getField("subject").apply { isAccessible = true }.set(token, subject)
+    }
+
+    private fun sha256Hex(value: String): String = MessageDigest
+        .getInstance("SHA-256")
+        .digest(value.toByteArray())
+        .joinToString("") { "%02x".format(it) }
 }

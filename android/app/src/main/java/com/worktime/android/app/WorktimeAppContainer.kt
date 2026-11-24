@@ -42,7 +42,12 @@ class WorktimeAppContainer(
             baseUrlOverrideProvider = apiBaseUrlOverrideStore::currentOverrideBlocking
         )
     val dashboardRepository =
-        WorktimeRepository(api = api, sessionController = sessionManager, cache = dashboardCacheStore)
+        WorktimeRepository(
+            api = api,
+            sessionController = sessionManager,
+            cache = dashboardCacheStore,
+            environmentKey = { apiBaseUrlOverrideStore.currentOverrideBlocking() ?: appConfig.apiBaseUrl }
+        )
 
     // Only alive while at least one SyncSignalTransport.subscribe() is active (foregrounded +
     // authenticated, see DashboardViewModel) -- SupervisorJob keeps a failed connect attempt from

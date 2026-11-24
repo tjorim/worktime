@@ -8,6 +8,7 @@ import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -49,6 +50,12 @@ class OidcSessionManager @Inject constructor(
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
+    // Source of SessionState.Authenticated.sessionId: bumped on every sign-in and on restoring a
+    // saved session at startup, never by a token refresh. Declared before authState because the
+    // restore in its initializer already uses it.
+    @Volatile
+    private var sessionId = 0L
+
     @Volatile
     private var authState: AuthState? =
         try {
@@ -56,7 +63,10 @@ class OidcSessionManager @Inject constructor(
                 .readAuthStateJson()
                 ?.takeIf { it.isNotBlank() }
                 ?.let(AuthState::jsonDeserialize)
-                ?.also(::publishState)
+                ?.also { state ->
+                    sessionId++
+                    publishState(state)
+                }
         } catch (_: Exception) {
             // readAuthStateJson() is backed by EncryptedSharedPreferences, which can throw
             // GeneralSecurityException/IOException if the Android Keystore key is lost or
@@ -106,6 +116,7 @@ class OidcSessionManager @Inject constructor(
             throw IllegalStateException(message)
         }
 
+        sessionId++
         persistAuthState(newState)
     }
 
@@ -208,10 +219,25 @@ class OidcSessionManager @Inject constructor(
     }
 
     private fun publishState(state: AuthState) {
-        _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+        _sessionState.value =
+            SessionState.Authenticated(
+                hasRefreshToken = !state.refreshToken.isNullOrBlank(),
+                sessionId = sessionId,
+                accountKey = state.accountKey()
+            )
     }
 
     private companion object {
         const val TAG = "OidcSessionManager"
     }
 }
+
+/** A digest of the signed-in principal, or null when the token carries no usable identity. */
+private fun AuthState.accountKey(): String? = runCatching {
+    val token = parsedIdToken ?: return null
+    if (token.issuer.isBlank() || token.subject.isBlank()) return null
+    MessageDigest
+        .getInstance("SHA-256")
+        .digest("${token.issuer}\n${token.subject}".toByteArray())
+        .joinToString("") { "%02x".format(it) }
+}.getOrNull()

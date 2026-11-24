@@ -31,6 +31,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Fixed
 
+- **Android:** Signing out, an expired or revoked sign-in or switching accounts no longer leaves the previous account’s dashboard, actions or Time Off entries on screen, and late responses from the previous session are ignored.
 - Time Off warnings identify the overlapping entry and dates. The month calendar flags only affected days, and specific dates take priority over date ranges and weekly entries.
 - Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
 

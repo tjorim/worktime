@@ -41,6 +41,7 @@ import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
@@ -222,7 +223,7 @@ class WorktimeRepositoryTest {
         val result = repository.deleteAccount()
 
         assertEquals(MutationResult.Error("Request failed (500)"), result)
-        assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+        assertTrue(sessionController.sessionState.value is SessionState.Authenticated)
     }
 
     @Test
@@ -280,7 +281,7 @@ class WorktimeRepositoryTest {
 
         assertEquals(intent, result)
         // Building the intent must not itself end the local session — only completeLogout does.
-        assertEquals(SessionState.Authenticated(hasRefreshToken = true), sessionController.sessionState.value)
+        assertTrue(sessionController.sessionState.value is SessionState.Authenticated)
         assertEquals(0, sessionController.completeLogoutCallCount)
     }
 
@@ -742,12 +743,17 @@ internal class FakeApi(
     var lastUnregisteredFcmToken: String? = null
         private set
 
+    /** When set, dashboard loads and task creation wait for it, so a test can change session mid-flight. */
+    var gate: CompletableDeferred<Unit>? = null
+
     override suspend fun getDashboard(authorization: String, timezone: String): DashboardResponse {
+        gate?.await()
         dashboardThrowable?.let { throw it }
         return response
     }
 
     override suspend fun createTask(authorization: String, payload: TaskMutationRequest): TaskRecord {
+        gate?.await()
         taskThrowable?.let { throw it }
         return sampleTask(text = payload.text ?: "Task")
     }
@@ -919,15 +925,31 @@ internal class FakeApi(
     }
 }
 
-internal class FakeSessionController(token: String?, private val logoutIntent: android.content.Intent? = null) :
-    SessionController {
+internal class FakeSessionController(
+    token: String?,
+    private val logoutIntent: android.content.Intent? = null,
+    accountKey: String? = "account-a"
+) : SessionController {
     private var currentToken: String? = token
     var completeLogoutCallCount = 0
         private set
+    var logoutCallCount = 0
+        private set
     override val sessionState =
         MutableStateFlow<SessionState>(
-            if (token == null) SessionState.LoggedOut else SessionState.Authenticated(hasRefreshToken = true)
+            if (token == null) {
+                SessionState.LoggedOut
+            } else {
+                SessionState.Authenticated(hasRefreshToken = true, sessionId = 1, accountKey = accountKey)
+            }
         )
+
+    /** Simulates a new sign-in (possibly another account) replacing whatever session was active. */
+    fun signIn(token: String, sessionId: Long, accountKey: String?) {
+        currentToken = token
+        sessionState.value =
+            SessionState.Authenticated(hasRefreshToken = true, sessionId = sessionId, accountKey = accountKey)
+    }
 
     override suspend fun createAuthorizationIntent() = throw UnsupportedOperationException()
 
@@ -936,6 +958,7 @@ internal class FakeSessionController(token: String?, private val logoutIntent: a
     override suspend fun getFreshAccessToken(): String? = currentToken
 
     override suspend fun logout() {
+        logoutCallCount++
         currentToken = null
         sessionState.value = SessionState.LoggedOut
     }

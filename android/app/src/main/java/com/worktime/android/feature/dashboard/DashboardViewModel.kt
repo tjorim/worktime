@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.worktime.android.core.auth.SessionState
+import com.worktime.android.core.auth.activeSessionId
 import com.worktime.android.core.network.ConnectivityObserver
 import com.worktime.android.core.notifications.fetchPlannedTask
 import com.worktime.android.core.sync.SyncSignalTransport
@@ -99,14 +100,13 @@ class DashboardViewModel(
     private var refreshJob: Job? = null
     private var actionsJob: Job? = null
 
+    // The session everything this view model holds belongs to (#2092). When it changes -- sign-out,
+    // a forced expiry, another account -- all of it is dropped, and a response that began under an
+    // earlier session is ignored (see isActive) instead of landing in the new session's state.
+    private var activeSessionId: Long? = repository.sessionState.value.activeSessionId
+
     init {
-        viewModelScope.launch {
-            repository.sessionState.collect { sessionState ->
-                if (sessionState is SessionState.LoggedOut) {
-                    _uiState.value = DashboardUiState.LoggedOut
-                }
-            }
-        }
+        viewModelScope.launch { repository.sessionState.collect(::onSessionState) }
         refresh()
         viewModelScope.launch {
             connectivityObserver.isOnline
@@ -119,13 +119,14 @@ class DashboardViewModel(
             viewModelScope.launch {
                 isAppForegrounded
                     .combine(repository.sessionState) { foregrounded, sessionState ->
-                        foregrounded && sessionState is SessionState.Authenticated
+                        if (foregrounded) sessionState.activeSessionId else null
                     }.distinctUntilChanged()
                     // collectLatest: whenever "should be connected" flips (foreground/background,
-                    // sign-in/out), the previous block's `finally` unsubscribes before a new one
-                    // (re)subscribes -- never two overlapping SSE connections for one view model.
-                    .collectLatest { active ->
-                        if (!active) return@collectLatest
+                    // sign-in/out, a different session), the previous block's `finally` unsubscribes
+                    // before a new one (re)subscribes -- never two overlapping SSE connections for
+                    // one view model, and never a stream opened for a previous account.
+                    .collectLatest { sessionId ->
+                        if (sessionId == null) return@collectLatest
                         val unsubscribe = syncSignalTransport.subscribe(::onSyncSignal)
                         try {
                             awaitCancellation()
@@ -136,6 +137,24 @@ class DashboardViewModel(
             }
         }
     }
+
+    private fun onSessionState(sessionState: SessionState) {
+        val sessionId = sessionState.activeSessionId
+        if (sessionId != activeSessionId) {
+            activeSessionId = sessionId
+            refreshJob?.cancel()
+            actionsJob?.cancel()
+            _actionsState.value = MobileActionsUiState()
+            _uiState.value = DashboardUiState.Loading
+            if (sessionId != null) refresh()
+        }
+        if (sessionState is SessionState.LoggedOut) {
+            _uiState.value = DashboardUiState.LoggedOut
+        }
+    }
+
+    /** Whether [sessionId] is still the signed-in session, i.e. a result obtained under it may be applied. */
+    private fun isActive(sessionId: Long?): Boolean = repository.sessionState.value.activeSessionId == sessionId
 
     /** The UI reporting `ON_START`: (re)connects the live-updates stream if signed in. */
     fun onAppForegrounded() {
@@ -170,6 +189,7 @@ class DashboardViewModel(
 
     fun refresh() {
         refreshJob?.cancel()
+        val sessionId = repository.sessionState.value.activeSessionId
         refreshJob =
             viewModelScope.launch {
                 // Cold start (or recovering from LoggedOut/Error): show the last cached dashboard
@@ -178,6 +198,7 @@ class DashboardViewModel(
                 // back to a possibly-older cached snapshot.
                 if (_uiState.value !is DashboardUiState.Success) {
                     val cached = repository.loadCachedDashboard()
+                    if (!isActive(sessionId)) return@launch
                     _uiState.value =
                         if (cached != null) {
                             DashboardUiState.Success(cached.dashboard, staleAsOf = cached.cachedAt)
@@ -185,12 +206,17 @@ class DashboardViewModel(
                             DashboardUiState.Loading
                         }
                 }
-                when (val result = repository.loadDashboard()) {
+                val result = repository.loadDashboard()
+                if (!isActive(sessionId)) return@launch
+                when (result) {
                     is DashboardLoadResult.Success -> {
                         refreshActions()
                         _uiState.value = DashboardUiState.Success(result.dashboard)
                     }
                     DashboardLoadResult.LoggedOut -> _uiState.value = DashboardUiState.LoggedOut
+                    // The session or API environment changed under this request; a refresh for the
+                    // new one is already on its way (or is the caller's to start).
+                    DashboardLoadResult.Superseded -> Unit
                     is DashboardLoadResult.Error -> {
                         // A cached (possibly stale) dashboard is still more useful than a hard
                         // error, so only surface the error when there is nothing to show instead.
@@ -211,58 +237,32 @@ class DashboardViewModel(
     }
 
     private suspend fun refreshActionsNow() = coroutineScope {
-        val runningTaskAsync =
-            async {
-                when (val result = repository.getRunningTask()) {
-                    is MutationResult.Success -> result.value
-                    else -> null
-                }
-            }
+        val sessionId = repository.sessionState.value.activeSessionId
+        val runningTaskAsync = async { repository.getRunningTask().valueOrNull() }
         val plannedTaskAsync = async { fetchPlannedTask(repository) }
-        val weeklyLocationsAsync =
-            async {
-                when (val result = repository.loadWeeklyWorkLocations()) {
-                    is MutationResult.Success -> result.value
-                    else -> emptyList()
-                }
-            }
-        val syncStatusAsync =
-            async {
-                when (val result = repository.loadSyncStatus()) {
-                    is MutationResult.Success -> result.value
-                    else -> null
-                }
-            }
+        val weeklyLocationsAsync = async { repository.loadWeeklyWorkLocations().valueOrNull().orEmpty() }
+        val syncStatusAsync = async { repository.loadSyncStatus().valueOrNull() }
         val workLocationPreferencesAsync =
-            async {
-                when (val result = repository.loadWorkLocationPreferences()) {
-                    is MutationResult.Success -> result.value
-                    else -> WorkLocationPreferences()
-                }
-            }
-        val labelsAsync =
-            async {
-                when (val result = repository.listLabels()) {
-                    is MutationResult.Success -> result.value
-                    else -> emptyList()
-                }
-            }
-        val templatesAsync =
-            async {
-                when (val result = repository.listTemplates()) {
-                    is MutationResult.Success -> result.value
-                    else -> emptyList()
-                }
-            }
+            async { repository.loadWorkLocationPreferences().valueOrNull() ?: WorkLocationPreferences() }
+        val labelsAsync = async { repository.listLabels().valueOrNull().orEmpty() }
+        val templatesAsync = async { repository.listTemplates().valueOrNull().orEmpty() }
+        val runningTask = runningTaskAsync.await()
+        val plannedTask = plannedTaskAsync.await()
+        val weeklyWorkLocations = weeklyLocationsAsync.await()
+        val syncStatus = syncStatusAsync.await()
+        val workLocationPreferences = workLocationPreferencesAsync.await()
+        val labels = labelsAsync.await()
+        val templates = templatesAsync.await()
+        if (!isActive(sessionId)) return@coroutineScope
         _actionsState.value =
             _actionsState.value.copy(
-                runningTask = runningTaskAsync.await(),
-                plannedTask = plannedTaskAsync.await(),
-                weeklyWorkLocations = weeklyLocationsAsync.await(),
-                syncStatus = syncStatusAsync.await(),
-                workLocationPreferences = workLocationPreferencesAsync.await(),
-                labels = labelsAsync.await(),
-                templates = templatesAsync.await()
+                runningTask = runningTask,
+                plannedTask = plannedTask,
+                weeklyWorkLocations = weeklyWorkLocations,
+                syncStatus = syncStatus,
+                workLocationPreferences = workLocationPreferences,
+                labels = labels,
+                templates = templates
             )
     }
 
@@ -368,15 +368,21 @@ class DashboardViewModel(
     }
 
     fun deleteAccount() {
+        val sessionId = repository.sessionState.value.activeSessionId
         viewModelScope.launch {
             _actionsState.value = _actionsState.value.copy(isDeletingAccount = true, deleteAccountError = null)
-            when (val result = repository.deleteAccount()) {
+            val result = repository.deleteAccount()
+            if (!isActive(sessionId)) return@launch
+            when (result) {
                 is MutationResult.Success -> {
                     _uiState.value = DashboardUiState.LoggedOut
                     _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
                 }
                 MutationResult.LoggedOut -> {
                     _uiState.value = DashboardUiState.LoggedOut
+                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
+                }
+                MutationResult.Superseded -> {
                     _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
                 }
                 is MutationResult.ValidationError -> {
@@ -392,10 +398,13 @@ class DashboardViewModel(
     }
 
     private fun submitMutation(block: suspend () -> MutationResult<*>) {
+        val sessionId = repository.sessionState.value.activeSessionId
         viewModelScope.launch {
             _actionsState.value = _actionsState.value.copy(isSubmitting = true, message = null)
+            val result = block()
+            if (!isActive(sessionId)) return@launch
             _actionsState.value =
-                when (val result = block()) {
+                when (result) {
                     is MutationResult.Success -> {
                         refreshActions()
                         _actionsState.value.copy(isSubmitting = false, message = "Saved")
@@ -404,6 +413,7 @@ class DashboardViewModel(
                         _uiState.value = DashboardUiState.LoggedOut
                         _actionsState.value.copy(isSubmitting = false, message = "Session expired. Sign in again.")
                     }
+                    MutationResult.Superseded -> _actionsState.value.copy(isSubmitting = false)
                     is MutationResult.ValidationError -> {
                         _actionsState.value.copy(isSubmitting = false, message = result.message)
                     }
@@ -430,6 +440,9 @@ class DashboardViewModel(
         }
     }
 }
+
+/** The value of a successful result; every failure (including a superseded request) reads as absent. */
+private fun <T> MutationResult<T>.valueOrNull(): T? = (this as? MutationResult.Success)?.value
 
 /** Parses an ISO-8601 offset date-time (accepts both a numeric offset and a `Z` suffix), or null. */
 private fun parseInstantOrNull(value: String): java.time.Instant? = try {

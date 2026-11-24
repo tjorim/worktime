@@ -43,6 +43,9 @@ sealed interface DashboardLoadResult {
 
     data object LoggedOut : DashboardLoadResult
 
+    /** The session this load belonged to ended or was replaced mid-flight; its outcome must be ignored. */
+    data object Superseded : DashboardLoadResult
+
     data class Error(val message: String) : DashboardLoadResult
 }
 
@@ -51,14 +54,16 @@ data class CachedDashboard(val dashboard: DashboardResponse, val cachedAt: Strin
 
 /**
  * Durable on-disk read cache for the dashboard read model (#1230), so a cold launch with no
- * connectivity can render the user's last-known data instead of a bare error. [clear] is suspend
- * (awaited by every caller) so a subsequent sign-in on a shared device can never observe the
- * previous account's cached dashboard through an unfinished, fire-and-forget deletion.
+ * connectivity can render the user's last-known data instead of a bare error. Entries are
+ * partitioned by an opaque account/environment key (#2092): [load] only returns what was [save]d
+ * for the same key. [clear] is suspend (awaited by every caller) so a subsequent sign-in on a shared
+ * device can never observe the previous account's cached dashboard through an unfinished,
+ * fire-and-forget deletion.
  */
 interface DashboardCache {
-    suspend fun load(): CachedDashboard?
+    suspend fun load(accountKey: String): CachedDashboard?
 
-    suspend fun save(dashboard: DashboardResponse, cachedAt: String)
+    suspend fun save(accountKey: String, dashboard: DashboardResponse, cachedAt: String)
 
     suspend fun clear()
 }
@@ -67,6 +72,9 @@ sealed interface MutationResult<out T> {
     data class Success<T>(val value: T) : MutationResult<T>
 
     data object LoggedOut : MutationResult<Nothing>
+
+    /** The session this request belonged to ended or was replaced mid-flight; its outcome must be ignored. */
+    data object Superseded : MutationResult<Nothing>
 
     data class ValidationError(val message: String) : MutationResult<Nothing>
 
@@ -212,7 +220,9 @@ interface DashboardRepository {
 class WorktimeRepository(
     private val api: WorktimeApi,
     private val sessionController: SessionController,
-    private val cache: DashboardCache? = null
+    private val cache: DashboardCache? = null,
+    /** The API environment in effect (base URL); part of every request's scope and of the cache key. */
+    private val environmentKey: () -> String = { "" }
 ) : DashboardRepository {
     override val sessionState: StateFlow<SessionState> = sessionController.sessionState
 
@@ -228,39 +238,107 @@ class WorktimeRepository(
     }
 
     override suspend fun loadDashboard(): DashboardLoadResult {
-        val timezone = TimeZone.getDefault().id
+        val scope = currentScope()
+        val cacheKey = currentCacheKey()
         return try {
-            val token = sessionController.getFreshAccessToken() ?: return DashboardLoadResult.LoggedOut
-            val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = timezone)
-            // Best-effort: a cache-persistence failure must never turn an already-successful
-            // fetch into a reported error, so it's isolated from this function's own try/catch.
-            cacheDashboard(dashboard)
-            DashboardLoadResult.Success(dashboard)
+            val token = sessionController.getFreshAccessToken()
+            when {
+                token == null ->
+                    if (sessionEnded(scope)) DashboardLoadResult.LoggedOut else DashboardLoadResult.Superseded
+                else -> fetchDashboard(scope, cacheKey, token)
+            }
         } catch (error: HttpException) {
-            if (error.code() == HTTP_UNAUTHORIZED) {
-                sessionController.logout()
-                cache?.clear()
-                DashboardLoadResult.LoggedOut
-            } else {
-                DashboardLoadResult.Error("Unable to load Worktime data (${error.code()})")
+            when {
+                !isCurrent(scope) -> DashboardLoadResult.Superseded
+                error.code() == HTTP_UNAUTHORIZED -> {
+                    endSession()
+                    DashboardLoadResult.LoggedOut
+                }
+                else -> DashboardLoadResult.Error("Unable to load Worktime data (${error.code()})")
             }
         } catch (_: IOException) {
-            DashboardLoadResult.Error("Unable to reach the Worktime backend")
+            if (isCurrent(scope)) {
+                DashboardLoadResult.Error("Unable to reach the Worktime backend")
+            } else {
+                DashboardLoadResult.Superseded
+            }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
-            DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
+            if (isCurrent(scope)) {
+                DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
+            } else {
+                DashboardLoadResult.Superseded
+            }
         }
     }
 
-    private suspend fun cacheDashboard(dashboard: DashboardResponse) {
+    private suspend fun fetchDashboard(scope: RequestScope?, cacheKey: String?, token: String): DashboardLoadResult {
+        val dashboard = api.getDashboard(authorization = "Bearer $token", timezone = TimeZone.getDefault().id)
+        // A response for a session that has since ended or been replaced must neither be shown
+        // nor persisted: it would put the previous account's data on disk after sign-out.
+        if (!isCurrent(scope)) return DashboardLoadResult.Superseded
+        // Best-effort: a cache-persistence failure must never turn an already-successful
+        // fetch into a reported error, so it's isolated from loadDashboard's own try/catch.
+        cacheDashboard(cacheKey, dashboard)
+        return DashboardLoadResult.Success(dashboard)
+    }
+
+    private suspend fun cacheDashboard(cacheKey: String?, dashboard: DashboardResponse) {
+        if (cacheKey == null) return
         try {
-            cache?.save(dashboard, OffsetDateTime.now(ZoneOffset.UTC).toString())
+            cache?.save(cacheKey, dashboard, OffsetDateTime.now(ZoneOffset.UTC).toString())
         } catch (error: Exception) {
             if (error is CancellationException) throw error
         }
     }
 
-    override suspend fun loadCachedDashboard(): CachedDashboard? = cache?.load()
+    override suspend fun loadCachedDashboard(): CachedDashboard? {
+        val scope = currentScope()
+        val cacheKey = currentCacheKey() ?: return null
+        val cached = cache?.load(cacheKey) ?: return null
+        return cached.takeIf { isCurrent(scope) }
+    }
+
+    /** The session and API environment a request starts in, or null while signed out. */
+    private fun currentScope(): RequestScope? {
+        val session = sessionController.sessionState.value as? SessionState.Authenticated ?: return null
+        return RequestScope(session.sessionId, environmentKey())
+    }
+
+    /** Whether [scope] is still the active session and environment, so a response may be applied. */
+    private fun isCurrent(scope: RequestScope?): Boolean = currentScope() == scope
+
+    /** Key for the persisted dashboard: the principal plus the environment, null when there is no identity. */
+    private fun currentCacheKey(): String? {
+        val session = sessionController.sessionState.value as? SessionState.Authenticated ?: return null
+        return session.accountKey?.let { "${environmentKey()}|$it" }
+    }
+
+    /**
+     * Handles the session controller reporting no token. Returns true when the session ended (and
+     * clears what was cached for it), false when a newer session replaced the one [scope] began in.
+     */
+    private suspend fun sessionEnded(scope: RequestScope?): Boolean {
+        if (sessionController.sessionState.value !is SessionState.Authenticated) {
+            clearCacheBestEffort()
+            return true
+        }
+        return isCurrent(scope)
+    }
+
+    /** Ends the current session after the backend rejected its credentials, and drops its cached data. */
+    private suspend fun endSession() {
+        sessionController.logout()
+        clearCacheBestEffort()
+    }
+
+    private suspend fun clearCacheBestEffort() {
+        try {
+            cache?.clear()
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+        }
+    }
 
     override suspend fun startTimeTracking(text: String, labelId: String?): MutationResult<TaskRecord> {
         val now = OffsetDateTime.now(ZoneOffset.UTC).toString()
@@ -498,10 +576,12 @@ class WorktimeRepository(
         return response.body()?.data
     }
 
-    override suspend fun deleteAccount(): MutationResult<Unit> = withAuthorizedToken { token ->
-        api.deleteAccount(authorization = "Bearer $token")
-        sessionController.logout()
-        cache?.clear()
+    override suspend fun deleteAccount(): MutationResult<Unit> {
+        val result = withAuthorizedToken { token -> api.deleteAccount(authorization = "Bearer $token") }
+        // After the request, not inside it: signing out changes the session, which would make the
+        // request look superseded.
+        if (result is MutationResult.Success) endSession()
+        return result
     }
 
     override suspend fun registerFcmToken(token: String): MutationResult<Unit> = withAuthorizedToken<Unit> {
@@ -530,24 +610,41 @@ class WorktimeRepository(
         conflictMessage: String? = null,
         block: suspend (token: String) -> T
     ): MutationResult<T> {
+        val scope = currentScope()
         return try {
-            val token = sessionController.getFreshAccessToken() ?: return MutationResult.LoggedOut
-            MutationResult.Success(block(token))
+            val token =
+                sessionController.getFreshAccessToken()
+                    ?: return if (sessionEnded(scope)) MutationResult.LoggedOut else MutationResult.Superseded
+            val value = block(token)
+            if (isCurrent(scope)) MutationResult.Success(value) else MutationResult.Superseded
         } catch (error: HttpException) {
-            if (error.code() == HTTP_UNAUTHORIZED) {
-                sessionController.logout()
-                MutationResult.LoggedOut
-            } else {
-                mapHttpError(error, conflictMessage)
+            when {
+                !isCurrent(scope) -> MutationResult.Superseded
+                error.code() == HTTP_UNAUTHORIZED -> {
+                    endSession()
+                    MutationResult.LoggedOut
+                }
+                else -> mapHttpError(error, conflictMessage)
             }
         } catch (_: IOException) {
-            MutationResult.Error("Unable to reach the Worktime backend")
+            if (isCurrent(scope)) {
+                MutationResult.Error("Unable to reach the Worktime backend")
+            } else {
+                MutationResult.Superseded
+            }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
-            MutationResult.Error(error.message ?: "Request failed")
+            if (isCurrent(scope)) {
+                MutationResult.Error(error.message ?: "Request failed")
+            } else {
+                MutationResult.Superseded
+            }
         }
     }
 }
+
+/** What a request started in; a response is only applied while the active session and environment still match. */
+private data class RequestScope(val sessionId: Long, val environment: String)
 
 private fun TimeOffDraft.toMutationRequest(): TimeOffEntryMutationRequest = when (this) {
     is TimeOffDraft.SingleDate ->
