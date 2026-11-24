@@ -49,6 +49,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass") // one scenario per view-model behaviour, sharing a single repository fake
 class DashboardViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
@@ -624,6 +625,55 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun environmentChangeDoesNotKeepThePreviousEnvironmentsDashboardAfterAFailedLoad() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard(accountId = 1)),
+                listLabelsResult = MutationResult.Success(listOf(sampleLabel())),
+                loadDashboardProvider = { callNumber ->
+                    if (callNumber == 1) {
+                        DashboardLoadResult.Success(sampleDashboard(accountId = 1))
+                    } else {
+                        DashboardLoadResult.Error("offline")
+                    }
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+
+        repository.environment = "https://staging.example"
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.Error("offline"), viewModel.uiState.value)
+        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+    }
+
+    @Test
+    fun loadStartedInAnotherEnvironmentIsIgnoredAndReloaded() = runTest(dispatcher) {
+        val firstLoad = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                loadDashboardProvider = { callNumber ->
+                    // E.g. a saved API override restored just after start-up, while the first load runs.
+                    if (callNumber == 1) firstLoad.await()
+                    DashboardLoadResult.Success(sampleDashboard(accountId = callNumber))
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        repository.environment = "https://staging.example"
+        firstLoad.release()
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+        assertEquals(2, (viewModel.uiState.value as DashboardUiState.Success).dashboard.identity.id)
+    }
+
+    @Test
     fun accountSwitchDropsPreviousAccountsDashboardAndActionState() = runTest(dispatcher) {
         val gate = CompletableDeferred<Unit>()
         val repository =
@@ -789,6 +839,8 @@ class DashboardViewModelTest {
         private val startTrackingProvider: (suspend () -> MutationResult<TaskRecord>)? = null
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
+        var environment = ""
+        override val apiEnvironment: String get() = environment
         var completeLogoutCallCount = 0
             private set
         var updatedLabelId: String? = null

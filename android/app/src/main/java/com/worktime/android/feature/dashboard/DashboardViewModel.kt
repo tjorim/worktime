@@ -102,8 +102,10 @@ class DashboardViewModel(
 
     // The session everything this view model holds belongs to (#2092). When it changes -- sign-out,
     // a forced expiry, another account -- all of it is dropped, and a response that began under an
-    // earlier session is ignored (see isActive) instead of landing in the new session's state.
+    // earlier session is ignored (see ownsState) instead of landing in the new session's state.
+    // The same goes for the API environment (#2092): state loaded from one must not outlive a switch to another.
     private var activeSessionId: Long? = repository.sessionState.value.activeSessionId
+    private var activeEnvironment: String = repository.apiEnvironment
 
     init {
         viewModelScope.launch { repository.sessionState.collect(::onSessionState) }
@@ -142,6 +144,7 @@ class DashboardViewModel(
         val sessionId = sessionState.activeSessionId
         if (sessionId != activeSessionId) {
             activeSessionId = sessionId
+            activeEnvironment = repository.apiEnvironment
             refreshJob?.cancel()
             actionsJob?.cancel()
             _actionsState.value = MobileActionsUiState()
@@ -153,8 +156,31 @@ class DashboardViewModel(
         }
     }
 
-    /** Whether [sessionId] is still the signed-in session, i.e. a result obtained under it may be applied. */
-    private fun isActive(sessionId: Long?): Boolean = repository.sessionState.value.activeSessionId == sessionId
+    private data class StateOwner(val sessionId: Long?, val environment: String)
+
+    private fun currentOwner() = StateOwner(repository.sessionState.value.activeSessionId, repository.apiEnvironment)
+
+    /**
+     * Whether a result obtained under [owner] may still be applied. When only the API environment
+     * moved (a changed session is handled by [onSessionState]), the result is dropped and the data
+     * reloaded against the new environment.
+     */
+    private fun ownsState(owner: StateOwner): Boolean {
+        val current = currentOwner()
+        if (current == owner) return true
+        if (current.sessionId == owner.sessionId) refresh()
+        return false
+    }
+
+    /** Drops everything loaded from another API environment before loading from the current one. */
+    private fun adoptEnvironment() {
+        val environment = repository.apiEnvironment
+        if (environment == activeEnvironment) return
+        activeEnvironment = environment
+        actionsJob?.cancel()
+        _actionsState.value = MobileActionsUiState()
+        _uiState.value = DashboardUiState.Loading
+    }
 
     /** The UI reporting `ON_START`: (re)connects the live-updates stream if signed in. */
     fun onAppForegrounded() {
@@ -189,7 +215,8 @@ class DashboardViewModel(
 
     fun refresh() {
         refreshJob?.cancel()
-        val sessionId = repository.sessionState.value.activeSessionId
+        adoptEnvironment()
+        val owner = currentOwner()
         refreshJob =
             viewModelScope.launch {
                 // Cold start (or recovering from LoggedOut/Error): show the last cached dashboard
@@ -198,7 +225,7 @@ class DashboardViewModel(
                 // back to a possibly-older cached snapshot.
                 if (_uiState.value !is DashboardUiState.Success) {
                     val cached = repository.loadCachedDashboard()
-                    if (!isActive(sessionId)) return@launch
+                    if (!ownsState(owner)) return@launch
                     _uiState.value =
                         if (cached != null) {
                             DashboardUiState.Success(cached.dashboard, staleAsOf = cached.cachedAt)
@@ -207,7 +234,7 @@ class DashboardViewModel(
                         }
                 }
                 val result = repository.loadDashboard()
-                if (!isActive(sessionId)) return@launch
+                if (!ownsState(owner)) return@launch
                 when (result) {
                     is DashboardLoadResult.Success -> {
                         refreshActions()
@@ -238,7 +265,7 @@ class DashboardViewModel(
     }
 
     private suspend fun refreshActionsNow() = coroutineScope {
-        val sessionId = repository.sessionState.value.activeSessionId
+        val owner = currentOwner()
         val runningTaskAsync = async { repository.getRunningTask().valueOrNull() }
         val plannedTaskAsync = async { fetchPlannedTask(repository) }
         val weeklyLocationsAsync = async { repository.loadWeeklyWorkLocations().valueOrNull().orEmpty() }
@@ -254,7 +281,7 @@ class DashboardViewModel(
         val workLocationPreferences = workLocationPreferencesAsync.await()
         val labels = labelsAsync.await()
         val templates = templatesAsync.await()
-        if (!isActive(sessionId)) return@coroutineScope
+        if (!ownsState(owner)) return@coroutineScope
         _actionsState.value =
             _actionsState.value.copy(
                 runningTask = runningTask,
@@ -369,11 +396,11 @@ class DashboardViewModel(
     }
 
     fun deleteAccount() {
-        val sessionId = repository.sessionState.value.activeSessionId
+        val owner = currentOwner()
         viewModelScope.launch {
             _actionsState.value = _actionsState.value.copy(isDeletingAccount = true, deleteAccountError = null)
             val result = repository.deleteAccount()
-            if (!isActive(sessionId)) return@launch
+            if (!ownsState(owner)) return@launch
             when (result) {
                 is MutationResult.Success -> {
                     _uiState.value = DashboardUiState.LoggedOut
@@ -399,11 +426,11 @@ class DashboardViewModel(
     }
 
     private fun submitMutation(block: suspend () -> MutationResult<*>) {
-        val sessionId = repository.sessionState.value.activeSessionId
+        val owner = currentOwner()
         viewModelScope.launch {
             _actionsState.value = _actionsState.value.copy(isSubmitting = true, message = null)
             val result = block()
-            if (!isActive(sessionId)) return@launch
+            if (!ownsState(owner)) return@launch
             _actionsState.value =
                 when (result) {
                     is MutationResult.Success -> {

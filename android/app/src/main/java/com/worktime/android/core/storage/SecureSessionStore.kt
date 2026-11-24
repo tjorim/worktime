@@ -26,6 +26,15 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
         runCatching { prefs.edit().putString(KEY_AUTH_STATE, value).apply() }
     }
 
+    /** The opaque account identity established at sign-in; it survives refreshes that carry no ID token. */
+    fun readAccountKey(): String? = runCatching { prefs.getString(KEY_ACCOUNT, null) }.getOrNull()
+
+    fun writeAccountKey(value: String?) {
+        runCatching {
+            prefs.edit().apply { if (value == null) remove(KEY_ACCOUNT) else putString(KEY_ACCOUNT, value) }.apply()
+        }
+    }
+
     fun clear() {
         runCatching { prefs.edit().clear().apply() }
     }
@@ -33,5 +42,6 @@ class SecureSessionStore @Inject constructor(@ApplicationContext context: Contex
     private companion object {
         const val PREFS_NAME = "worktime_android_secure_session"
         const val KEY_AUTH_STATE = "auth_state"
+        const val KEY_ACCOUNT = "account_key"
     }
 }

@@ -116,6 +116,9 @@ sealed interface TimeOffDraft {
 interface DashboardRepository {
     val sessionState: StateFlow<SessionState>
 
+    /** The API environment requests currently go to; state loaded from another one must not be kept. */
+    val apiEnvironment: String get() = ""
+
     suspend fun loadDashboard(): DashboardLoadResult
 
     /**
@@ -225,6 +228,7 @@ class WorktimeRepository(
     private val environmentKey: () -> String = { "" }
 ) : DashboardRepository {
     override val sessionState: StateFlow<SessionState> = sessionController.sessionState
+    override val apiEnvironment: String get() = environmentKey()
 
     companion object {
         private const val HTTP_NO_CONTENT = 204
@@ -279,6 +283,8 @@ class WorktimeRepository(
         // Best-effort: a cache-persistence failure must never turn an already-successful
         // fetch into a reported error, so it's isolated from loadDashboard's own try/catch.
         cacheDashboard(cacheKey, dashboard)
+        // The cache write suspends; a sign-in during it must not hand this dashboard to the new session.
+        if (!isCurrent(scope)) return DashboardLoadResult.Superseded
         return DashboardLoadResult.Success(dashboard)
     }
 
@@ -332,7 +338,8 @@ class WorktimeRepository(
     /** Ends the current session after the backend rejected its credentials, and drops its cached data. */
     private suspend fun endSession() {
         sessionController.logout()
-        clearCacheBestEffort()
+        // Logging out can suspend; if another sign-in took over meanwhile, its cache is not ours to drop.
+        if (sessionController.sessionState.value !is SessionState.Authenticated) clearCacheBestEffort()
     }
 
     private suspend fun clearCacheBestEffort() {

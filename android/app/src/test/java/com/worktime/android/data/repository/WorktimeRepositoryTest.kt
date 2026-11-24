@@ -944,6 +944,9 @@ internal class FakeSessionController(
 
     /** When set, token requests wait for it and then read the session current at that point. */
     var tokenGate: CompletableDeferred<Unit>? = null
+
+    /** Runs while a logout is suspended (like provider discovery), before it ends the session. */
+    var duringLogout: (suspend () -> Unit)? = null
     override val sessionState =
         MutableStateFlow<SessionState>(
             if (token == null) {
@@ -971,8 +974,13 @@ internal class FakeSessionController(
 
     override suspend fun logout() {
         logoutCallCount++
-        currentToken = null
-        sessionState.value = SessionState.LoggedOut
+        val ending = sessionState.value
+        duringLogout?.invoke()
+        // Like OidcSessionManager: only the session this logout was made for is ended.
+        if (sessionState.value == ending) {
+            currentToken = null
+            sessionState.value = SessionState.LoggedOut
+        }
     }
 
     override suspend fun buildLogoutIntent(): android.content.Intent? = logoutIntent

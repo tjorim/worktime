@@ -336,6 +336,31 @@ class WorktimeRepositoryDashboardCacheTest {
     }
 
     @Test
+    fun signInDuringTheCacheWriteDoesNotHandTheDashboardToTheNewSession() = runTest {
+        val cache = FakeDashboardCache()
+        val session = FakeSessionController(token = "token-a")
+        cache.duringSave = { session.signIn(token = "token-b", sessionId = 2, accountKey = ACCOUNT_B) }
+        val repository = repository(FakeApi(), session, cache)
+
+        assertEquals(DashboardLoadResult.Superseded, repository.loadDashboard())
+    }
+
+    @Test
+    fun signInDuringUnauthorizedLogoutKeepsTheNewSessionAndItsCache() = runTest {
+        val cache = FakeDashboardCache()
+        cache.save(KEY_B, sampleDashboard(), CACHED_AT)
+        val session = FakeSessionController(token = "token-a")
+        session.duringLogout = { session.signIn(token = "token-b", sessionId = 2, accountKey = ACCOUNT_B) }
+        val repository = repository(FakeApi(taskThrowable = httpException(401)), session, cache)
+
+        assertEquals(MutationResult.LoggedOut, repository.startTimeTracking("Task"))
+
+        assertTrue(session.sessionState.value is SessionState.Authenticated)
+        assertEquals(0, cache.clearCallCount)
+        assertEquals(CachedDashboard(sampleDashboard(), CACHED_AT), cache.load(KEY_B))
+    }
+
+    @Test
     fun environmentChangeDuringALoadDiscardsTheResponse() = runTest {
         val cache = FakeDashboardCache()
         val api = FakeApi().apply { gate = CompletableDeferred() }
@@ -351,6 +376,7 @@ class WorktimeRepositoryDashboardCacheTest {
     }
 
     private class FakeDashboardCache(private val saveThrowable: Throwable? = null) : DashboardCache {
+        var duringSave: (suspend () -> Unit)? = null
         var savedKey: String? = null
             private set
         var savedDashboard: DashboardResponse? = null
@@ -366,6 +392,7 @@ class WorktimeRepositoryDashboardCacheTest {
 
         override suspend fun save(accountKey: String, dashboard: DashboardResponse, cachedAt: String) {
             saveThrowable?.let { throw it }
+            duringSave?.invoke()
             savedKey = accountKey
             savedDashboard = dashboard
             savedCachedAt = cachedAt
