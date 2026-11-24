@@ -3,10 +3,12 @@ package com.worktime.android.feature.settings
 import android.net.Uri
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import com.worktime.android.core.auth.OidcConfig
 import com.worktime.android.core.config.AppConfig
 import com.worktime.android.core.config.WebEntryPoint
@@ -45,6 +47,11 @@ class AccountScreenTest {
         }
     }
 
+    // The screen is a lazy list, so off-screen cards are not composed until scrolled to.
+    private fun scrollTo(text: String) {
+        composeTestRule.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+    }
+
     @Test
     fun keepsNativeSessionAppLockAndNotificationControls() {
         var loggedOut = false
@@ -53,9 +60,12 @@ class AccountScreenTest {
             loggedOut = true
         }, onOpenNotificationSettings = { notificationSettingsOpened = true })
 
-        composeTestRule.onNodeWithText("App lock").performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText("Open notification settings").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("Sign out").performScrollTo().performClick()
+        scrollTo("App lock")
+        composeTestRule.onNodeWithText("App lock").assertIsDisplayed()
+        scrollTo("Open notification settings")
+        composeTestRule.onNodeWithText("Open notification settings").performClick()
+        scrollTo("Sign out")
+        composeTestRule.onNodeWithText("Sign out").performClick()
 
         assertEquals(true, notificationSettingsOpened)
         assertEquals(true, loggedOut)
