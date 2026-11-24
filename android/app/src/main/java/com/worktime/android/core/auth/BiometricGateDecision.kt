@@ -18,5 +18,21 @@ object BiometricGateDecision {
         return idleMillis >= timeoutMillis
     }
 
+    /**
+     * Decision for a freshly created process, where no in-memory backgrounding was observed. A missing
+     * timestamp means the previous session ended without recording one (killed before it was persisted),
+     * so an enabled lock fails closed instead of treating the launch as a quick return.
+     */
+    fun shouldLockOnColdStart(
+        lockEnabled: Boolean,
+        idleTimeoutMinutes: Int,
+        lastBackgroundEpochMillis: Long?,
+        nowEpochMillis: Long
+    ): Boolean {
+        if (!lockEnabled) return false
+        if (lastBackgroundEpochMillis == null) return true
+        return shouldRequireAuthentication(lockEnabled, idleTimeoutMinutes, lastBackgroundEpochMillis, nowEpochMillis)
+    }
+
     private const val MILLIS_PER_MINUTE = 60_000L
 }

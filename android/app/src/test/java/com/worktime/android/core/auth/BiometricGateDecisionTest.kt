@@ -76,4 +76,34 @@ class BiometricGateDecisionTest {
             )
         )
     }
+
+    @Test
+    fun coldStartDoesNotLockWhenLockIsDisabled() {
+        assertFalse(
+            BiometricGateDecision.shouldLockOnColdStart(
+                lockEnabled = false,
+                idleTimeoutMinutes = 1,
+                lastBackgroundEpochMillis = null,
+                nowEpochMillis = 1_000L
+            )
+        )
+    }
+
+    @Test
+    fun coldStartLocksWhenEnabledWithoutARecordedBackgroundTimestamp() {
+        assertTrue(
+            BiometricGateDecision.shouldLockOnColdStart(
+                lockEnabled = true,
+                idleTimeoutMinutes = 5,
+                lastBackgroundEpochMillis = null,
+                nowEpochMillis = 1_000L
+            )
+        )
+    }
+
+    @Test
+    fun coldStartFollowsTheIdleWindowWhenATimestampExists() {
+        assertFalse(BiometricGateDecision.shouldLockOnColdStart(true, 5, 0L, 4 * 60_000L))
+        assertTrue(BiometricGateDecision.shouldLockOnColdStart(true, 5, 0L, 5 * 60_000L))
+    }
 }
