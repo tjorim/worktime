@@ -44,6 +44,7 @@ import java.time.OffsetDateTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -74,6 +75,48 @@ class WorktimeRepositoryTest {
         // Token-only requests go through a separate helper that must also catch the failure.
         assertTrue(repository.listTimeOffEntries(null, null) is MutationResult.Error)
         assertTrue(repository.registerFcmToken("fcm") is MutationResult.Error)
+    }
+
+    @Test
+    fun transportFailuresMapToActionableCopyWithoutLeakingDiagnostics() = runTest {
+        val session = mockk<SessionController>()
+        every { session.sessionState } returns MutableStateFlow(SessionState.Authenticated(true))
+        val repository = WorktimeRepository(api = FakeApi(), sessionController = session)
+
+        coEvery { session.getFreshAccessToken() } throws IOException("Unable to resolve host \"api.internal\"")
+        val offline = "Can't reach Worktime. Check your connection and retry."
+        assertEquals(DashboardLoadResult.Error(offline), repository.loadDashboard())
+        assertEquals(MutationResult.Error(offline), repository.getRunningTask())
+
+        coEvery { session.getFreshAccessToken() } throws SerializationException("Unexpected JSON token at offset 3")
+        val unreadable = "Worktime sent data this app can't read. Retry, or update the app if it keeps happening."
+        assertEquals(DashboardLoadResult.Error(unreadable), repository.loadDashboard())
+        assertEquals(MutationResult.Error(unreadable), repository.getRunningTask())
+
+        coEvery { session.getFreshAccessToken() } throws IllegalStateException("db password is hunter2")
+        assertEquals(
+            DashboardLoadResult.Error("Something went wrong loading Worktime data. Retry in a moment."),
+            repository.loadDashboard()
+        )
+        assertEquals(
+            MutationResult.Error("Something went wrong. Retry in a moment."),
+            repository.getRunningTask()
+        )
+    }
+
+    @Test
+    fun loadDashboardMapsServerErrorsToRetryCopyAndKeepsTheStatusForClientErrors() = runTest {
+        val session = FakeSessionController(token = "token-123")
+        val serverDown =
+            WorktimeRepository(api = FakeApi(dashboardThrowable = httpException(503)), sessionController = session)
+        val forbidden =
+            WorktimeRepository(api = FakeApi(dashboardThrowable = httpException(403)), sessionController = session)
+
+        assertEquals(
+            DashboardLoadResult.Error("Worktime is having trouble right now. Retry in a moment."),
+            serverDown.loadDashboard()
+        )
+        assertEquals(DashboardLoadResult.Error("Unable to load Worktime data (403)"), forbidden.loadDashboard())
     }
 
     @Test

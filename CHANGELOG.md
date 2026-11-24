@@ -33,6 +33,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 - **Android:** Signing out, an expired or revoked sign-in or switching accounts no longer leaves the previous account’s dashboard, actions or Time Off entries on screen, and late responses from the previous session are ignored.
 - **Android:** App lock is decided before anything is shown: a cold start or resume after the idle timeout no longer flashes your data before the unlock prompt, and the “Waiting for confirmation…” state resets instead of sticking after a rotation or restart.
+- **Android:** A failed refresh no longer hides a running timer or cancels scheduled reminders. Today keeps the last known timer and data with when they were last updated and a Retry, Start timer stays unavailable until the timer status is known, and connection and server errors explain what to do next.
 - Time Off warnings identify the overlapping entry and dates. The month calendar flags only affected days, and specific dates take priority over date ranges and weekly entries.
 - Time off statistics count only leave in the headline total and show attendance, markers, business trips and courses separately.
 

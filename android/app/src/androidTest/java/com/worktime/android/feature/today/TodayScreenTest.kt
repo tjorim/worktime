@@ -19,6 +19,7 @@ import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.feature.dashboard.ReadStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -29,7 +30,7 @@ class TodayScreenTest {
     val composeTestRule = createComposeRule()
 
     private fun renderToday(
-        actionsState: MobileActionsUiState = MobileActionsUiState(),
+        actionsState: MobileActionsUiState = MobileActionsUiState(timerStatus = ReadStatus.Confirmed),
         onStartTracking: (String, String?) -> Unit = { _, _ -> },
         onStopTracking: (String) -> Unit = {},
         onUpdateTask: (String, String?, String?) -> Unit = { _, _, _ -> }
@@ -75,8 +76,38 @@ class TodayScreenTest {
     }
 
     @Test
+    fun startTimerButton_isDisabledWhileTheTimerStatusIsUnknown() {
+        renderToday(actionsState = MobileActionsUiState(refreshFailed = true))
+
+        composeTestRule.onNodeWithText("Task").performScrollTo().performTextInput("Write report")
+        composeTestRule.onNodeWithText("Start timer").performScrollTo().assertIsNotEnabled()
+        composeTestRule
+            .onNodeWithText("Couldn't check your running timer, so Start is unavailable.")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun staleRunningTask_isStillShownWithItsAge() {
+        renderToday(
+            actionsState =
+            MobileActionsUiState(
+                runningTask = sampleRunningTask(),
+                timerStatus = ReadStatus.Stale,
+                timerConfirmedAt = "2026-05-26T08:00:00Z",
+                refreshFailed = true
+            )
+        )
+
+        composeTestRule.onNodeWithText("Stop timer").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Retry").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun runningTask_showsUpdateAndStopButtonsInsteadOfStart() {
-        renderToday(actionsState = MobileActionsUiState(runningTask = sampleRunningTask()))
+        renderToday(
+            actionsState = MobileActionsUiState(runningTask = sampleRunningTask(), timerStatus = ReadStatus.Confirmed)
+        )
 
         composeTestRule.onNodeWithText("Update task").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Stop timer").performScrollTo().assertIsDisplayed()
@@ -86,7 +117,7 @@ class TodayScreenTest {
     fun stopTimer_invokesCallbackWithRunningTaskId() {
         var stoppedId: String? = null
         renderToday(
-            actionsState = MobileActionsUiState(runningTask = sampleRunningTask()),
+            actionsState = MobileActionsUiState(runningTask = sampleRunningTask(), timerStatus = ReadStatus.Confirmed),
             onStopTracking = { stoppedId = it }
         )
 
@@ -100,7 +131,7 @@ class TodayScreenTest {
         var updatedId: String? = null
         var updatedText: String? = null
         renderToday(
-            actionsState = MobileActionsUiState(runningTask = sampleRunningTask()),
+            actionsState = MobileActionsUiState(runningTask = sampleRunningTask(), timerStatus = ReadStatus.Confirmed),
             onUpdateTask = { id, text, _ ->
                 updatedId = id
                 updatedText = text

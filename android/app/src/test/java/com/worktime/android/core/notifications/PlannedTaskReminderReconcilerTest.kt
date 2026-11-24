@@ -156,6 +156,25 @@ class PlannedTaskReminderReconcilerTest {
             )
         }
     }
+
+    @Test
+    fun `fetchPlannedTask reports a failed read instead of folding it into no planned task`() = runTest {
+        val failure = MutationResult.Error("Can't reach Worktime. Check your connection and retry.")
+        coEvery { repository.listTasks(any(), any()) } returns failure
+
+        assertEquals(failure, fetchPlannedTask(repository))
+    }
+
+    @Test
+    fun `fetchPlannedTask returns the soonest planned task or a confirmed none`() = runTest {
+        val soon = sampleTask(id = "planned-soon", hoursFromNow = 1)
+        coEvery { repository.listTasks(any(), any()) } returns
+            MutationResult.Success(listOf(sampleTask(id = "later", hoursFromNow = 3), soon))
+        assertEquals(MutationResult.Success(soon), fetchPlannedTask(repository))
+
+        coEvery { repository.listTasks(any(), any()) } returns MutationResult.Success(emptyList())
+        assertEquals(MutationResult.Success(null), fetchPlannedTask(repository))
+    }
 }
 
 private fun sampleTask(id: String, hoursFromNow: Int, isPlanned: Boolean = true): TaskRecord {

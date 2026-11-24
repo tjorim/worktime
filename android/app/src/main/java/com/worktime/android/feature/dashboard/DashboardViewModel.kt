@@ -21,6 +21,7 @@ import com.worktime.android.data.repository.DashboardLoadResult
 import com.worktime.android.data.repository.DashboardRepository
 import com.worktime.android.data.repository.MutationResult
 import com.worktime.android.data.repository.WorkLocationPreferences
+import java.time.Clock
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface DashboardUiState {
@@ -53,14 +55,44 @@ sealed interface DashboardUiState {
      * cached at when this is a cached snapshot shown while offline or before a fresh fetch has
      * completed (#1230) — [com.worktime.android.ui.components.ReadModelScreen] renders it as a
      * banner instead of a hard error or an indefinite loading spinner.
+     *
+     * [refreshError] is set when the latest refresh failed while this data stayed on screen: it
+     * carries the actionable copy for the failure so the banner can say why the data is old.
      */
-    data class Success(val dashboard: DashboardResponse, val staleAsOf: String? = null) : DashboardUiState
+    data class Success(
+        val dashboard: DashboardResponse,
+        val staleAsOf: String? = null,
+        val refreshError: String? = null
+    ) : DashboardUiState
+}
+
+/**
+ * What the app knows about a value the backend owns. A confirmed absence (a successful read that
+ * found nothing) is a different thing from not knowing, and neither is the same as holding a
+ * last-known value whose latest refresh failed (#2093).
+ */
+enum class ReadStatus {
+    /** Never successfully read in this session: the paired value is a placeholder, not an answer. */
+    Unknown,
+
+    /** The latest read succeeded: the paired value, including "nothing there", is authoritative. */
+    Confirmed,
+
+    /** A read succeeded earlier but the latest one failed: the paired value is last-known. */
+    Stale
 }
 
 data class MobileActionsUiState(
+    /** The running timer, or null. Only meaningful per [timerStatus]: null alone does not mean "no timer". */
     val runningTask: TaskRecord? = null,
+    val timerStatus: ReadStatus = ReadStatus.Unknown,
+    /** ISO-8601 instant [runningTask] was last read successfully, for "as of" copy while [ReadStatus.Stale]. */
+    val timerConfirmedAt: String? = null,
     /** The soonest-starting planned task (stop_time already set, start_time still ahead), if any. */
     val plannedTask: TaskRecord? = null,
+    val plannedTaskStatus: ReadStatus = ReadStatus.Unknown,
+    /** True when at least one read in the latest actions refresh failed (the affected values were kept). */
+    val refreshFailed: Boolean = false,
     val weeklyWorkLocations: List<WorkLocationRecord> = emptyList(),
     val labels: List<LabelRecord> = emptyList(),
     val templates: List<TemplateRecord> = emptyList(),
@@ -70,13 +102,25 @@ data class MobileActionsUiState(
     val message: String? = null,
     val isDeletingAccount: Boolean = false,
     val deleteAccountError: String? = null
-)
+) {
+    /** Starting a timer is only safe when we know there is none running; unknown or stale could double-start. */
+    val canStartTimer: Boolean get() = timerStatus == ReadStatus.Confirmed
+
+    /**
+     * Whether [runningTask] and [plannedTask] are real answers, so reminder alarms may be reconciled
+     * against them. Before the first successful read a null means "not loaded", and cancelling the
+     * alarms scheduled earlier on that basis would silently drop reminders (#2093).
+     */
+    val remindersReadable: Boolean
+        get() = timerStatus != ReadStatus.Unknown && plannedTaskStatus != ReadStatus.Unknown
+}
 
 @Suppress("TooManyFunctions") // one view model facade for all mobile dashboard actions
 class DashboardViewModel(
     private val repository: DashboardRepository,
     connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled,
-    private val syncSignalTransport: SyncSignalTransport? = null
+    private val syncSignalTransport: SyncSignalTransport? = null,
+    private val clock: Clock = Clock.systemUTC()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -106,6 +150,10 @@ class DashboardViewModel(
     // The same goes for the API environment (#2092): state loaded from one must not outlive a switch to another.
     private var activeSessionId: Long? = repository.sessionState.value.activeSessionId
     private var activeEnvironment: String = repository.apiEnvironment
+
+    // ISO-8601 instant of the last successful dashboard fetch in this session, so an in-place
+    // failure can say how old the data on screen is.
+    private var lastDashboardRefreshAt: String? = null
 
     init {
         viewModelScope.launch { repository.sessionState.collect(::onSessionState) }
@@ -148,6 +196,7 @@ class DashboardViewModel(
             refreshJob?.cancel()
             actionsJob?.cancel()
             _actionsState.value = MobileActionsUiState()
+            lastDashboardRefreshAt = null
             _uiState.value = DashboardUiState.Loading
             if (sessionId != null) refresh()
         }
@@ -179,6 +228,7 @@ class DashboardViewModel(
         activeEnvironment = environment
         actionsJob?.cancel()
         _actionsState.value = MobileActionsUiState()
+        lastDashboardRefreshAt = null
         _uiState.value = DashboardUiState.Loading
     }
 
@@ -237,6 +287,7 @@ class DashboardViewModel(
                 if (!ownsState(owner)) return@launch
                 when (result) {
                     is DashboardLoadResult.Success -> {
+                        lastDashboardRefreshAt = clock.instant().toString()
                         refreshActions()
                         _uiState.value = DashboardUiState.Success(result.dashboard)
                     }
@@ -245,14 +296,26 @@ class DashboardViewModel(
                     // environment moved under this request -- e.g. a saved override restored just
                     // after start-up. Load again against the new one.
                     DashboardLoadResult.Superseded -> refresh()
-                    is DashboardLoadResult.Error -> {
-                        // A cached (possibly stale) dashboard is still more useful than a hard
-                        // error, so only surface the error when there is nothing to show instead.
-                        if (_uiState.value !is DashboardUiState.Success) {
-                            _uiState.value = DashboardUiState.Error(result.message)
-                        }
-                    }
+                    is DashboardLoadResult.Error -> keepDataOrShowError(result.message)
                 }
+            }
+    }
+
+    /**
+     * A failed refresh must not read as a fresh success: keep the data on screen but mark it stale
+     * with the failure copy and the age of what's shown. Only surface a hard error when there is
+     * nothing to show instead.
+     */
+    private fun keepDataOrShowError(message: String) {
+        val current = _uiState.value
+        _uiState.value =
+            if (current is DashboardUiState.Success) {
+                current.copy(
+                    staleAsOf = current.staleAsOf ?: lastDashboardRefreshAt ?: current.dashboard.asOf,
+                    refreshError = message
+                )
+            } else {
+                DashboardUiState.Error(message)
             }
     }
 
@@ -264,37 +327,63 @@ class DashboardViewModel(
             }
     }
 
+    /**
+     * Reads everything the Today screen needs and merges it into [actionsState] one read at a time:
+     * a read that fails keeps its previous value (and is marked [ReadStatus.Stale]) instead of
+     * collapsing to an empty default, so one flaky request can't make a running timer vanish or
+     * wipe the labels and templates already loaded (#2093).
+     */
     private suspend fun refreshActionsNow() = coroutineScope {
         val owner = currentOwner()
-        val runningTaskAsync = async { repository.getRunningTask().valueOrNull() }
+        val runningTaskAsync = async { repository.getRunningTask() }
         val plannedTaskAsync = async { fetchPlannedTask(repository) }
-        val weeklyLocationsAsync = async { repository.loadWeeklyWorkLocations().valueOrNull().orEmpty() }
-        val syncStatusAsync = async { repository.loadSyncStatus().valueOrNull() }
-        val workLocationPreferencesAsync =
-            async { repository.loadWorkLocationPreferences().valueOrNull() ?: WorkLocationPreferences() }
-        val labelsAsync = async { repository.listLabels().valueOrNull().orEmpty() }
-        val templatesAsync = async { repository.listTemplates().valueOrNull().orEmpty() }
+        val weeklyLocationsAsync = async { repository.loadWeeklyWorkLocations() }
+        val syncStatusAsync = async { repository.loadSyncStatus() }
+        val workLocationPreferencesAsync = async { repository.loadWorkLocationPreferences() }
+        val labelsAsync = async { repository.listLabels() }
+        val templatesAsync = async { repository.listTemplates() }
         val runningTask = runningTaskAsync.await()
         val plannedTask = plannedTaskAsync.await()
-        val weeklyWorkLocations = weeklyLocationsAsync.await()
+        val weeklyLocations = weeklyLocationsAsync.await()
         val syncStatus = syncStatusAsync.await()
         val workLocationPreferences = workLocationPreferencesAsync.await()
         val labels = labelsAsync.await()
         val templates = templatesAsync.await()
         if (!ownsState(owner)) return@coroutineScope
-        _actionsState.value =
-            _actionsState.value.copy(
-                runningTask = runningTask,
-                plannedTask = plannedTask,
-                weeklyWorkLocations = weeklyWorkLocations,
-                syncStatus = syncStatus,
-                workLocationPreferences = workLocationPreferences,
-                labels = labels,
-                templates = templates
+        val now = clock.instant().toString()
+        _actionsState.update { current ->
+            current.copy(
+                runningTask = runningTask.orPrevious(current.runningTask),
+                timerStatus = runningTask.statusAfter(current.timerStatus),
+                timerConfirmedAt = if (runningTask is MutationResult.Success) now else current.timerConfirmedAt,
+                plannedTask = plannedTask.orPrevious(current.plannedTask),
+                plannedTaskStatus = plannedTask.statusAfter(current.plannedTaskStatus),
+                weeklyWorkLocations = weeklyLocations.orPrevious(current.weeklyWorkLocations),
+                syncStatus = syncStatus.orPrevious(current.syncStatus),
+                workLocationPreferences = workLocationPreferences.orPrevious(current.workLocationPreferences),
+                labels = labels.orPrevious(current.labels),
+                templates = templates.orPrevious(current.templates),
+                refreshFailed =
+                listOf(
+                    runningTask,
+                    plannedTask,
+                    weeklyLocations,
+                    syncStatus,
+                    workLocationPreferences,
+                    labels,
+                    templates
+                ).any { it !is MutationResult.Success }
             )
+        }
     }
 
     fun startTimeTracking(text: String, labelId: String? = null) {
+        // Don't write while we can't tell whether a timer is already running: the start would
+        // double-book (#2093). The screen disables Start in these states; this is the backstop.
+        if (!_actionsState.value.canStartTimer) {
+            _actionsState.update { it.copy(message = TIMER_STATUS_UNKNOWN_MESSAGE) }
+            return
+        }
         submitMutation { repository.startTimeTracking(text, labelId) }
     }
 
@@ -453,6 +542,9 @@ class DashboardViewModel(
     }
 
     companion object {
+        private const val TIMER_STATUS_UNKNOWN_MESSAGE =
+            "Couldn't check your running timer yet. Retry once it loads."
+
         fun factory(
             repository: DashboardRepository,
             connectivityObserver: ConnectivityObserver = ConnectivityObserver.Disabled,
@@ -469,8 +561,14 @@ class DashboardViewModel(
     }
 }
 
-/** The value of a successful result; every failure (including a superseded request) reads as absent. */
-private fun <T> MutationResult<T>.valueOrNull(): T? = (this as? MutationResult.Success)?.value
+/** The freshly read value, or [previous] when this read failed. A successful null (confirmed absence) wins. */
+private fun <T> MutationResult<T>.orPrevious(previous: T): T = if (this is MutationResult.Success) value else previous
+
+private fun MutationResult<*>.statusAfter(previous: ReadStatus): ReadStatus = when {
+    this is MutationResult.Success -> ReadStatus.Confirmed
+    previous == ReadStatus.Unknown -> ReadStatus.Unknown
+    else -> ReadStatus.Stale
+}
 
 /** Parses an ISO-8601 offset date-time (accepts both a numeric offset and a `Z` suffix), or null. */
 private fun parseInstantOrNull(value: String): java.time.Instant? = try {

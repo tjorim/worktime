@@ -48,7 +48,11 @@ fun ReadModelScreen(
         is DashboardUiState.Success ->
             Column(modifier = Modifier.fillMaxSize()) {
                 if (uiState.staleAsOf != null) {
-                    StaleDataBanner(cachedAt = uiState.staleAsOf, onRetry = onRetry)
+                    StaleDataBanner(
+                        cachedAt = uiState.staleAsOf,
+                        refreshError = uiState.refreshError,
+                        onRetry = onRetry
+                    )
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     content(uiState.dashboard)
@@ -58,7 +62,7 @@ fun ReadModelScreen(
 }
 
 @Composable
-private fun StaleDataBanner(cachedAt: String, onRetry: () -> Unit) {
+private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: () -> Unit) {
     Card(
         modifier =
         Modifier
@@ -75,7 +79,12 @@ private fun StaleDataBanner(cachedAt: String, onRetry: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Offline — showing data from ${formatInstant(cachedAt)}",
+                text =
+                if (refreshError != null) {
+                    "$refreshError Showing data from ${formatInstant(cachedAt)}."
+                } else {
+                    "Showing saved data from ${formatInstant(cachedAt)}. Refreshing…"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
