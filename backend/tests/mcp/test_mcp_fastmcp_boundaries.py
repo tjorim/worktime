@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 from unittest.mock import patch
 
 import httpx2
+import jwt
 import pytest
+from cryptography.hazmat.primitives import serialization
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
-from fastmcp.server.auth import JWTVerifier, RemoteAuthProvider
+from fastmcp.server.auth import JWTVerifier
 from fastmcp.server.auth.providers.jwt import RSAKeyPair
-from pydantic import AnyHttpUrl, BaseModel, Field
+from jwt.algorithms import RSAAlgorithm
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -25,7 +29,9 @@ from tests.mcp.test_mcp_server import _make_factory, _token_for_user
 
 PRIVATE = "PRIVATE-NOTE-9f3a"
 ISSUER = "https://auth.example/realms/worktime"
+RESOURCE = "https://api.example/mcp/"
 KEYS = RSAKeyPair.generate()
+JWKS = {"keys": [RSAAlgorithm.to_jwk(serialization.load_pem_public_key(KEYS.public_key.encode()), as_dict=True)]}
 
 
 async def _owner(factory: async_sessionmaker[AsyncSession], username: str = "boundary-owner") -> int:
@@ -152,23 +158,25 @@ async def test_multiauth_resolves_keycloak_and_integration_principals_over_state
             session, user_id, name="e2e-client"
         )
 
-    def stand_in_keycloak(*, realm_url: str, base_url: str, audience: str | None, required_scopes: list[str]):
-        return RemoteAuthProvider(
-            token_verifier=JWTVerifier(public_key=KEYS.public_key, issuer=realm_url, audience=audience),
-            authorization_servers=[AnyHttpUrl(realm_url)],
-            base_url=base_url,
-        )
+    async def fetch_jwks(verifier: JWTVerifier) -> dict[str, Any]:
+        assert verifier.jwks_uri == f"{ISSUER}/protocol/openid-connect/certs"
+        return JWKS
 
     monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", ISSUER)
     monkeypatch.setattr("app.mcp.server.settings.OIDC_AUDIENCE", "worktime")
-    with patch("app.mcp.server.KeycloakAuthProvider", stand_in_keycloak):
-        _server, app = create_mcp_http_app(factory, path="/", stateless_http=True)
-    keycloak_token = KEYS.create_token(
-        subject="keycloak-subject-1",
-        issuer=ISSUER,
-        audience="worktime",
-        additional_claims={"preferred_username": "kc-user", "name": "Keycloak User"},
-    )
+    monkeypatch.setattr("app.mcp.server.settings.MCP_RESOURCE_URL", RESOURCE)
+    monkeypatch.setattr(JWTVerifier, "_fetch_jwks", fetch_jwks)
+    _server, app = create_mcp_http_app(factory, path="/", stateless_http=True)
+
+    def token(**overrides: Any) -> str:
+        claims = {"audience": [RESOURCE, "account"], "issuer": ISSUER} | overrides
+        return KEYS.create_token(
+            subject="keycloak-subject-1",
+            additional_claims={"preferred_username": "kc-user", "name": "Keycloak User"},
+            **claims,
+        )
+
+    keycloak_token = token()
 
     # FastMCP 4.1 and the MCP SDK speak httpx2 (a separate package from httpx).
     def client_factory(
@@ -218,6 +226,31 @@ async def test_multiauth_resolves_keycloak_and_integration_principals_over_state
                 "http://test/", json=initialize, headers={**headers, "Authorization": "Bearer wtic_not-a-key"}
             )
             missing = await http.post("http://test/", json=initialize, headers=headers)
+            no_expiry = jwt.encode(
+                {"sub": "keycloak-subject-1", "iss": ISSUER, "aud": [RESOURCE, "account"]},
+                KEYS.private_key.get_secret_value(),
+                algorithm="RS256",
+            )
+            rejected = {}
+            for label, rejected_token in {
+                # The REST API audience must not authenticate MCP: web and Android tokens carry it.
+                "api_audience": token(audience="worktime"),
+                "api_audience_list": token(audience=["worktime", "account"]),
+                "other_resource": token(audience=["https://other.example/mcp/", "account"]),
+                "resource_without_slash": token(audience="https://api.example/mcp"),
+                "wrong_issuer": token(issuer="https://another-issuer.example"),
+                "expired": token(expires_in_seconds=-60),
+                "no_expiry": no_expiry,
+                "bad_signature": jwt.encode(
+                    {"sub": "x", "iss": ISSUER, "aud": RESOURCE, "exp": int(time.time()) + 300},
+                    RSAKeyPair.generate().private_key.get_secret_value(),
+                    algorithm="RS256",
+                ),
+            }.items():
+                response = await http.post(
+                    "http://test/", json=initialize, headers={**headers, "Authorization": f"Bearer {rejected_token}"}
+                )
+                rejected[label] = response.status_code
 
     assert whoami is not None
     assert whoami["user_id"] == user_id
@@ -234,3 +267,5 @@ async def test_multiauth_resolves_keycloak_and_integration_principals_over_state
     assert "mcp-session-id" not in ok.headers
     assert bad.status_code == 401
     assert missing.status_code == 401
+    assert rejected == dict.fromkeys(rejected, 401)
+    assert len(rejected) == 8

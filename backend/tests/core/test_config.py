@@ -402,3 +402,37 @@ def test_log_configuration_reports_disabled_trusted_hosts(caplog):
     with caplog.at_level(logging.INFO):
         settings.log_configuration()
     assert "Trusted Hosts:   * (Host header validation disabled)" in caplog.text
+
+
+def test_mcp_resource_url_defaults_to_disabled() -> None:
+    assert Settings(_env_file=None).MCP_RESOURCE_URL == ""
+
+
+def test_mcp_resource_url_accepts_the_canonical_endpoint() -> None:
+    assert Settings(_env_file=None, MCP_RESOURCE_URL="https://worktime.example/mcp/").MCP_RESOURCE_URL == (
+        "https://worktime.example/mcp/"
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "worktime",
+        "https://worktime.example/mcp",
+        "https://worktime.example/mcp/?unexpected=true",
+        "https://worktime.example/mcp/#fragment",
+        "https://user@worktime.example/mcp/",
+        "ftp://worktime.example/mcp/",
+        "https://worktime.example/other/",
+    ],
+)
+def test_mcp_resource_url_requires_canonical_endpoint(url: str) -> None:
+    with pytest.raises(ValueError, match="MCP_RESOURCE_URL"):
+        Settings(_env_file=None, MCP_RESOURCE_URL=url)
+
+
+def test_retired_mcp_base_url_fails_loudly_instead_of_unmounting_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MCP_BASE_URL", "https://worktime.example/mcp")
+    with pytest.raises(ValueError, match="MCP_BASE_URL is no longer read"):
+        Settings(_env_file=None)
+    assert Settings(_env_file=None, MCP_RESOURCE_URL="https://worktime.example/mcp/").MCP_RESOURCE_URL

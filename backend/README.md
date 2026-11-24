@@ -122,6 +122,7 @@ Important variables:
 - `CACHE_ENABLED` / `CACHE_TTL` — holiday-cache behavior
 - `DATABASE_ENABLED` / `DATABASE_URL` — PostgreSQL database behavior (or `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD_FILE`)
 - `OIDC_ISSUER_URL` / `OIDC_AUDIENCE` / `OIDC_JWKS_URI` / `OIDC_ALGORITHMS` — OIDC provider settings
+- `MCP_RESOURCE_URL` — canonical public MCP URL (`https://<host>/mcp/`); mounts MCP and is the only audience its OAuth tokens may carry (replaces `MCP_BASE_URL`)
 - `DEV_AUTH_BYPASS_TOKEN` — local-dev-only shortcut that skips OIDC/JWKS verification (refuses to start outside `ENVIRONMENT=development`)
 - `RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT` — per-client-IP rate limiting
 - `SENTRY_DSN` / `SENTRY_TRACES_SAMPLE_RATE` — error tracking (disabled when `SENTRY_DSN` is empty)

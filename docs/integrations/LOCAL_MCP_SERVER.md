@@ -51,9 +51,19 @@ operator-defined overlap window; only one previous secret is accepted.
 ## Connect over authenticated HTTP
 
 Worktime tools require an authenticated principal, so stdio is not a supported
-transport. Configure `MCP_BASE_URL`, run the FastAPI backend, and
-connect to its `/mcp` endpoint using OAuth or a managed integration-client key
+transport. Configure `MCP_RESOURCE_URL`, run the FastAPI backend, and
+connect to its `/mcp/` endpoint using OAuth or a managed integration-client key
 that carries the `worktime:mcp` scope.
+
+`MCP_RESOURCE_URL` is the canonical public URL, for example
+`https://worktime.example/mcp/` (HTTP(S), path exactly `/mcp/`, no query,
+fragment or credentials). It replaces `MCP_BASE_URL`, which is no longer read;
+startup fails if only the old variable is set. OAuth access tokens must carry
+this URL as their audience, and a token minted for the REST API
+(`OIDC_AUDIENCE`) does not authenticate MCP, nor the reverse. Managed
+integration-client keys are independent of both. After the identity provider
+starts issuing the MCP audience, reconnect existing OAuth clients: tokens issued
+before the cutover are rejected.
 
 ## Capability discovery
 

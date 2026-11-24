@@ -6,7 +6,6 @@ PostgreSQL.
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager, suppress
 from typing import Any
 
@@ -45,8 +44,7 @@ from .version import APP_VERSION
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-_worktime_mcp_base_url = os.environ.get("MCP_BASE_URL", "")
-if _worktime_mcp_base_url:
+if settings.MCP_RESOURCE_URL:
     from .mcp.server import MCP_CAPABILITY_CONTRACT_VERSION as _MCP_CAPABILITY_CONTRACT_VERSION
     from .mcp.server import MCP_TOOL_CAPABILITIES as _MCP_TOOL_CAPABILITIES
     from .mcp.server import create_mcp_http_app as _create_mcp_http_app
@@ -286,7 +284,7 @@ async def mcp_capabilities() -> dict[str, Any]:
     dict ``create_mcp_server()`` iterates to register tools — so this
     response cannot drift from what's actually registered on the running
     server. ``tools`` is empty when the MCP server isn't mounted
-    (``MCP_BASE_URL`` unset).
+    (``MCP_RESOURCE_URL`` unset).
     """
     enabled = _mcp_app is not None
     return {
