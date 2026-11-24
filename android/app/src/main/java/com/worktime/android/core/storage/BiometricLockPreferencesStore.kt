@@ -23,18 +23,29 @@ data class BiometricLockPreferences(
     }
 }
 
+/** What the app-lock gate needs from persistence; a seam so the gate can be unit tested without DataStore. */
+interface BiometricLockPreferencesSource {
+    val preferences: Flow<BiometricLockPreferences>
+
+    suspend fun setLockEnabled(value: Boolean)
+
+    suspend fun setIdleTimeoutMinutes(value: Int)
+
+    suspend fun setLastBackgroundEpochMillis(value: Long)
+}
+
 /**
  * Opt-in app-lock preferences: whether the biometric/device-credential gate is enabled,
  * how long the app may sit idle in the background before re-authentication is required,
  * and the timestamp of the last backgrounding, used to evaluate that idle window on resume.
  */
-class BiometricLockPreferencesStore(context: Context) {
+class BiometricLockPreferencesStore(context: Context) : BiometricLockPreferencesSource {
     private val dataStore =
         PreferenceDataStoreFactory.create(
             produceFile = { context.preferencesDataStoreFile(PREFERENCES_FILE) }
         )
 
-    val preferences: Flow<BiometricLockPreferences> =
+    override val preferences: Flow<BiometricLockPreferences> =
         dataStore.data
             .catch { error ->
                 if (error is IOException) emit(emptyPreferences()) else throw error
@@ -47,15 +58,15 @@ class BiometricLockPreferencesStore(context: Context) {
                 )
             }
 
-    suspend fun setLockEnabled(value: Boolean) {
+    override suspend fun setLockEnabled(value: Boolean) {
         dataStore.edit { it[KEY_LOCK_ENABLED] = value }
     }
 
-    suspend fun setIdleTimeoutMinutes(value: Int) {
+    override suspend fun setIdleTimeoutMinutes(value: Int) {
         dataStore.edit { it[KEY_IDLE_TIMEOUT_MINUTES] = value }
     }
 
-    suspend fun setLastBackgroundEpochMillis(value: Long) {
+    override suspend fun setLastBackgroundEpochMillis(value: Long) {
         dataStore.edit { it[KEY_LAST_BACKGROUND_EPOCH_MILLIS] = value }
     }
 

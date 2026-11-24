@@ -37,10 +37,38 @@ internal fun BiometricPrompt.CryptoObject?.isVerifiedUnlock(): Boolean {
  * cryptographic unlock rather than a boolean flag that could be forged by a compromised caller.
  * If the keystore key was invalidated (e.g. the user changed their enrolled biometrics), a fresh
  * key is generated transparently rather than crashing.
+ *
+ * The prompt is created together with the authenticator, not on [authenticate]. `BiometricPrompt`
+ * re-registers its callbacks with an already-showing prompt fragment when it is constructed for a
+ * recreated activity, so building the authenticator for the new host (as soon as the gate is
+ * composed) is what reattaches a prompt that survived rotation instead of orphaning its result.
  */
-class BiometricAuthenticator(private val activity: FragmentActivity) {
+class BiometricAuthenticator(
+    private val activity: FragmentActivity,
+    private val onSuccess: () -> Unit,
+    private val onError: (String) -> Unit
+) {
     private val allowedAuthenticators =
         BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+    private val prompt =
+        BiometricPrompt(
+            activity,
+            ContextCompat.getMainExecutor(activity),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (!result.cryptoObject.isVerifiedUnlock()) {
+                        onError("Authentication could not be cryptographically verified.")
+                        return
+                    }
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    onError(errString.toString())
+                }
+            }
+        )
 
     fun checkAvailability(): BiometricAvailability =
         when (BiometricManager.from(activity).canAuthenticate(allowedAuthenticators)) {
@@ -59,23 +87,7 @@ class BiometricAuthenticator(private val activity: FragmentActivity) {
             else -> BiometricAvailability.Unavailable("Device authentication is not available right now.")
         }
 
-    fun authenticate(onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val executor = ContextCompat.getMainExecutor(activity)
-        val callback =
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    if (!result.cryptoObject.isVerifiedUnlock()) {
-                        onError("Authentication could not be cryptographically verified.")
-                        return
-                    }
-                    onSuccess()
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    onError(errString.toString())
-                }
-            }
-        val prompt = BiometricPrompt(activity, executor, callback)
+    fun authenticate() {
         val promptInfo =
             BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Unlock Worktime")
