@@ -67,15 +67,19 @@ suspend fun reconcilePlannedTaskReminder(
 }
 
 /**
- * Tolerant version of the same lookup for UI display purposes (see
- * [com.worktime.android.feature.dashboard.DashboardViewModel]): a failed fetch just shows no
- * planned task rather than propagating an error, since it self-corrects on the next refresh.
- * [reconcilePlannedTaskReminder] does not use this -- see its own doc for why.
+ * The same lookup for UI display purposes (see
+ * [com.worktime.android.feature.dashboard.DashboardViewModel]). A failed fetch is returned as the
+ * failure rather than folded into "no planned task", so the caller can keep what it already had
+ * instead of treating an outage as proof there is nothing planned (#2093).
  */
-suspend fun fetchPlannedTask(repository: DashboardRepository): TaskRecord? {
-    val result = listNearTermTasks(repository)
-    return (result as? MutationResult.Success)?.value?.let(::nextPlannedTask)
-}
+suspend fun fetchPlannedTask(repository: DashboardRepository): MutationResult<TaskRecord?> =
+    when (val result = listNearTermTasks(repository)) {
+        is MutationResult.Success -> MutationResult.Success(nextPlannedTask(result.value))
+        MutationResult.LoggedOut -> MutationResult.LoggedOut
+        MutationResult.Superseded -> MutationResult.Superseded
+        is MutationResult.ValidationError -> result
+        is MutationResult.Error -> result
+    }
 
 /**
  * The date range is compared against task.start_time (a UTC instant) using the device's local

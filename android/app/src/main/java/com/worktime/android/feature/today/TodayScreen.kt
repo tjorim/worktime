@@ -37,6 +37,7 @@ import com.worktime.android.data.model.TemplateRecord
 import com.worktime.android.data.model.WorkLocationRecord
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.feature.dashboard.ReadStatus
 import com.worktime.android.ui.components.ColorSwatchPicker
 import com.worktime.android.ui.components.DatePickerField
 import com.worktime.android.ui.components.LocalDateSaver
@@ -152,10 +153,12 @@ fun TodayScreen(
                             onLabelSelected = { taskLabelId = it },
                             onCreateLabel = onCreateLabel
                         )
+                        TimerStatusNotice(actionsState = actionsState, onRetry = onRetry)
                         if (actionsState.runningTask == null) {
                             Button(
                                 onClick = { onStartTracking(taskText, taskLabelId.ifBlank { null }) },
-                                enabled = !actionsState.isSubmitting && taskText.isNotBlank()
+                                enabled =
+                                !actionsState.isSubmitting && actionsState.canStartTimer && taskText.isNotBlank()
                             ) {
                                 Text("Start timer")
                             }
@@ -179,7 +182,7 @@ fun TodayScreen(
                                 Text("Stop timer")
                             }
                         }
-                        text("Running task", actionsState.runningTask?.text ?: "None")
+                        text("Running task", runningTaskLabel(actionsState))
                     }
                 }
             }
@@ -217,6 +220,39 @@ fun TodayScreen(
                 }
             }
         }
+    }
+}
+
+/** "None" is only true when the read that said so succeeded; otherwise we don't know. */
+private fun runningTaskLabel(actionsState: MobileActionsUiState): String = actionsState.runningTask?.text
+    ?: if (actionsState.timerStatus == ReadStatus.Unknown) "Unknown" else "None"
+
+/** Says why Start may be unavailable, or that the timer shown is last-known, and offers a retry. */
+@Composable
+private fun TimerStatusNotice(actionsState: MobileActionsUiState, onRetry: () -> Unit) {
+    val notice =
+        when (actionsState.timerStatus) {
+            // The timer itself is current; if another read failed, say so without calling the timer stale.
+            ReadStatus.Confirmed ->
+                if (actionsState.refreshFailed) "Some details couldn't be refreshed and may be out of date." else return
+            ReadStatus.Unknown ->
+                if (actionsState.refreshFailed) {
+                    "Couldn't check your running timer, so Start is unavailable."
+                } else {
+                    "Checking your running timer…"
+                }
+            ReadStatus.Stale -> {
+                val asOf = formatInstant(actionsState.timerConfirmedAt.orEmpty())
+                "Couldn't refresh your timer. Showing it as of $asOf."
+            }
+        }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = notice, modifier = Modifier.weight(1f))
+        if (actionsState.refreshFailed) TextButton(onClick = onRetry) { Text("Retry") }
     }
 }
 

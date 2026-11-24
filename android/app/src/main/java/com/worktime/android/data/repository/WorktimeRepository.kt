@@ -29,6 +29,7 @@ import java.time.ZoneOffset
 import java.util.TimeZone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -237,6 +238,16 @@ class WorktimeRepository(
         private const val HTTP_NOT_FOUND = 404
         private const val HTTP_CONFLICT = 409
         private const val WEEK_LOOKBACK_DAYS = 6L
+        private const val HTTP_SERVER_ERROR = 500
+
+        // Actionable copy for transport and decode failures. Never pass an exception's own message
+        // through: it is an English diagnostic that can leak internals (#2093).
+        private const val OFFLINE_MESSAGE = "Can't reach Worktime. Check your connection and retry."
+        private const val UNREADABLE_RESPONSE_MESSAGE =
+            "Worktime sent data this app can't read. Retry, or update the app if it keeps happening."
+        private const val UNKNOWN_LOAD_MESSAGE = "Something went wrong loading Worktime data. Retry in a moment."
+        private const val UNKNOWN_REQUEST_MESSAGE = "Something went wrong. Retry in a moment."
+        private const val SERVER_TROUBLE_MESSAGE = "Worktime is having trouble right now. Retry in a moment."
         private const val LABEL_NAME_CONFLICT_MESSAGE = "Label name must be unique"
         private const val LABEL_IN_USE_MESSAGE = "Label is in use by tasks or templates and cannot be deleted"
     }
@@ -261,16 +272,20 @@ class WorktimeRepository(
                     endSession()
                     DashboardLoadResult.LoggedOut
                 }
-                else -> DashboardLoadResult.Error("Unable to load Worktime data (${error.code()})")
+                else -> DashboardLoadResult.Error(httpFailureMessage(error.code()))
             }
         } catch (_: IOException) {
             unlessSuperseded(scope, DashboardLoadResult.Superseded) {
-                DashboardLoadResult.Error("Unable to reach the Worktime backend")
+                DashboardLoadResult.Error(OFFLINE_MESSAGE)
+            }
+        } catch (_: SerializationException) {
+            unlessSuperseded(scope, DashboardLoadResult.Superseded) {
+                DashboardLoadResult.Error(UNREADABLE_RESPONSE_MESSAGE)
             }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             unlessSuperseded(scope, DashboardLoadResult.Superseded) {
-                DashboardLoadResult.Error(error.message ?: "Unable to load Worktime data")
+                DashboardLoadResult.Error(UNKNOWN_LOAD_MESSAGE)
             }
         }
     }
@@ -609,6 +624,9 @@ class WorktimeRepository(
         cache?.clear()
     }
 
+    private fun httpFailureMessage(code: Int): String =
+        if (code >= HTTP_SERVER_ERROR) SERVER_TROUBLE_MESSAGE else "Unable to load Worktime data ($code)"
+
     private fun mapHttpError(error: HttpException, conflictMessage: String? = null): MutationResult<Nothing> =
         when (error.code()) {
             HTTP_BAD_REQUEST -> MutationResult.ValidationError("Request validation failed")
@@ -645,12 +663,16 @@ class WorktimeRepository(
             }
         } catch (_: IOException) {
             unlessSuperseded(scope, MutationResult.Superseded) {
-                MutationResult.Error("Unable to reach the Worktime backend")
+                MutationResult.Error(OFFLINE_MESSAGE)
+            }
+        } catch (_: SerializationException) {
+            unlessSuperseded(scope, MutationResult.Superseded) {
+                MutationResult.Error(UNREADABLE_RESPONSE_MESSAGE)
             }
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             unlessSuperseded(scope, MutationResult.Superseded) {
-                MutationResult.Error(error.message ?: "Request failed")
+                MutationResult.Error(UNKNOWN_REQUEST_MESSAGE)
             }
         }
     }

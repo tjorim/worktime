@@ -18,6 +18,8 @@ import com.worktime.android.core.notifications.registerFcmTokenIfNeeded
 import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.DashboardViewModel
+import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.feature.dashboard.ReadStatus
 import com.worktime.android.feature.session.BiometricGateViewModel
 
 /** Owns app-level integrations that do not render UI. */
@@ -54,10 +56,9 @@ private fun ReconcileNotifications(
         // Prevent a forced logout racing cancellation and re-arming a reminder.
         if (sessionState is SessionState.LoggedOut) return@LaunchedEffect
         val dashboard = (uiState as? DashboardUiState.Success)?.dashboard ?: return@LaunchedEffect
-        scheduler.reconcile(
+        scheduler.reconcileFrom(
             dashboard.identity.id,
-            actionsState.plannedTask,
-            actionsState.runningTask,
+            actionsState,
             preferences.plannedTasksEnabled,
             preferences.timeTrackingEnabled
         )
@@ -68,6 +69,30 @@ private fun ReconcileNotifications(
         }
     }
     // Sign-out cleanup lives in WorktimeAndroidApplication so it also runs without a screen.
+}
+
+/**
+ * Re-arms the reminder alarms from the latest task reads. [ReminderScheduler.reconcile] cancels an
+ * alarm whenever it's handed a null task, so a kind whose read hasn't succeeded yet is flagged
+ * unknown and keeps what was scheduled earlier (unless that reminder was switched off, which always
+ * cancels). Confirmed reads, including a confirmed absence, schedule or cancel as usual, and a later
+ * failure keeps the last-known task, which re-arms identically (#2093).
+ */
+internal fun ReminderScheduler.reconcileFrom(
+    accountId: Int,
+    actions: MobileActionsUiState,
+    plannedTasksEnabled: Boolean,
+    timersEnabled: Boolean
+) {
+    reconcile(
+        accountId,
+        actions.plannedTask,
+        actions.runningTask,
+        plannedTasksEnabled,
+        timersEnabled,
+        plannedTaskKnown = actions.plannedTaskStatus != ReadStatus.Unknown,
+        timerKnown = actions.timerStatus != ReadStatus.Unknown
+    )
 }
 
 @Composable

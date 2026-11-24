@@ -626,10 +626,20 @@ class DashboardViewModelTest {
 
     @Test
     fun environmentChangeDoesNotKeepThePreviousEnvironmentsDashboardAfterAFailedLoad() = runTest(dispatcher) {
+        var labelReads = 0
         val repository =
             FakeDashboardRepository(
                 result = DashboardLoadResult.Success(sampleDashboard(accountId = 1)),
-                listLabelsResult = MutationResult.Success(listOf(sampleLabel())),
+                listLabelsProvider = {
+                    labelReads++
+                    if (labelReads ==
+                        1
+                    ) {
+                        MutationResult.Success(listOf(sampleLabel()))
+                    } else {
+                        MutationResult.Error("offline")
+                    }
+                },
                 loadDashboardProvider = { callNumber ->
                     if (callNumber == 1) {
                         DashboardLoadResult.Success(sampleDashboard(accountId = 1))
@@ -641,13 +651,17 @@ class DashboardViewModelTest {
         val viewModel = DashboardViewModel(repository)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+        assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
 
         repository.environment = "https://staging.example"
         viewModel.refresh()
         advanceUntilIdle()
 
+        // The other environment's labels are gone and a failed read there must not bring them back.
+        // The actions are still re-read independently of the failed dashboard load.
         assertEquals(DashboardUiState.Error("offline"), viewModel.uiState.value)
-        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+        assertTrue(viewModel.actionsState.value.labels.isEmpty())
+        assertEquals(ReadStatus.Confirmed, viewModel.actionsState.value.timerStatus)
     }
 
     @Test
