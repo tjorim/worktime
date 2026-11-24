@@ -2,14 +2,17 @@ package com.worktime.android.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -19,6 +22,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.ui.theme.WorktimeSpacing
 
@@ -46,23 +54,28 @@ fun ReadModelScreen(
                 onAction = onRetry
             )
         is DashboardUiState.Success ->
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.staleAsOf != null) {
-                    StaleDataBanner(
-                        cachedAt = uiState.staleAsOf,
-                        refreshError = uiState.refreshError,
-                        onRetry = onRetry
-                    )
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    content(uiState.dashboard)
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val bannerMaxHeight = maxHeight / 2
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (uiState.staleAsOf != null) {
+                        StaleDataBanner(
+                            cachedAt = uiState.staleAsOf,
+                            refreshError = uiState.refreshError,
+                            // Never let the banner crowd out the data it describes.
+                            maxHeight = bannerMaxHeight,
+                            onRetry = onRetry
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        content(uiState.dashboard)
+                    }
                 }
             }
     }
 }
 
 @Composable
-private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: () -> Unit) {
+private fun StaleDataBanner(cachedAt: String, refreshError: String?, maxHeight: Dp, onRetry: () -> Unit) {
     Card(
         modifier =
         Modifier
@@ -70,13 +83,16 @@ private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: ()
             .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
     ) {
-        Row(
+        // Stacked rather than side by side so a long message and the button reflow at large font scales,
+        // and scrollable within [maxHeight] so Retry stays reachable when the message is long.
+        Column(
             modifier =
             Modifier
                 .fillMaxWidth()
+                .heightIn(max = maxHeight)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = WorktimeSpacing.standard, vertical = WorktimeSpacing.inline),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.tight)
         ) {
             Text(
                 text =
@@ -85,11 +101,11 @@ private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: ()
                 } else {
                     "Showing saved data from ${formatInstant(cachedAt)}. Refreshing…"
                 },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            TextButton(onClick = onRetry) {
+            TextButton(onClick = onRetry, modifier = Modifier.align(Alignment.End)) {
                 Text("Retry")
             }
         }
@@ -106,6 +122,7 @@ fun ScreenList(title: String, body: LazyListScope.() -> Unit) {
         item {
             Text(
                 text = title,
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall
             )
         }
@@ -126,15 +143,12 @@ fun EmptyPane(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxSize()
-            .padding(WorktimeSpacing.section),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = title, style = MaterialTheme.typography.headlineSmall)
+    CenteredScrollPane(contentPadding = WorktimeSpacing.section) {
+        Text(
+            text = title,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall
+        )
         Card(modifier = Modifier.padding(top = WorktimeSpacing.standard)) {
             Column(
                 modifier =
@@ -143,8 +157,14 @@ fun EmptyPane(
                     .padding(WorktimeSpacing.standard),
                 verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
             ) {
-                Text(text = headline, style = MaterialTheme.typography.titleMedium)
-                Text(text = body, style = MaterialTheme.typography.bodyMedium)
+                // One announcement for the state, so a loading pane that turns into an error is read out.
+                Column(
+                    modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                    verticalArrangement = Arrangement.spacedBy(WorktimeSpacing.compactCard)
+                ) {
+                    Text(text = headline, style = MaterialTheme.typography.titleMedium)
+                    Text(text = body, style = MaterialTheme.typography.bodyMedium)
+                }
                 if (actionLabel != null && onAction != null) {
                     Button(onClick = onAction) {
                         Text(actionLabel)

@@ -2,7 +2,6 @@ package com.worktime.android.feature.session
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -10,10 +9,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.worktime.android.core.auth.BiometricAvailability
+import com.worktime.android.ui.components.CenteredScrollPane
 
 @Composable
 fun BiometricGateScreen(
@@ -22,15 +25,12 @@ fun BiometricGateScreen(
     onUnlock: () -> Unit,
     onContinueWithoutLock: () -> Unit
 ) {
-    Column(
-        modifier =
-        Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "Worktime is locked", style = MaterialTheme.typography.headlineMedium)
+    CenteredScrollPane(contentPadding = 24.dp) {
+        Text(
+            text = "Worktime is locked",
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineMedium
+        )
         Card(modifier = Modifier.padding(top = 16.dp)) {
             Column(
                 modifier =
@@ -45,7 +45,11 @@ fun BiometricGateScreen(
                 )
                 when (availability) {
                     is BiometricAvailability.Unavailable -> {
-                        Text(text = availability.message, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            text = availability.message,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            color = MaterialTheme.colorScheme.error
+                        )
                         Button(onClick = onContinueWithoutLock) {
                             Text("Continue")
                         }

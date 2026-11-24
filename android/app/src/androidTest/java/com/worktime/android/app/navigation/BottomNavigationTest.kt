@@ -2,9 +2,6 @@ package com.worktime.android.app.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -14,9 +11,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -24,6 +28,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.worktime.android.app.WorktimeBottomBar
 import org.junit.Rule
 import org.junit.Test
 
@@ -45,22 +50,13 @@ class BottomNavigationTest {
 
             Scaffold(
                 bottomBar = {
-                    NavigationBar {
-                        destinations.forEach { destination ->
-                            NavigationBarItem(
-                                selected = currentRoute == destination.route,
-                                onClick = {
-                                    navController.navigate(destination.route) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                        popUpTo(navController.graph.startDestinationId) {
-                                            saveState = true
-                                        }
-                                    }
-                                },
-                                icon = { Icon(imageVector = destination.icon, contentDescription = destination.label) },
-                                label = { Text(destination.label) }
-                            )
+                    WorktimeBottomBar(destinations, currentRoute) { route ->
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                            restoreState = true
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
                         }
                     }
                 }
@@ -87,8 +83,31 @@ class BottomNavigationTest {
         renderScaffold()
 
         WorktimeDestination.entries.forEach { destination ->
-            composeTestRule.onNodeWithContentDescription(destination.label, useUnmergedTree = true).assertIsDisplayed()
+            composeTestRule.onNodeWithText(destination.label).assertIsDisplayed().assertHasClickAction()
         }
+    }
+
+    @Test
+    fun navigationIcons_areDecorativeBecauseTheLabelNamesTheTab() {
+        renderScaffold()
+
+        WorktimeDestination.entries.forEach { destination ->
+            // A description repeating the visible label would make TalkBack read every tab twice.
+            composeTestRule
+                .onAllNodesWithContentDescription(destination.label, useUnmergedTree = true)
+                .assertCountEquals(0)
+        }
+    }
+
+    @Test
+    fun navigationItems_areTabsAndOnlyTheCurrentOneIsSelected() {
+        renderScaffold()
+
+        composeTestRule.onNodeWithText(WorktimeDestination.Today.label).assertIsSelected()
+        composeTestRule.onNodeWithText(WorktimeDestination.NextShifts.label).assertIsNotSelected()
+        composeTestRule
+            .onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+            .assertCountEquals(WorktimeDestination.entries.size)
     }
 
     @Test
@@ -97,9 +116,7 @@ class BottomNavigationTest {
 
         composeTestRule.onNodeWithText("Today screen").assertIsDisplayed()
 
-        composeTestRule
-            .onNodeWithContentDescription(WorktimeDestination.TimeOff.label, useUnmergedTree = true)
-            .performClick()
+        composeTestRule.onNodeWithText(WorktimeDestination.TimeOff.label).performClick()
 
         composeTestRule.onNodeWithText("Time Off screen").assertIsDisplayed()
     }
@@ -110,14 +127,10 @@ class BottomNavigationTest {
 
         composeTestRule.onNodeWithText("Note").performTextInput("draft note")
 
-        composeTestRule
-            .onNodeWithContentDescription(WorktimeDestination.NextShifts.label, useUnmergedTree = true)
-            .performClick()
+        composeTestRule.onNodeWithText(WorktimeDestination.NextShifts.label).performClick()
         composeTestRule.onNodeWithText("Next screen").assertIsDisplayed()
 
-        composeTestRule
-            .onNodeWithContentDescription(WorktimeDestination.Today.label, useUnmergedTree = true)
-            .performClick()
+        composeTestRule.onNodeWithText(WorktimeDestination.Today.label).performClick()
 
         composeTestRule.onNodeWithText("draft note").assertIsDisplayed()
     }
