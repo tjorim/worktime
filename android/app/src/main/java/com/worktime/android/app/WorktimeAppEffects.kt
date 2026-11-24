@@ -67,12 +67,7 @@ private fun ReconcileNotifications(
             notifications.showSyncStatus("Sync checked at ${status.serverTimestamp}")
         }
     }
-    LaunchedEffect(sessionState) {
-        if (sessionState is SessionState.LoggedOut) {
-            scheduler.cancelAll()
-            notifications.cancelAll()
-        }
-    }
+    // Sign-out cleanup lives in WorktimeAndroidApplication so it also runs without a screen.
 }
 
 @Composable
