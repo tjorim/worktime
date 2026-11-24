@@ -5,10 +5,22 @@ sealed interface SessionState {
 
     data object LoggedOut : SessionState
 
-    data class Authenticated(val hasRefreshToken: Boolean) : SessionState
+    /**
+     * [sessionId] is unique per sign-in (or restore after a process restart) and unchanged by token
+     * refreshes, so everything tied to one session -- in-flight responses, cached reads, UI action
+     * state -- can be discarded the moment it differs. [accountKey] is a stable opaque digest of the
+     * principal (issuer and subject) and is null when the token carries no identity, in which case
+     * nothing may be persisted for the session.
+     */
+    data class Authenticated(val hasRefreshToken: Boolean, val sessionId: Long = 0, val accountKey: String? = null) :
+        SessionState
 
     data class Error(val message: String) : SessionState
 }
+
+/** The [SessionState.Authenticated.sessionId] of the signed-in session, or null when there is none. */
+val SessionState.activeSessionId: Long?
+    get() = (this as? SessionState.Authenticated)?.sessionId
 
 interface SessionController {
     val sessionState: kotlinx.coroutines.flow.StateFlow<SessionState>

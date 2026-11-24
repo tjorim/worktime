@@ -38,6 +38,8 @@ suspend fun reconcilePlannedTaskReminder(
         when (val result = repository.loadDashboard()) {
             is DashboardLoadResult.Success -> result.dashboard.identity.id
             DashboardLoadResult.LoggedOut -> return ReconcileOutcome.LoggedOut
+            // The account changed mid-fetch; retry rather than schedule alarms for the old one.
+            DashboardLoadResult.Superseded -> return ReconcileOutcome.FetchFailed
             is DashboardLoadResult.Error -> return ReconcileOutcome.FetchFailed
         }
 

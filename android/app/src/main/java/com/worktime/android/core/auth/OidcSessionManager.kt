@@ -8,6 +8,7 @@ import com.worktime.android.core.storage.ApiBaseUrlOverrideStore
 import com.worktime.android.core.storage.SecureSessionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -49,6 +50,18 @@ class OidcSessionManager @Inject constructor(
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
+    // Source of SessionState.Authenticated.sessionId: bumped on every sign-in and on restoring a
+    // saved session at startup, never by a token refresh. Declared before authState because the
+    // restore in its initializer already uses it.
+    @Volatile
+    private var sessionId = 0L
+
+    // The principal of the current sign-in. A refresh response may omit the ID token (OIDC allows
+    // it), after which AppAuth no longer exposes one, so the identity established at sign-in is
+    // kept -- and persisted, to survive a restart -- instead of being re-derived from every state.
+    @Volatile
+    private var accountKey: String? = null
+
     @Volatile
     private var authState: AuthState? =
         try {
@@ -56,7 +69,11 @@ class OidcSessionManager @Inject constructor(
                 .readAuthStateJson()
                 ?.takeIf { it.isNotBlank() }
                 ?.let(AuthState::jsonDeserialize)
-                ?.also(::publishState)
+                ?.also { state ->
+                    sessionId++
+                    accountKey = sessionStore.readAccountKey()?.takeIf { it.isNotBlank() } ?: state.principalKey()
+                    publishState(state)
+                }
         } catch (_: Exception) {
             // readAuthStateJson() is backed by EncryptedSharedPreferences, which can throw
             // GeneralSecurityException/IOException if the Android Keystore key is lost or
@@ -106,7 +123,9 @@ class OidcSessionManager @Inject constructor(
             throw IllegalStateException(message)
         }
 
-        persistAuthState(newState)
+        // Serialized with getFreshAccessToken: a refresh callback that already passed its
+        // "still the current state" check must finish publishing before this sign-in replaces it.
+        tokenMutex.withLock { persistAuthState(newState, newSession = true) }
     }
 
     override suspend fun getFreshAccessToken(): String? = tokenMutex.withLock {
@@ -141,6 +160,7 @@ class OidcSessionManager @Inject constructor(
     }
 
     override suspend fun logout() {
+        val endingState = authState
         runCatching {
             // No Activity is available from this (possibly non-interactive) caller, so this
             // fires the end-session screen into a new task best-effort and does not wait for
@@ -151,7 +171,9 @@ class OidcSessionManager @Inject constructor(
         }.onFailure { exception ->
             if (exception is CancellationException) throw exception
         }
-        completeLogout()
+        // Building the end-session intent can suspend (provider discovery). If a new sign-in landed
+        // meanwhile, this request belongs to the session it was made for and must not end that one.
+        tokenMutex.withLock { if (authState === endingState) completeLogout() }
     }
 
     override suspend fun buildLogoutIntent(): Intent? = runCatching { buildEndSessionIntent() }
@@ -201,17 +223,38 @@ class OidcSessionManager @Inject constructor(
         }
     }
 
-    private fun persistAuthState(state: AuthState) {
+    private fun persistAuthState(state: AuthState, newSession: Boolean = false) {
+        if (newSession) {
+            sessionId++
+            accountKey = null
+        }
+        accountKey = accountKey ?: state.principalKey()
         authState = state
         sessionStore.writeAuthStateJson(state.jsonSerializeString())
+        sessionStore.writeAccountKey(accountKey)
         publishState(state)
     }
 
     private fun publishState(state: AuthState) {
-        _sessionState.value = SessionState.Authenticated(hasRefreshToken = !state.refreshToken.isNullOrBlank())
+        _sessionState.value =
+            SessionState.Authenticated(
+                hasRefreshToken = !state.refreshToken.isNullOrBlank(),
+                sessionId = sessionId,
+                accountKey = accountKey
+            )
     }
 
     private companion object {
         const val TAG = "OidcSessionManager"
     }
 }
+
+/** A digest of the signed-in principal, or null when the token carries no usable identity. */
+private fun AuthState.principalKey(): String? = runCatching {
+    val token = parsedIdToken ?: return null
+    if (token.issuer.isBlank() || token.subject.isBlank()) return null
+    MessageDigest
+        .getInstance("SHA-256")
+        .digest("${token.issuer}\n${token.subject}".toByteArray())
+        .joinToString("") { "%02x".format(it) }
+}.getOrNull()

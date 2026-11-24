@@ -28,6 +28,9 @@ import com.worktime.android.data.repository.WorkLocationPreferences
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -46,6 +49,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass") // one scenario per view-model behaviour, sharing a single repository fake
 class DashboardViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 
@@ -572,10 +576,256 @@ class DashboardViewModelTest {
         assertEquals("Saved", viewModel.actionsState.value.message)
     }
 
+    @Test
+    fun staleDashboardLoadAfterAccountSwitchIsIgnored() = runTest(dispatcher) {
+        val refreshCompletion = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard(accountId = 1)),
+                loadDashboardProvider = { callNumber ->
+                    // The first load (account A) is still waiting on its token refresh when B signs in.
+                    if (callNumber == 1) refreshCompletion.await()
+                    DashboardLoadResult.Success(sampleDashboard(accountId = callNumber))
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+        assertEquals(2, (viewModel.uiState.value as DashboardUiState.Success).dashboard.identity.id)
+
+        refreshCompletion.release()
+        advanceUntilIdle()
+
+        assertEquals(2, (viewModel.uiState.value as DashboardUiState.Success).dashboard.identity.id)
+    }
+
+    @Test
+    fun loadSupersededByAnEnvironmentChangeIsRetried() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                loadDashboardProvider = { callNumber ->
+                    if (callNumber ==
+                        1
+                    ) {
+                        DashboardLoadResult.Superseded
+                    } else {
+                        DashboardLoadResult.Success(sampleDashboard())
+                    }
+                }
+            )
+
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+    }
+
+    @Test
+    fun environmentChangeDoesNotKeepThePreviousEnvironmentsDashboardAfterAFailedLoad() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard(accountId = 1)),
+                listLabelsResult = MutationResult.Success(listOf(sampleLabel())),
+                loadDashboardProvider = { callNumber ->
+                    if (callNumber == 1) {
+                        DashboardLoadResult.Success(sampleDashboard(accountId = 1))
+                    } else {
+                        DashboardLoadResult.Error("offline")
+                    }
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+
+        repository.environment = "https://staging.example"
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.Error("offline"), viewModel.uiState.value)
+        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+    }
+
+    @Test
+    fun loadStartedInAnotherEnvironmentIsIgnoredAndReloaded() = runTest(dispatcher) {
+        val firstLoad = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                loadDashboardProvider = { callNumber ->
+                    // E.g. a saved API override restored just after start-up, while the first load runs.
+                    if (callNumber == 1) firstLoad.await()
+                    DashboardLoadResult.Success(sampleDashboard(accountId = callNumber))
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        repository.environment = "https://staging.example"
+        firstLoad.release()
+        advanceUntilIdle()
+
+        assertEquals(2, repository.loadDashboardCallCount)
+        assertEquals(2, (viewModel.uiState.value as DashboardUiState.Success).dashboard.identity.id)
+    }
+
+    @Test
+    fun accountSwitchDropsPreviousAccountsDashboardAndActionState() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard(accountId = 1)),
+                listLabelsResult = MutationResult.Success(listOf(sampleLabel()))
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+        // Account B's first load is slow; nothing of A's may be visible meanwhile.
+        repository.gate = gate
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.Loading, viewModel.uiState.value)
+        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+    }
+
+    @Test
+    fun revokedRefreshDropsDashboardAndActionState() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                listLabelsResult = MutationResult.Success(listOf(sampleLabel()))
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
+
+        // A terminal refresh failure signs out through the session controller, not through the view model.
+        repository.sessionState.value = SessionState.LoggedOut
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+    }
+
+    @Test
+    fun logoutDuringALoadIsNotOverwrittenByItsResult() = runTest(dispatcher) {
+        val refreshCompletion = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                loadDashboardProvider = {
+                    refreshCompletion.await()
+                    DashboardLoadResult.Success(sampleDashboard())
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        assertEquals(DashboardUiState.Loading, viewModel.uiState.value)
+
+        repository.sessionState.value = SessionState.LoggedOut
+        advanceUntilIdle()
+        refreshCompletion.release()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.LoggedOut, viewModel.uiState.value)
+        assertEquals(MobileActionsUiState(), viewModel.actionsState.value)
+    }
+
+    @Test
+    fun staleCachedDashboardIsNotShownAfterAccountSwitch() = runTest(dispatcher) {
+        val cacheRead = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Error("offline"),
+                cachedDashboardProvider = {
+                    cacheRead.await()
+                    CachedDashboard(sampleDashboard(accountId = 1), cachedAt = "2026-05-26T10:00:00Z")
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        repository.cachedDashboardProvider = null
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+        cacheRead.release()
+        advanceUntilIdle()
+
+        assertEquals(DashboardUiState.Error("offline"), viewModel.uiState.value)
+    }
+
+    @Test
+    fun staleMutationResultDoesNotSignOutOrTouchTheNewSession() = runTest(dispatcher) {
+        val response = UncancellableGate()
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                startTrackingProvider = {
+                    response.await()
+                    MutationResult.LoggedOut
+                }
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+        viewModel.startTimeTracking("Focus")
+        advanceUntilIdle()
+        assertTrue(viewModel.actionsState.value.isSubmitting)
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+        response.release()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is DashboardUiState.Success)
+        assertEquals(false, viewModel.actionsState.value.isSubmitting)
+        assertEquals(null, viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun supersededMutationReleasesTheSubmittingFlag() = runTest(dispatcher) {
+        val repository =
+            FakeDashboardRepository(
+                result = DashboardLoadResult.Success(sampleDashboard()),
+                startTrackingResult = MutationResult.Superseded
+            )
+        val viewModel = DashboardViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.startTimeTracking("Focus")
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.actionsState.value.isSubmitting)
+        assertEquals(null, viewModel.actionsState.value.message)
+    }
+
+    @Test
+    fun accountSwitchResubscribesToLiveUpdates() = runTest(dispatcher) {
+        val repository = FakeDashboardRepository(result = DashboardLoadResult.Success(sampleDashboard()))
+        val transport = FakeSyncSignalTransport()
+        val viewModel = DashboardViewModel(repository, syncSignalTransport = transport)
+        viewModel.onAppForegrounded()
+        advanceUntilIdle()
+        assertEquals(1, transport.subscribeCallCount)
+
+        repository.sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+
+        assertEquals(2, transport.subscribeCallCount)
+        assertEquals(1, transport.unsubscribeCallCount)
+    }
+
     private class FakeDashboardRepository(
         private val result: DashboardLoadResult,
-        private val gate: CompletableDeferred<Unit>? = null,
+        var gate: CompletableDeferred<Unit>? = null,
         private val cachedDashboardResult: CachedDashboard? = null,
+        var cachedDashboardProvider: (suspend () -> CachedDashboard?)? = null,
         private val startTrackingResult: MutationResult<TaskRecord> = MutationResult.Success(sampleTask()),
         private val listLabelsResult: MutationResult<List<LabelRecord>> = MutationResult.Success(emptyList()),
         private val listLabelsProvider: (suspend () -> MutationResult<List<LabelRecord>>)? = null,
@@ -584,9 +834,13 @@ class DashboardViewModelTest {
             MutationResult.Success(WorkLocationPreferences()),
         private val createLabelResult: MutationResult<LabelRecord> = MutationResult.Success(sampleLabel()),
         private val deleteAccountResult: MutationResult<Unit> = MutationResult.Success(Unit),
-        private val logoutIntentResult: Intent? = null
+        private val logoutIntentResult: Intent? = null,
+        private val loadDashboardProvider: (suspend (callNumber: Int) -> DashboardLoadResult)? = null,
+        private val startTrackingProvider: (suspend () -> MutationResult<TaskRecord>)? = null
     ) : DashboardRepository {
         override val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(hasRefreshToken = true))
+        var environment = ""
+        override val apiEnvironment: String get() = environment
         var completeLogoutCallCount = 0
             private set
         var updatedLabelId: String? = null
@@ -617,10 +871,11 @@ class DashboardViewModelTest {
         override suspend fun loadDashboard(): DashboardLoadResult {
             loadDashboardCallCount++
             gate?.await()
-            return result
+            return loadDashboardProvider?.invoke(loadDashboardCallCount) ?: result
         }
 
-        override suspend fun loadCachedDashboard(): CachedDashboard? = cachedDashboardResult
+        override suspend fun loadCachedDashboard(): CachedDashboard? =
+            cachedDashboardProvider?.invoke() ?: cachedDashboardResult
 
         override suspend fun buildLogoutIntent(): Intent? = logoutIntentResult
 
@@ -630,7 +885,7 @@ class DashboardViewModelTest {
         }
 
         override suspend fun startTimeTracking(text: String, labelId: String?): MutationResult<TaskRecord> =
-            startTrackingResult
+            startTrackingProvider?.invoke() ?: startTrackingResult
 
         override suspend fun stopTimeTracking(taskId: String): MutationResult<TaskRecord> =
             MutationResult.Success(sampleTask())
@@ -753,6 +1008,17 @@ class DashboardViewModelTest {
         override suspend fun unregisterFcmToken(token: String): MutationResult<Unit> = MutationResult.Success(Unit)
     }
 
+    /** A suspension point that keeps running when its caller is cancelled, like AppAuth's token refresh. */
+    private class UncancellableGate {
+        private var continuation: Continuation<Unit>? = null
+
+        suspend fun await() = suspendCoroutine { continuation = it }
+
+        fun release() {
+            continuation?.resume(Unit)
+        }
+    }
+
     private class FakeConnectivityObserver : ConnectivityObserver {
         private val flow = MutableSharedFlow<Boolean>(replay = 1, extraBufferCapacity = 8)
         override val isOnline: Flow<Boolean> = flow
@@ -784,7 +1050,11 @@ class DashboardViewModelTest {
     }
 }
 
-private fun sampleDashboard(): DashboardResponse = DashboardResponse(
+private fun sampleDashboard(accountId: Int = 1): DashboardResponse = sampleDashboardTemplate().let {
+    it.copy(identity = it.identity.copy(id = accountId))
+}
+
+private fun sampleDashboardTemplate(): DashboardResponse = DashboardResponse(
     asOf = "2026-05-26T12:00:00Z",
     identity = Identity(id = 1, username = "demo", displayName = "Demo User", isAdmin = false),
     workContext =
