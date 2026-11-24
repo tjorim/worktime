@@ -85,6 +85,7 @@ private fun StaleDataBanner(cachedAt: String, refreshError: String?, onRetry: ()
                 } else {
                     "Showing saved data from ${formatInstant(cachedAt)}. Refreshing…"
                 },
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

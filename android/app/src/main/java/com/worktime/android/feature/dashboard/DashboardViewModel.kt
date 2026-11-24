@@ -105,14 +105,6 @@ data class MobileActionsUiState(
 ) {
     /** Starting a timer is only safe when we know there is none running; unknown or stale could double-start. */
     val canStartTimer: Boolean get() = timerStatus == ReadStatus.Confirmed
-
-    /**
-     * Whether [runningTask] and [plannedTask] are real answers, so reminder alarms may be reconciled
-     * against them. Before the first successful read a null means "not loaded", and cancelling the
-     * alarms scheduled earlier on that basis would silently drop reminders (#2093).
-     */
-    val remindersReadable: Boolean
-        get() = timerStatus != ReadStatus.Unknown && plannedTaskStatus != ReadStatus.Unknown
 }
 
 @Suppress("TooManyFunctions") // one view model facade for all mobile dashboard actions
@@ -296,7 +288,13 @@ class DashboardViewModel(
                     // environment moved under this request -- e.g. a saved override restored just
                     // after start-up. Load again against the new one.
                     DashboardLoadResult.Superseded -> refresh()
-                    is DashboardLoadResult.Error -> keepDataOrShowError(result.message)
+                    is DashboardLoadResult.Error -> {
+                        // The action reads are independent endpoints: a recovered timer endpoint
+                        // must clear a stale timer even while the dashboard itself still fails,
+                        // or Start stays unavailable after a reconnect.
+                        refreshActions()
+                        keepDataOrShowError(result.message)
+                    }
                 }
             }
     }
@@ -384,15 +382,17 @@ class DashboardViewModel(
             _actionsState.update { it.copy(message = TIMER_STATUS_UNKNOWN_MESSAGE) }
             return
         }
-        submitMutation { repository.startTimeTracking(text, labelId) }
+        submitMutation(onSuccess = ::applyStartedTimer) { repository.startTimeTracking(text, labelId) }
     }
 
     fun stopTimeTracking(taskId: String) {
-        submitMutation { repository.stopTimeTracking(taskId) }
+        submitMutation(onSuccess = ::applyStoppedTimer) { repository.stopTimeTracking(taskId) }
     }
 
     fun updateTask(taskId: String, text: String?, labelId: String?) {
-        submitMutation { repository.updateTask(taskId = taskId, text = text, labelId = labelId) }
+        submitMutation(onSuccess = ::applyUpdatedTimer) {
+            repository.updateTask(taskId = taskId, text = text, labelId = labelId)
+        }
     }
 
     fun setWorkLocation(date: LocalDate, countryCode: String, label: String?) {
@@ -514,7 +514,31 @@ class DashboardViewModel(
         }
     }
 
-    private fun submitMutation(block: suspend () -> MutationResult<*>) {
+    // A write that succeeded is known, so apply it before the follow-up read: if that read fails,
+    // the screen must not keep offering to stop a timer we just stopped (a second Stop would move
+    // the recorded stop time) or hide one we just started (#2093).
+    private fun applyStartedTimer(task: TaskRecord, state: MobileActionsUiState) = state.copy(
+        runningTask = task,
+        timerStatus = ReadStatus.Confirmed,
+        timerConfirmedAt = clock.instant().toString()
+    )
+
+    private fun applyStoppedTimer(task: TaskRecord, state: MobileActionsUiState): MobileActionsUiState {
+        if (state.runningTask?.id != task.id) return state
+        return state.copy(
+            runningTask = null,
+            timerStatus = ReadStatus.Confirmed,
+            timerConfirmedAt = clock.instant().toString()
+        )
+    }
+
+    private fun applyUpdatedTimer(task: TaskRecord, state: MobileActionsUiState) =
+        if (state.runningTask?.id == task.id && task.stopTime == null) state.copy(runningTask = task) else state
+
+    private fun <T> submitMutation(
+        onSuccess: (T, MobileActionsUiState) -> MobileActionsUiState = { _, state -> state },
+        block: suspend () -> MutationResult<T>
+    ) {
         val owner = currentOwner()
         viewModelScope.launch {
             _actionsState.value = _actionsState.value.copy(isSubmitting = true, message = null)
@@ -524,7 +548,7 @@ class DashboardViewModel(
                 when (result) {
                     is MutationResult.Success -> {
                         refreshActions()
-                        _actionsState.value.copy(isSubmitting = false, message = "Saved")
+                        onSuccess(result.value, _actionsState.value).copy(isSubmitting = false, message = "Saved")
                     }
                     MutationResult.LoggedOut -> {
                         _uiState.value = DashboardUiState.LoggedOut

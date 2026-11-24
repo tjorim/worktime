@@ -23,6 +23,7 @@ import com.worktime.android.core.storage.NotificationPreferences
 import com.worktime.android.feature.dashboard.DashboardUiState
 import com.worktime.android.feature.dashboard.DashboardViewModel
 import com.worktime.android.feature.dashboard.MobileActionsUiState
+import com.worktime.android.feature.dashboard.ReadStatus
 import com.worktime.android.feature.session.BiometricGateViewModel
 
 /** Owns app-level integrations that do not render UI. */
@@ -92,21 +93,27 @@ private fun ReconcileNotifications(
 }
 
 /**
- * Re-arms the reminder alarms from the latest task reads, but only once those reads are real
- * answers. [ReminderScheduler.reconcile] cancels an alarm whenever it's handed a null task, so
- * passing it the placeholder from a failed or not-yet-finished read would drop reminders that were
- * scheduled correctly earlier. A later failure keeps the last-known tasks, which re-arms
- * identically. Returns whether it reconciled (#2093).
+ * Re-arms the reminder alarms from the latest task reads. [ReminderScheduler.reconcile] cancels an
+ * alarm whenever it's handed a null task, so a kind whose read hasn't succeeded yet is flagged
+ * unknown and keeps what was scheduled earlier (unless that reminder was switched off, which always
+ * cancels). Confirmed reads, including a confirmed absence, schedule or cancel as usual, and a later
+ * failure keeps the last-known task, which re-arms identically (#2093).
  */
 internal fun ReminderScheduler.reconcileFrom(
     accountId: Int,
     actions: MobileActionsUiState,
     plannedTasksEnabled: Boolean,
     timersEnabled: Boolean
-): Boolean {
-    if (!actions.remindersReadable) return false
-    reconcile(accountId, actions.plannedTask, actions.runningTask, plannedTasksEnabled, timersEnabled)
-    return true
+) {
+    reconcile(
+        accountId,
+        actions.plannedTask,
+        actions.runningTask,
+        plannedTasksEnabled,
+        timersEnabled,
+        plannedTaskKnown = actions.plannedTaskStatus != ReadStatus.Unknown,
+        timerKnown = actions.timerStatus != ReadStatus.Unknown
+    )
 }
 
 @Composable

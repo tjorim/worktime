@@ -230,6 +230,72 @@ class ReminderSchedulerTest {
         verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
     }
 
+    @Test
+    fun `reconcile keeps the alarm of an enabled kind whose task is not known yet`() {
+        val accountId = 1
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
+        every { mockSharedPrefs.getString(any(), any()) } returns null
+        every { mockEditor.remove(any()) } returns mockEditor
+        every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
+
+        scheduler.reconcile(
+            accountId,
+            null,
+            null,
+            plannedTasksEnabled = true,
+            timersEnabled = true,
+            plannedTaskKnown = false,
+            timerKnown = false
+        )
+
+        verify(exactly = 0) { mockAlarmManager.cancel(any<PendingIntent>()) }
+    }
+
+    @Test
+    fun `reconcile cancels a disabled kind even when its task is not known`() {
+        val accountId = 1
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
+        every { mockSharedPrefs.getString(any(), any()) } returns null
+        every { mockEditor.remove(any()) } returns mockEditor
+        every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
+
+        scheduler.reconcile(
+            accountId,
+            null,
+            null,
+            plannedTasksEnabled = false,
+            timersEnabled = false,
+            plannedTaskKnown = false,
+            timerKnown = false
+        )
+
+        verify(exactly = 2) { mockAlarmManager.cancel(any<PendingIntent>()) }
+    }
+
+    @Test
+    fun `reconcile cancels only the kind that is confirmed absent`() {
+        val accountId = 1
+        every { mockSharedPrefs.getInt(ReminderScheduler.KEY_ACCOUNT, any()) } returns accountId
+        every { mockAlarmManager.cancel(any<PendingIntent>()) } returns Unit
+        every { mockSharedPrefs.getString(any(), any()) } returns null
+        every { mockEditor.remove(any()) } returns mockEditor
+        every { PendingIntent.getBroadcast(any(), any(), any(), any()) } returns mockk()
+
+        scheduler.reconcile(
+            accountId,
+            null,
+            null,
+            plannedTasksEnabled = true,
+            timersEnabled = true,
+            plannedTaskKnown = false,
+            timerKnown = true
+        )
+
+        verify(exactly = 1) { mockAlarmManager.cancel(any<PendingIntent>()) }
+    }
+
     // ==================== Rescheduling Tests ====================
 
     @Test

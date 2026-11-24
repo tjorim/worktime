@@ -230,7 +230,9 @@ private fun runningTaskLabel(actionsState: MobileActionsUiState): String = actio
 private fun TimerStatusNotice(actionsState: MobileActionsUiState, onRetry: () -> Unit) {
     val notice =
         when (actionsState.timerStatus) {
-            ReadStatus.Confirmed -> return
+            // The timer itself is current; if another read failed, say so without calling the timer stale.
+            ReadStatus.Confirmed ->
+                if (actionsState.refreshFailed) "Some details couldn't be refreshed and may be out of date." else return
             ReadStatus.Unknown ->
                 if (actionsState.refreshFailed) {
                     "Couldn't check your running timer, so Start is unavailable."

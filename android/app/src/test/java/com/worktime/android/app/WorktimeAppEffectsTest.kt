@@ -6,8 +6,6 @@ import com.worktime.android.feature.dashboard.MobileActionsUiState
 import com.worktime.android.feature.dashboard.ReadStatus
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WorktimeAppEffectsTest {
@@ -16,27 +14,34 @@ class WorktimeAppEffectsTest {
     private val planned = task("planned-1")
 
     @Test
-    fun `does not reconcile before the task reads have succeeded`() {
-        val reconciled = scheduler.reconcileFrom(ACCOUNT_ID, MobileActionsUiState(refreshFailed = true), true, true)
+    fun `flags both kinds unknown before any task read has succeeded`() {
+        scheduler.reconcileFrom(ACCOUNT_ID, MobileActionsUiState(refreshFailed = true), true, true)
 
-        assertFalse(reconciled)
-        verify(exactly = 0) { scheduler.reconcile(any(), any(), any(), any(), any()) }
+        verify(exactly = 1) {
+            scheduler.reconcile(ACCOUNT_ID, null, null, true, true, plannedTaskKnown = false, timerKnown = false)
+        }
     }
 
     @Test
-    fun `does not reconcile when only one of the task reads is known`() {
-        val actions = MobileActionsUiState(timerStatus = ReadStatus.Confirmed)
+    fun `treats each kind separately when only one read is known`() {
+        val actions = MobileActionsUiState(runningTask = timer, timerStatus = ReadStatus.Confirmed)
 
-        assertFalse(scheduler.reconcileFrom(ACCOUNT_ID, actions, true, true))
-        verify(exactly = 0) { scheduler.reconcile(any(), any(), any(), any(), any()) }
+        scheduler.reconcileFrom(ACCOUNT_ID, actions, true, true)
+
+        verify(exactly = 1) {
+            scheduler.reconcile(ACCOUNT_ID, null, timer, true, true, plannedTaskKnown = false, timerKnown = true)
+        }
     }
 
     @Test
-    fun `a confirmed absence reconciles with null so stale alarms are cancelled`() {
+    fun `a confirmed absence is passed as known so stale alarms are cancelled`() {
         val actions = MobileActionsUiState(timerStatus = ReadStatus.Confirmed, plannedTaskStatus = ReadStatus.Confirmed)
 
-        assertTrue(scheduler.reconcileFrom(ACCOUNT_ID, actions, true, true))
-        verify(exactly = 1) { scheduler.reconcile(ACCOUNT_ID, null, null, true, true) }
+        scheduler.reconcileFrom(ACCOUNT_ID, actions, true, true)
+
+        verify(exactly = 1) {
+            scheduler.reconcile(ACCOUNT_ID, null, null, true, true, plannedTaskKnown = true, timerKnown = true)
+        }
     }
 
     @Test
@@ -50,8 +55,20 @@ class WorktimeAppEffectsTest {
                 refreshFailed = true
             )
 
-        assertTrue(scheduler.reconcileFrom(ACCOUNT_ID, actions, true, false))
-        verify(exactly = 1) { scheduler.reconcile(ACCOUNT_ID, planned, timer, true, false) }
+        scheduler.reconcileFrom(ACCOUNT_ID, actions, true, false)
+
+        verify(exactly = 1) {
+            scheduler.reconcile(ACCOUNT_ID, planned, timer, true, false, plannedTaskKnown = true, timerKnown = true)
+        }
+    }
+
+    @Test
+    fun `reminder settings are forwarded even while the reads are unknown`() {
+        scheduler.reconcileFrom(ACCOUNT_ID, MobileActionsUiState(), plannedTasksEnabled = false, timersEnabled = false)
+
+        verify(exactly = 1) {
+            scheduler.reconcile(ACCOUNT_ID, null, null, false, false, plannedTaskKnown = false, timerKnown = false)
+        }
     }
 
     private fun task(id: String) = TaskRecord(

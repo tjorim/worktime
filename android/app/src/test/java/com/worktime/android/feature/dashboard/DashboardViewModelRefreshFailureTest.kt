@@ -49,12 +49,13 @@ class DashboardViewModelRefreshFailureTest {
     private val dispatcher = StandardTestDispatcher()
     private val clock = Clock.fixed(Instant.parse("2026-05-26T12:30:00Z"), ZoneOffset.UTC)
     private val repository = mockk<DashboardRepository>()
+    private val sessionState = MutableStateFlow<SessionState>(SessionState.Authenticated(true, sessionId = 1))
     private val offline = MutationResult.Error("Can't reach Worktime. Check your connection and retry.")
 
     @Before
     fun setUp() {
         kotlinx.coroutines.Dispatchers.setMain(dispatcher)
-        every { repository.sessionState } returns MutableStateFlow(SessionState.Authenticated(hasRefreshToken = true))
+        every { repository.sessionState } returns sessionState
         every { repository.apiEnvironment } returns "test"
         coEvery { repository.loadCachedDashboard() } returns null
         coEvery { repository.loadDashboard() } returns DashboardLoadResult.Success(sampleDashboard())
@@ -68,6 +69,7 @@ class DashboardViewModelRefreshFailureTest {
         coEvery { repository.listLabels() } returns MutationResult.Success(listOf(sampleLabel()))
         coEvery { repository.listTemplates() } returns MutationResult.Success(listOf(sampleTemplate()))
         coEvery { repository.startTimeTracking(any(), any()) } returns MutationResult.Success(sampleTask())
+        coEvery { repository.stopTimeTracking(any()) } returns MutationResult.Success(sampleTask())
     }
 
     @After
@@ -93,7 +95,6 @@ class DashboardViewModelRefreshFailureTest {
         assertEquals(ReadStatus.Stale, state.timerStatus)
         assertEquals("2026-05-26T12:30:00Z", state.timerConfirmedAt)
         assertTrue(state.refreshFailed)
-        assertTrue(state.remindersReadable)
         assertFalse(state.canStartTimer)
     }
 
@@ -114,7 +115,6 @@ class DashboardViewModelRefreshFailureTest {
         assertNull(unknown.actionsState.value.runningTask)
         assertEquals(ReadStatus.Unknown, unknown.actionsState.value.timerStatus)
         assertFalse(unknown.actionsState.value.canStartTimer)
-        assertFalse(unknown.actionsState.value.remindersReadable)
     }
 
     @Test
@@ -313,6 +313,100 @@ class DashboardViewModelRefreshFailureTest {
         assertEquals(DashboardUiState.Success(sampleDashboard()), viewModel.uiState.value)
         assertNull(viewModel.actionsState.value.runningTask)
         assertEquals(ReadStatus.Confirmed, viewModel.actionsState.value.timerStatus)
+    }
+
+    @Test
+    fun `a stopped timer stays stopped when the follow-up read fails`() = runTest(dispatcher) {
+        coEvery { repository.stopTimeTracking("task-1") } returns
+            MutationResult.Success(sampleTask().copy(stopTime = "2026-05-26T12:45:00Z"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        assertEquals(sampleTask(), viewModel.actionsState.value.runningTask)
+
+        coEvery { repository.getRunningTask() } returns offline
+        viewModel.stopTimeTracking("task-1")
+        advanceUntilIdle()
+
+        // The write is applied locally so Stop can't be offered (and sent) twice, but with the
+        // follow-up read failed the timer isn't confirmed, so Start waits for a successful refresh.
+        val state = viewModel.actionsState.value
+        assertNull(state.runningTask)
+        assertEquals(ReadStatus.Stale, state.timerStatus)
+        assertFalse(state.canStartTimer)
+    }
+
+    @Test
+    fun `a started timer is shown even when the follow-up read fails`() = runTest(dispatcher) {
+        coEvery { repository.getRunningTask() } returns MutationResult.Success(null)
+        val started = sampleTask().copy(id = "task-2", text = "New work")
+        coEvery { repository.startTimeTracking("New work", null) } returns MutationResult.Success(started)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        coEvery { repository.getRunningTask() } returns offline
+        viewModel.startTimeTracking("New work")
+        advanceUntilIdle()
+
+        assertEquals(started, viewModel.actionsState.value.runningTask)
+        assertEquals(ReadStatus.Stale, viewModel.actionsState.value.timerStatus)
+    }
+
+    @Test
+    fun `an updated running task replaces the shown one even when the follow-up read fails`() = runTest(dispatcher) {
+        val renamed = sampleTask().copy(text = "Renamed")
+        coEvery { repository.updateTask("task-1", "Renamed", null) } returns MutationResult.Success(renamed)
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        coEvery { repository.getRunningTask() } returns offline
+        viewModel.updateTask("task-1", "Renamed", null)
+        advanceUntilIdle()
+
+        assertEquals(renamed, viewModel.actionsState.value.runningTask)
+    }
+
+    @Test
+    fun `a recovered timer endpoint clears the stale timer even while the dashboard still fails`() =
+        runTest(dispatcher) {
+            val connectivity = FakeConnectivityObserver()
+            val viewModel = viewModel(connectivity)
+            advanceUntilIdle()
+            coEvery { repository.getRunningTask() } returns offline
+            viewModel.refreshActions()
+            advanceUntilIdle()
+            assertEquals(ReadStatus.Stale, viewModel.actionsState.value.timerStatus)
+
+            coEvery { repository.loadDashboard() } returns DashboardLoadResult.Error("Can't reach Worktime.")
+            coEvery { repository.getRunningTask() } returns MutationResult.Success(null)
+            connectivity.emit(true)
+            connectivity.emit(false)
+            connectivity.emit(true)
+            advanceUntilIdle()
+
+            assertEquals(ReadStatus.Confirmed, viewModel.actionsState.value.timerStatus)
+            assertTrue(viewModel.actionsState.value.canStartTimer)
+            assertTrue((viewModel.uiState.value as DashboardUiState.Success).refreshError != null)
+        }
+
+    @Test
+    fun `switching accounts drops retained values even when the new account's reads fail`() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        assertEquals(listOf(sampleLabel()), viewModel.actionsState.value.labels)
+
+        coEvery { repository.getRunningTask() } returns offline
+        coEvery { repository.listLabels() } returns offline
+        coEvery { repository.listTemplates() } returns offline
+        coEvery { repository.loadDashboard() } returns DashboardLoadResult.Error("Can't reach Worktime.")
+        sessionState.value = SessionState.Authenticated(true, sessionId = 2, accountKey = "account-b")
+        advanceUntilIdle()
+
+        val state = viewModel.actionsState.value
+        assertNull(state.runningTask)
+        assertEquals(ReadStatus.Unknown, state.timerStatus)
+        assertTrue(state.labels.isEmpty())
+        assertTrue(state.templates.isEmpty())
+        assertTrue(viewModel.uiState.value is DashboardUiState.Error)
     }
 
     private class FakeConnectivityObserver : ConnectivityObserver {

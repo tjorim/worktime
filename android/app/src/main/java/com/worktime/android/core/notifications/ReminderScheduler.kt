@@ -21,23 +21,36 @@ class ReminderScheduler(private val context: Context) {
     // pre-S exact-alarm-permission branch below without Robolectric.
     internal var sdkInt: Int = Build.VERSION.SDK_INT
 
+    /**
+     * Re-arms (or cancels) the alarm of each kind. [plannedTaskKnown] / [timerKnown] say whether a null
+     * task for that kind is an authoritative "none" (the default) or just not-yet-read, in which case
+     * an enabled kind's existing alarm is left alone (#2093).
+     */
     fun reconcile(
         accountId: Int,
         plannedTask: TaskRecord?,
         runningTask: TaskRecord?,
         plannedTasksEnabled: Boolean,
-        timersEnabled: Boolean
+        timersEnabled: Boolean,
+        plannedTaskKnown: Boolean = true,
+        timerKnown: Boolean = true
     ) {
         if (store.getInt(KEY_ACCOUNT, INVALID_ID) != accountId) {
             cancelAll()
             store.edit().putInt(KEY_ACCOUNT, accountId).apply()
         }
+        // A kind whose task isn't known (its read hasn't succeeded yet) keeps whatever is scheduled,
+        // unless the user turned that reminder off -- a null task there would mean "none", not "unknown".
         if (plannedTasksEnabled && plannedTask != null) {
             schedulePlannedTask(accountId, plannedTask)
-        } else {
+        } else if (plannedTaskKnown || !plannedTasksEnabled) {
             cancel(TYPE_PLANNED_TASK)
         }
-        if (timersEnabled && runningTask != null) scheduleTimer(accountId, runningTask) else cancel(TYPE_TIMER)
+        if (timersEnabled && runningTask != null) {
+            scheduleTimer(accountId, runningTask)
+        } else if (timerKnown || !timersEnabled) {
+            cancel(TYPE_TIMER)
+        }
     }
 
     fun cancelAll() {
