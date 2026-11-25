@@ -21,7 +21,7 @@ from enum import StrEnum
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.server.auth import AccessToken, AuthCheck, AuthContext, MultiAuth, TokenVerifier
+from fastmcp.server.auth import AccessToken, AuthCheck, AuthContext, JWTVerifier, MultiAuth, TokenVerifier
 from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.http import StarletteWithLifespan
@@ -134,19 +134,38 @@ class DbIntegrationClientVerifier(TokenVerifier):
         )
 
 
+class McpJwtVerifier(JWTVerifier):
+    """Require the expiry claim in addition to FastMCP's JWT validation."""
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        verified = await super().verify_token(token)
+        if verified is None or verified.expires_at is None:
+            return None
+        return verified
+
+
 def _build_auth_provider(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> KeycloakAuthProvider | MultiAuth:
-    """Build the FastMCP auth provider from Keycloak and managed clients."""
-    base_url = os.environ.get("MCP_BASE_URL", "http://localhost:8000/mcp")
-    realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL)
-    audience = settings.OIDC_AUDIENCE or None
+    """Build the FastMCP auth provider from Keycloak and managed clients.
+
+    OAuth access tokens must carry the canonical MCP resource URL as their
+    audience. The REST API audience (``OIDC_AUDIENCE``) is deliberately not
+    accepted here, so a web or Android token cannot call MCP tools.
+    """
+    resource_url = settings.MCP_RESOURCE_URL or "http://localhost:8000/mcp/"
+    realm_url = os.environ.get("WORKTIME_MCP_KEYCLOAK_REALM_URL", settings.OIDC_ISSUER_URL).rstrip("/")
 
     keycloak = KeycloakAuthProvider(
         realm_url=realm_url,
-        base_url=base_url,
+        base_url=resource_url,
+        token_verifier=McpJwtVerifier(
+            jwks_uri=f"{realm_url}/protocol/openid-connect/certs",
+            issuer=realm_url,
+            algorithm="RS256",
+            audience=resource_url,
+        ),
         required_scopes=[],
-        audience=audience,
     )
 
     verifier = DbIntegrationClientVerifier(session_factory or get_session_factory())
@@ -840,7 +859,7 @@ def main() -> None:
     """Reject stdio startup because Worktime tools require bearer auth."""
     raise SystemExit(
         "Worktime MCP requires authenticated HTTP transport; run the FastAPI "
-        "application with MCP_BASE_URL configured and connect to /mcp."
+        "application with MCP_RESOURCE_URL configured and connect to /mcp/."
     )
 
 

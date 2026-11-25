@@ -20,6 +20,7 @@ from app.mcp.server import (
     MCP_TOOL_CAPABILITIES,
     DbIntegrationClientVerifier,
     McpAuthError,
+    McpJwtVerifier,
     ToolEffect,
     WorktimeMcpBackend,
     _build_auth_provider,
@@ -53,7 +54,7 @@ def _make_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
 
 
 def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monkeypatch) -> None:
-    monkeypatch.setenv("MCP_BASE_URL", "https://api.example/mcp")
+    monkeypatch.setattr("app.mcp.server.settings.MCP_RESOURCE_URL", "https://api.example/mcp/")
     monkeypatch.setenv("WORKTIME_MCP_KEYCLOAK_REALM_URL", "https://auth.example/realms/worktime")
     monkeypatch.setattr("app.mcp.server.settings.OIDC_AUDIENCE", "worktime")
 
@@ -66,12 +67,17 @@ def test_build_auth_provider_accepts_client_credentials_without_user_scopes(monk
     assert auth.server is provider.return_value
     assert len(auth.verifiers) == 1
     assert isinstance(auth.verifiers[0], DbIntegrationClientVerifier)
-    provider.assert_called_once_with(
-        realm_url="https://auth.example/realms/worktime",
-        base_url="https://api.example/mcp",
-        required_scopes=[],
-        audience="worktime",
-    )
+    provider.assert_called_once()
+    kwargs = provider.call_args.kwargs
+    assert kwargs["realm_url"] == "https://auth.example/realms/worktime"
+    assert kwargs["base_url"] == "https://api.example/mcp/"
+    assert kwargs["required_scopes"] == []
+    # MCP tokens must carry the resource URL, never the REST API audience.
+    verifier = kwargs["token_verifier"]
+    assert isinstance(verifier, McpJwtVerifier)
+    assert verifier.audience == "https://api.example/mcp/"
+    assert verifier.issuer == "https://auth.example/realms/worktime"
+    assert verifier.jwks_uri == "https://auth.example/realms/worktime/protocol/openid-connect/certs"
 
 
 async def test_create_mcp_server_registers_expected_tools(test_db: AsyncEngine) -> None:

@@ -6,9 +6,9 @@ settings with sensible defaults for development and production environments.
 
 import logging
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -91,8 +91,18 @@ class Settings(BaseSettings):
     # OIDC authentication configuration
     # OIDC_ISSUER_URL: Base URL of the OIDC provider (e.g. https://auth.example.com/application/o/worktime)
     OIDC_ISSUER_URL: str = "http://localhost:9000/application/o/worktime"
-    # OIDC_AUDIENCE: Expected audience claim in the JWT (leave empty to skip audience check)
+    # OIDC_AUDIENCE: Expected audience claim in the JWT (leave empty to skip audience check).
+    # Required when MCP_RESOURCE_URL is set (validate_mcp_requires_api_audience).
     OIDC_AUDIENCE: str = ""
+    # MCP_RESOURCE_URL: canonical public URL of the MCP endpoint (trailing slash
+    # required), e.g. https://worktime.example/mcp/. Setting it mounts the MCP
+    # server. It is advertised as the OAuth protected-resource identifier and is
+    # the only audience MCP OAuth access tokens may carry; OIDC_AUDIENCE keeps
+    # guarding the REST API. Leave empty to keep MCP disabled.
+    MCP_RESOURCE_URL: str = ""
+    # Retired MCP_BASE_URL, read from every settings source (environment and .env) only so
+    # startup can refuse a config that still uses it. Nothing else reads it.
+    RETIRED_MCP_BASE_URL: str = Field(default="", validation_alias="MCP_BASE_URL", exclude=True, repr=False)
     # Comma-separated OIDC client IDs allowed to manage MCP credentials.
     MCP_INTERACTIVE_CLIENT_IDS: str = "worktime,worktime-android"
     # OIDC_JWKS_URI: optional JWKS endpoint override; discovered from OIDC metadata when empty
@@ -170,6 +180,44 @@ class Settings(BaseSettings):
         if not v or not v.strip():
             raise ValueError("CORS_ORIGINS cannot be empty")
         return v
+
+    @field_validator("MCP_RESOURCE_URL")
+    @classmethod
+    def validate_mcp_resource_url(cls, v: str) -> str:
+        """Require the canonical public MCP URL, so the audience can be compared byte for byte."""
+        if not v:
+            return v
+        parts = urlsplit(v)
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.path != "/mcp/"
+            or parts.query
+            or parts.fragment
+            or parts.username is not None
+            or parts.password is not None
+            or v != parts.geturl()
+        ):
+            raise ValueError("MCP_RESOURCE_URL must be a canonical HTTP(S) URL ending in /mcp/")
+        return v
+
+    @model_validator(mode="after")
+    def validate_mcp_base_url_is_retired(self) -> Settings:
+        """Fail loudly instead of silently unmounting MCP when only the old variable is set."""
+        if self.RETIRED_MCP_BASE_URL and not self.MCP_RESOURCE_URL:
+            raise ValueError(
+                "MCP_BASE_URL is no longer read: set MCP_RESOURCE_URL to the canonical https://<host>/mcp/ URL."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_mcp_requires_api_audience(self) -> Settings:
+        """Keep MCP and REST tokens apart: an empty OIDC_AUDIENCE skips the REST audience check."""
+        if self.MCP_RESOURCE_URL and not self.OIDC_AUDIENCE:
+            raise ValueError(
+                "OIDC_AUDIENCE must be set when MCP_RESOURCE_URL is: without it the REST API accepts MCP tokens."
+            )
+        return self
 
     @field_validator("ENVIRONMENT")
     @classmethod
