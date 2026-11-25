@@ -409,9 +409,9 @@ def test_mcp_resource_url_defaults_to_disabled() -> None:
 
 
 def test_mcp_resource_url_accepts_the_canonical_endpoint() -> None:
-    assert Settings(_env_file=None, MCP_RESOURCE_URL="https://worktime.example/mcp/").MCP_RESOURCE_URL == (
-        "https://worktime.example/mcp/"
-    )
+    assert Settings(
+        _env_file=None, OIDC_AUDIENCE="worktime", MCP_RESOURCE_URL="https://worktime.example/mcp/"
+    ).MCP_RESOURCE_URL == ("https://worktime.example/mcp/")
 
 
 @pytest.mark.parametrize(
@@ -428,11 +428,32 @@ def test_mcp_resource_url_accepts_the_canonical_endpoint() -> None:
 )
 def test_mcp_resource_url_requires_canonical_endpoint(url: str) -> None:
     with pytest.raises(ValueError, match="MCP_RESOURCE_URL"):
-        Settings(_env_file=None, MCP_RESOURCE_URL=url)
+        Settings(_env_file=None, OIDC_AUDIENCE="worktime", MCP_RESOURCE_URL=url)
 
 
 def test_retired_mcp_base_url_fails_loudly_instead_of_unmounting_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MCP_BASE_URL", "https://worktime.example/mcp")
     with pytest.raises(ValueError, match="MCP_BASE_URL is no longer read"):
         Settings(_env_file=None)
-    assert Settings(_env_file=None, MCP_RESOURCE_URL="https://worktime.example/mcp/").MCP_RESOURCE_URL
+    assert Settings(
+        _env_file=None, OIDC_AUDIENCE="worktime", MCP_RESOURCE_URL="https://worktime.example/mcp/"
+    ).MCP_RESOURCE_URL
+
+
+def test_retired_mcp_base_url_in_env_file_also_fails_loudly(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    monkeypatch.delenv("MCP_BASE_URL", raising=False)
+    monkeypatch.delenv("MCP_RESOURCE_URL", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("MCP_BASE_URL=https://worktime.example/mcp\n")
+    with pytest.raises(ValueError, match="MCP_BASE_URL is no longer read"):
+        Settings(_env_file=env_file)
+    env_file.write_text(
+        "OIDC_AUDIENCE=worktime\nMCP_BASE_URL=https://worktime.example/mcp\nMCP_RESOURCE_URL=https://worktime.example/mcp/\n"
+    )
+    assert Settings(_env_file=env_file).MCP_RESOURCE_URL == "https://worktime.example/mcp/"
+
+
+def test_mcp_resource_url_requires_the_rest_api_audience(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OIDC_AUDIENCE", raising=False)
+    with pytest.raises(ValueError, match="OIDC_AUDIENCE must be set when MCP_RESOURCE_URL is"):
+        Settings(_env_file=None, MCP_RESOURCE_URL="https://worktime.example/mcp/")

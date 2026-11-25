@@ -44,7 +44,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
-- Bind MCP OAuth access tokens to the canonical public MCP URL (`MCP_RESOURCE_URL`, replacing `MCP_BASE_URL`), with a separate audience for the REST API. Reconnect OAuth clients after the Keycloak cutover.
+- Bind MCP OAuth access tokens to the canonical public MCP URL (`MCP_RESOURCE_URL`, replacing `MCP_BASE_URL`), with a separate audience for the REST API (`OIDC_AUDIENCE`, now required when MCP is enabled). Reconnect OAuth clients after the Keycloak cutover.
 - Standardise REST routes, use PATCH for partial updates and expose typed sync items and results. Keep deprecated routes available for native clients. (#1988)
 - Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
 - Reject member username changes with a stable API error and skip reserved usernames when provisioning new OIDC accounts.

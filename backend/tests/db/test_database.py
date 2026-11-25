@@ -77,7 +77,6 @@ class TestLifespanInitialization:
 
         monkeypatch.setattr(main, "settings", fake_settings)
         monkeypatch.setattr(main, "init_db", init_db_mock)
-        monkeypatch.setattr(main.os, "access", lambda *_: True)
 
         async def run_lifespan():
             async with main.lifespan(main.app):
@@ -102,7 +101,6 @@ class TestLifespanInitialization:
 
         monkeypatch.setattr(main, "settings", fake_settings)
         monkeypatch.setattr(main, "init_db", init_db_mock)
-        monkeypatch.setattr(main.os, "access", lambda *_: True)
 
         async def run_lifespan():
             async with main.lifespan(main.app):
@@ -137,7 +135,6 @@ class TestLifespanInitialization:
 
         monkeypatch.setattr(main, "settings", fake_settings)
         monkeypatch.setattr(main, "init_db", Mock())
-        monkeypatch.setattr(main.os, "access", lambda *_: True)
         monkeypatch.setattr(main.sync_event_manager, "start_pg_listener", AsyncMock())
         monkeypatch.setattr(main.sync_event_manager, "stop_pg_listener", AsyncMock())
         monkeypatch.setattr(oidc_config, "start_periodic_jwks_refresh", lambda: asyncio.create_task(background("jwks")))

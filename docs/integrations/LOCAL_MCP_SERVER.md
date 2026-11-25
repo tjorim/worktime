@@ -14,7 +14,8 @@ uv sync
 uv run alembic upgrade head
 ```
 
-Configure backend auth as usual (`OIDC_ISSUER_URL`, optional `OIDC_AUDIENCE`, etc).
+Configure backend auth as usual (`OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, etc). `OIDC_AUDIENCE` is
+optional for the REST API alone but required once `MCP_RESOURCE_URL` is set (see below).
 
 ## Automation credentials (managed integration clients)
 
@@ -60,7 +61,9 @@ that carries the `worktime:mcp` scope.
 fragment or credentials). It replaces `MCP_BASE_URL`, which is no longer read;
 startup fails if only the old variable is set. OAuth access tokens must carry
 this URL as their audience, and a token minted for the REST API
-(`OIDC_AUDIENCE`) does not authenticate MCP, nor the reverse. Managed
+(`OIDC_AUDIENCE`) does not authenticate MCP, nor the reverse. The reverse relies
+on the REST audience check, so startup fails when `MCP_RESOURCE_URL` is set and
+`OIDC_AUDIENCE` is empty. Managed
 integration-client keys are independent of both. After the identity provider
 starts issuing the MCP audience, reconnect existing OAuth clients: tokens issued
 before the cutover are rejected.

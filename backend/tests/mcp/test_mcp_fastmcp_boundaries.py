@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 import httpx2
 import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
@@ -31,7 +32,8 @@ PRIVATE = "PRIVATE-NOTE-9f3a"
 ISSUER = "https://auth.example/realms/worktime"
 RESOURCE = "https://api.example/mcp/"
 KEYS = RSAKeyPair.generate()
-JWKS = {"keys": [RSAAlgorithm.to_jwk(serialization.load_pem_public_key(KEYS.public_key.encode()), as_dict=True)]}
+PUBLIC_KEY = cast(RSAPublicKey, serialization.load_pem_public_key(KEYS.public_key.encode()))
+JWKS = {"keys": [RSAAlgorithm.to_jwk(PUBLIC_KEY, as_dict=True)]}
 
 
 async def _owner(factory: async_sessionmaker[AsyncSession], username: str = "boundary-owner") -> int:
@@ -168,12 +170,18 @@ async def test_multiauth_resolves_keycloak_and_integration_principals_over_state
     monkeypatch.setattr(JWTVerifier, "_fetch_jwks", fetch_jwks)
     _server, app = create_mcp_http_app(factory, path="/", stateless_http=True)
 
-    def token(**overrides: Any) -> str:
-        claims = {"audience": [RESOURCE, "account"], "issuer": ISSUER} | overrides
+    def token(
+        *,
+        audience: str | list[str] | None = None,
+        issuer: str = ISSUER,
+        expires_in_seconds: int = 3600,
+    ) -> str:
         return KEYS.create_token(
             subject="keycloak-subject-1",
+            issuer=issuer,
+            audience=audience if audience is not None else [RESOURCE, "account"],
+            expires_in_seconds=expires_in_seconds,
             additional_claims={"preferred_username": "kc-user", "name": "Keycloak User"},
-            **claims,
         )
 
     keycloak_token = token()
