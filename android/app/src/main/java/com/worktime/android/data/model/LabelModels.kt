@@ -7,9 +7,6 @@ import kotlinx.serialization.Serializable
 data class LabelMutationRequest(val name: String, val color: String)
 
 @Serializable
-data class LabelPatchRequest(val name: String? = null, val color: String? = null)
-
-@Serializable
 data class LabelRecord(
     val id: String,
     val name: String,

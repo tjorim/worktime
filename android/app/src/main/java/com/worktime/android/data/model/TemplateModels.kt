@@ -4,22 +4,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class TemplateMutationRequest(
-    val text: String,
-    @SerialName("label_id") val labelId: String? = null,
-    @SerialName("start_time") val startTime: String,
-    @SerialName("stop_time") val stopTime: String
-)
-
-@Serializable
-data class TemplatePatchRequest(
-    val text: String? = null,
-    @SerialName("label_id") val labelId: String? = null,
-    @SerialName("start_time") val startTime: String? = null,
-    @SerialName("stop_time") val stopTime: String? = null
-)
-
-@Serializable
 data class TemplateRecord(
     val id: String,
     @SerialName("label_id") val labelId: String? = null,

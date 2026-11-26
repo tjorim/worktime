@@ -49,6 +49,7 @@ shows the `### Planned` bullets under `[Unreleased]` as "Coming soon".
 
 ### Internal
 
+- **Android:** Remove the time-off, label update/delete, template create/update/delete, work-location default and account-deletion code that the companion navigation change left unreachable, with its tests. Today still reads templates, labels and work-location defaults and creates labels.
 - Bind MCP OAuth access tokens to the canonical public MCP URL (`MCP_RESOURCE_URL`, replacing `MCP_BASE_URL`), with a separate audience for the REST API (`OIDC_AUDIENCE`, now required when MCP is enabled). Reconnect OAuth clients after the Keycloak cutover.
 - Standardise REST routes, use PATCH for partial updates and expose typed sync items and results. Keep deprecated routes available for native clients. (#1988)
 - Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
