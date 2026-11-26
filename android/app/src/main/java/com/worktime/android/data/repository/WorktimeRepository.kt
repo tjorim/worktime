@@ -7,23 +7,15 @@ import com.worktime.android.data.api.WorktimeApi
 import com.worktime.android.data.model.DashboardResponse
 import com.worktime.android.data.model.FcmTokenRequest
 import com.worktime.android.data.model.LabelMutationRequest
-import com.worktime.android.data.model.LabelPatchRequest
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskMutationRequest
 import com.worktime.android.data.model.TaskRecord
-import com.worktime.android.data.model.TemplateMutationRequest
-import com.worktime.android.data.model.TemplatePatchRequest
 import com.worktime.android.data.model.TemplateRecord
-import com.worktime.android.data.model.TimeOffEntryMutationRequest
-import com.worktime.android.data.model.TimeOffEntryPatchRequest
-import com.worktime.android.data.model.TimeOffEntryRecord
-import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
 import java.io.IOException
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.TimeZone
@@ -31,9 +23,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -84,35 +74,6 @@ sealed interface MutationResult<out T> {
 
 data class WorkLocationPreferences(val homeCountry: String? = null, val officeCountry: String? = null)
 
-/** Domain shape for creating/editing a time-off entry, mirroring the backend's discriminated `entry_kind`. */
-sealed interface TimeOffDraft {
-    val entryType: String
-    val entryFlag: String
-    val note: String?
-
-    data class SingleDate(
-        val date: LocalDate,
-        override val entryType: String,
-        override val entryFlag: String,
-        override val note: String? = null
-    ) : TimeOffDraft
-
-    data class DateRange(
-        val startDate: LocalDate,
-        val endDate: LocalDate,
-        override val entryType: String,
-        override val entryFlag: String,
-        override val note: String? = null
-    ) : TimeOffDraft
-
-    data class Weekly(
-        val weekday: Int,
-        override val entryType: String,
-        override val entryFlag: String,
-        override val note: String? = null
-    ) : TimeOffDraft
-}
-
 @Suppress("TooManyFunctions") // one cohesive repository facade over the whole backend surface
 interface DashboardRepository {
     val sessionState: StateFlow<SessionState>
@@ -157,52 +118,11 @@ interface DashboardRepository {
 
     suspend fun listLabels(): MutationResult<List<LabelRecord>>
 
-    suspend fun updateLabel(labelId: String, name: String? = null, color: String? = null): MutationResult<LabelRecord>
-
-    suspend fun deleteLabel(labelId: String): MutationResult<Unit>
-
-    suspend fun createTemplate(
-        text: String,
-        labelId: String?,
-        startTime: LocalTime,
-        stopTime: LocalTime
-    ): MutationResult<TemplateRecord>
-
     suspend fun listTemplates(): MutationResult<List<TemplateRecord>>
-
-    suspend fun updateTemplate(
-        templateId: String,
-        text: String? = null,
-        labelId: String? = null,
-        startTime: LocalTime? = null,
-        stopTime: LocalTime? = null
-    ): MutationResult<TemplateRecord>
-
-    suspend fun deleteTemplate(templateId: String): MutationResult<Unit>
-
-    suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord>
-
-    suspend fun listTimeOffEntries(
-        startDate: LocalDate? = null,
-        endDate: LocalDate? = null
-    ): MutationResult<List<TimeOffEntryRecord>>
-
-    suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord>
-
-    suspend fun updateTimeOffEntry(entryId: String, draft: TimeOffDraft): MutationResult<TimeOffEntryRecord>
-
-    suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit>
 
     suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse>
 
     suspend fun loadWorkLocationPreferences(): MutationResult<WorkLocationPreferences>
-
-    suspend fun updateWorkLocationPreferences(
-        homeCountry: String?,
-        officeCountry: String?
-    ): MutationResult<WorkLocationPreferences>
-
-    suspend fun deleteAccount(): MutationResult<Unit>
 
     /** Registers this device's FCM token for background push-wake (#1205). Best-effort. */
     suspend fun registerFcmToken(token: String): MutationResult<Unit>
@@ -249,7 +169,6 @@ class WorktimeRepository(
         private const val UNKNOWN_REQUEST_MESSAGE = "Something went wrong. Retry in a moment."
         private const val SERVER_TROUBLE_MESSAGE = "Worktime is having trouble right now. Retry in a moment."
         private const val LABEL_NAME_CONFLICT_MESSAGE = "Label name must be unique"
-        private const val LABEL_IN_USE_MESSAGE = "Label is in use by tasks or templates and cannot be deleted"
     }
 
     override suspend fun loadDashboard(): DashboardLoadResult {
@@ -471,102 +390,8 @@ class WorktimeRepository(
         api.listLabels(authorization = "Bearer $token").items
     }
 
-    override suspend fun updateLabel(labelId: String, name: String?, color: String?): MutationResult<LabelRecord> =
-        withAuthorizedToken(conflictMessage = LABEL_NAME_CONFLICT_MESSAGE) { token ->
-            api.updateLabel(
-                authorization = "Bearer $token",
-                labelId = labelId,
-                payload = LabelPatchRequest(name = name, color = color)
-            )
-        }
-
-    override suspend fun deleteLabel(labelId: String): MutationResult<Unit> =
-        withAuthorizedToken(conflictMessage = LABEL_IN_USE_MESSAGE) { token ->
-            api.deleteLabel(authorization = "Bearer $token", labelId = labelId)
-        }
-
-    override suspend fun createTemplate(
-        text: String,
-        labelId: String?,
-        startTime: LocalTime,
-        stopTime: LocalTime
-    ): MutationResult<TemplateRecord> = withAuthorizedToken { token ->
-        api.createTemplate(
-            authorization = "Bearer $token",
-            payload =
-            TemplateMutationRequest(
-                text = text,
-                labelId = labelId,
-                startTime = startTime.toString(),
-                stopTime = stopTime.toString()
-            )
-        )
-    }
-
     override suspend fun listTemplates(): MutationResult<List<TemplateRecord>> = withAuthorizedToken { token ->
         api.listTemplates(authorization = "Bearer $token").items
-    }
-
-    override suspend fun updateTemplate(
-        templateId: String,
-        text: String?,
-        labelId: String?,
-        startTime: LocalTime?,
-        stopTime: LocalTime?
-    ): MutationResult<TemplateRecord> = withAuthorizedToken { token ->
-        api.updateTemplate(
-            authorization = "Bearer $token",
-            templateId = templateId,
-            payload =
-            TemplatePatchRequest(
-                text = text,
-                labelId = labelId,
-                startTime = startTime?.toString(),
-                stopTime = stopTime?.toString()
-            )
-        )
-    }
-
-    override suspend fun deleteTemplate(templateId: String): MutationResult<Unit> = withAuthorizedToken { token ->
-        api.deleteTemplate(authorization = "Bearer $token", templateId = templateId)
-    }
-
-    override suspend fun createTimeOffEntry(draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
-        withAuthorizedToken { token ->
-            val response =
-                api.upsertTimeOffEntry(authorization = "Bearer $token", payload = draft.toMutationRequest())
-            if (!response.isSuccessful) throw HttpException(response)
-            response.body() ?: error("Empty response body for time-off entry")
-        }
-
-    override suspend fun listTimeOffEntries(
-        startDate: LocalDate?,
-        endDate: LocalDate?
-    ): MutationResult<List<TimeOffEntryRecord>> = withAuthorizedToken { token ->
-        api
-            .listTimeOffEntries(
-                authorization = "Bearer $token",
-                startDate = startDate?.toString(),
-                endDate = endDate?.toString()
-            ).items
-    }
-
-    override suspend fun getTimeOffEntry(entryId: String): MutationResult<TimeOffEntryRecord> =
-        withAuthorizedToken { token ->
-            api.getTimeOffEntry(authorization = "Bearer $token", entryId = entryId)
-        }
-
-    override suspend fun updateTimeOffEntry(entryId: String, draft: TimeOffDraft): MutationResult<TimeOffEntryRecord> =
-        withAuthorizedToken { token ->
-            api.updateTimeOffEntry(
-                authorization = "Bearer $token",
-                entryId = entryId,
-                payload = draft.toPatchRequest()
-            )
-        }
-
-    override suspend fun deleteTimeOffEntry(entryId: String): MutationResult<Unit> = withAuthorizedToken { token ->
-        api.deleteTimeOffEntry(authorization = "Bearer $token", entryId = entryId)
     }
 
     override suspend fun loadSyncStatus(): MutationResult<SyncStatusResponse> = withAuthorizedToken { token ->
@@ -578,35 +403,10 @@ class WorktimeRepository(
             getPreferencesData(token).toWorkLocationPreferences()
         }
 
-    override suspend fun updateWorkLocationPreferences(
-        homeCountry: String?,
-        officeCountry: String?
-    ): MutationResult<WorkLocationPreferences> = withAuthorizedToken { token ->
-        val existing = getPreferencesData(token) ?: JsonObject(emptyMap())
-        val updated = existing.withWorkLocationPreferences(homeCountry, officeCountry)
-        api.putPreferences(
-            authorization = "Bearer $token",
-            payload =
-            UserPreferencesWrite(
-                data = updated,
-                clientUpdatedAt = OffsetDateTime.now(ZoneOffset.UTC).toString()
-            )
-        )
-        updated.toWorkLocationPreferences()
-    }
-
     private suspend fun getPreferencesData(token: String): JsonObject? {
         val response = api.getPreferences(authorization = "Bearer $token")
         if (!response.isSuccessful) throw HttpException(response)
         return response.body()?.data
-    }
-
-    override suspend fun deleteAccount(): MutationResult<Unit> {
-        val result = withAuthorizedToken { token -> api.deleteAccount(authorization = "Bearer $token") }
-        // After the request, not inside it: signing out changes the session, which would make the
-        // request look superseded.
-        if (result is MutationResult.Success) endSession()
-        return result
     }
 
     override suspend fun registerFcmToken(token: String): MutationResult<Unit> = withAuthorizedToken<Unit> {
@@ -681,64 +481,6 @@ class WorktimeRepository(
 /** What a request started in; a response is only applied while the active session and environment still match. */
 private data class RequestScope(val sessionId: Long, val environment: String)
 
-private fun TimeOffDraft.toMutationRequest(): TimeOffEntryMutationRequest = when (this) {
-    is TimeOffDraft.SingleDate ->
-        TimeOffEntryMutationRequest(
-            entryKind = "date",
-            date = date.toString(),
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note
-        )
-    is TimeOffDraft.DateRange ->
-        TimeOffEntryMutationRequest(
-            entryKind = "range",
-            startDate = startDate.toString(),
-            endDate = endDate.toString(),
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note
-        )
-    is TimeOffDraft.Weekly ->
-        TimeOffEntryMutationRequest(
-            entryKind = "weekly",
-            weekday = weekday,
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note
-        )
-}
-
-private fun TimeOffDraft.toPatchRequest(): TimeOffEntryPatchRequest = when (this) {
-    is TimeOffDraft.SingleDate ->
-        TimeOffEntryPatchRequest(
-            entryKind = "date",
-            date = date.toString(),
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note.toPatchNote()
-        )
-    is TimeOffDraft.DateRange ->
-        TimeOffEntryPatchRequest(
-            entryKind = "range",
-            startDate = startDate.toString(),
-            endDate = endDate.toString(),
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note.toPatchNote()
-        )
-    is TimeOffDraft.Weekly ->
-        TimeOffEntryPatchRequest(
-            entryKind = "weekly",
-            weekday = weekday,
-            entryType = entryType,
-            entryFlag = entryFlag,
-            note = note.toPatchNote()
-        )
-}
-
-private fun String?.toPatchNote() = this?.let(::JsonPrimitive) ?: JsonNull
-
 private fun JsonObject?.toWorkLocationPreferences(): WorkLocationPreferences {
     val settings = this?.get("settings")?.asJsonObjectOrNull()
     return WorkLocationPreferences(
@@ -747,24 +489,8 @@ private fun JsonObject?.toWorkLocationPreferences(): WorkLocationPreferences {
     )
 }
 
-private fun JsonObject.withWorkLocationPreferences(homeCountry: String?, officeCountry: String?): JsonObject {
-    val settings = this["settings"]?.asJsonObjectOrNull() ?: JsonObject(emptyMap())
-    val updatedSettings =
-        JsonObject(
-            settings
-                .toMutableMap()
-                .apply {
-                    put("homeCountry", homeCountry.toCountryJson())
-                    put("officeCountry", officeCountry.toCountryJson())
-                }
-        )
-    return JsonObject(toMutableMap().apply { put("settings", updatedSettings) })
-}
-
 private fun JsonElement.asJsonObjectOrNull(): JsonObject? = runCatching { jsonObject }.getOrNull()
 
 private fun JsonElement.asStringOrNull(): String? = runCatching { jsonPrimitive.contentOrNull }.getOrNull()
-
-private fun String?.toCountryJson(): JsonElement = normalizeCountryCode()?.let(::JsonPrimitive) ?: JsonNull
 
 private fun String?.normalizeCountryCode(): String? = this?.trim()?.uppercase()?.takeIf { it.length == 2 }

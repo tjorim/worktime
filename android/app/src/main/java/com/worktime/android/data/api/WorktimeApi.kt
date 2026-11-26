@@ -7,22 +7,13 @@ import com.worktime.android.data.model.FcmTokenRequest
 import com.worktime.android.data.model.FcmTokenResponse
 import com.worktime.android.data.model.LabelListResponse
 import com.worktime.android.data.model.LabelMutationRequest
-import com.worktime.android.data.model.LabelPatchRequest
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.SyncStatusResponse
 import com.worktime.android.data.model.TaskListResponse
 import com.worktime.android.data.model.TaskMutationRequest
 import com.worktime.android.data.model.TaskRecord
 import com.worktime.android.data.model.TemplateListResponse
-import com.worktime.android.data.model.TemplateMutationRequest
-import com.worktime.android.data.model.TemplatePatchRequest
-import com.worktime.android.data.model.TemplateRecord
-import com.worktime.android.data.model.TimeOffEntryListResponse
-import com.worktime.android.data.model.TimeOffEntryMutationRequest
-import com.worktime.android.data.model.TimeOffEntryPatchRequest
-import com.worktime.android.data.model.TimeOffEntryRecord
 import com.worktime.android.data.model.UserPreferencesRead
-import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
 import com.worktime.android.data.model.WorkLocationRecord
@@ -82,9 +73,6 @@ interface WorktimeApi {
         @Query("end_date") endDate: String? = null
     ): WorkLocationListResponse
 
-    @DELETE("api/labels/{labelId}")
-    suspend fun deleteLabel(@Header("Authorization") authorization: String, @Path("labelId") labelId: String)
-
     @GET("api/sync/status")
     suspend fun getSyncStatus(@Header("Authorization") authorization: String): SyncStatusResponse
 
@@ -92,17 +80,7 @@ interface WorktimeApi {
     @GET("api/preferences")
     suspend fun getPreferences(@Header("Authorization") authorization: String): Response<UserPreferencesRead?>
 
-    @PUT("api/preferences")
-    suspend fun putPreferences(
-        @Header("Authorization") authorization: String,
-        @Body payload: UserPreferencesWrite
-    ): UserPreferencesRead
-
-    @DELETE("api/me")
-    suspend fun deleteAccount(@Header("Authorization") authorization: String)
-
-    // Push-wake registration (#1205) -- resolved from the bearer token only, no user_id query
-    // param, same as api/me above.
+    // Push-wake registration (#1205) -- resolved from the bearer token only, no user_id query param.
     @POST("api/push/fcm-token")
     suspend fun registerFcmToken(
         @Header("Authorization") authorization: String,
@@ -111,36 +89,6 @@ interface WorktimeApi {
 
     @DELETE("api/push/fcm-token")
     suspend fun unregisterFcmToken(@Header("Authorization") authorization: String, @Query("token") token: String)
-
-    // Time off is resolved from the bearer token only - no user_id query param.
-    @POST("api/time-off")
-    suspend fun upsertTimeOffEntry(
-        @Header("Authorization") authorization: String,
-        @Body payload: TimeOffEntryMutationRequest
-    ): Response<TimeOffEntryRecord>
-
-    @GET("api/time-off")
-    suspend fun listTimeOffEntries(
-        @Header("Authorization") authorization: String,
-        @Query("start_date") startDate: String? = null,
-        @Query("end_date") endDate: String? = null
-    ): TimeOffEntryListResponse
-
-    @GET("api/time-off/{entryId}")
-    suspend fun getTimeOffEntry(
-        @Header("Authorization") authorization: String,
-        @Path("entryId") entryId: String
-    ): TimeOffEntryRecord
-
-    @PATCH("api/time-off/{entryId}")
-    suspend fun updateTimeOffEntry(
-        @Header("Authorization") authorization: String,
-        @Path("entryId") entryId: String,
-        @Body payload: TimeOffEntryPatchRequest
-    ): TimeOffEntryRecord
-
-    @DELETE("api/time-off/{entryId}")
-    suspend fun deleteTimeOffEntry(@Header("Authorization") authorization: String, @Path("entryId") entryId: String)
 
     @POST("api/labels")
     suspend fun createLabel(
@@ -151,31 +99,8 @@ interface WorktimeApi {
     @GET("api/labels")
     suspend fun listLabels(@Header("Authorization") authorization: String): LabelListResponse
 
-    @PATCH("api/labels/{labelId}")
-    suspend fun updateLabel(
-        @Header("Authorization") authorization: String,
-        @Path("labelId") labelId: String,
-        @Body payload: LabelPatchRequest
-    ): LabelRecord
-
-    @POST("api/time-tracking/templates")
-    suspend fun createTemplate(
-        @Header("Authorization") authorization: String,
-        @Body payload: TemplateMutationRequest
-    ): TemplateRecord
-
     @GET("api/time-tracking/templates")
     suspend fun listTemplates(@Header("Authorization") authorization: String): TemplateListResponse
-
-    @PATCH("api/time-tracking/templates/{templateId}")
-    suspend fun updateTemplate(
-        @Header("Authorization") authorization: String,
-        @Path("templateId") templateId: String,
-        @Body payload: TemplatePatchRequest
-    ): TemplateRecord
-
-    @DELETE("api/time-tracking/templates/{templateId}")
-    suspend fun deleteTemplate(@Header("Authorization") authorization: String, @Path("templateId") templateId: String)
 
     @GET("api/time-tracking/tasks")
     suspend fun listTasks(

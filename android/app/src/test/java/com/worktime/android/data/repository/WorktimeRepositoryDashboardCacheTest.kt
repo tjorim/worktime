@@ -111,19 +111,6 @@ class WorktimeRepositoryDashboardCacheTest {
     }
 
     @Test
-    fun deleteAccountClearsCacheOnSuccess() = runTest {
-        val cache = FakeDashboardCache()
-        cache.save(KEY_A, sampleDashboard(), CACHED_AT)
-        val repository =
-            repository(FakeApi(), FakeSessionController(token = "token-123"), cache)
-
-        val result = repository.deleteAccount()
-
-        assertTrue(result is MutationResult.Success)
-        assertEquals(1, cache.clearCallCount)
-    }
-
-    @Test
     fun cachedDashboardIsNotServedToAnotherAccount() = runTest {
         val cache = FakeDashboardCache()
         cache.save(KEY_A, sampleDashboard(), CACHED_AT)

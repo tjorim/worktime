@@ -99,9 +99,7 @@ data class MobileActionsUiState(
     val workLocationPreferences: WorkLocationPreferences = WorkLocationPreferences(),
     val syncStatus: SyncStatusResponse? = null,
     val isSubmitting: Boolean = false,
-    val message: String? = null,
-    val isDeletingAccount: Boolean = false,
-    val deleteAccountError: String? = null
+    val message: String? = null
 ) {
     /** Starting a timer is only safe when we know there is none running; unknown or stale could double-start. */
     val canStartTimer: Boolean get() = timerStatus == ReadStatus.Confirmed
@@ -403,53 +401,8 @@ class DashboardViewModel(
         submitMutation { repository.deleteWorkLocation(date) }
     }
 
-    fun updateWorkLocationPreferences(homeCountry: String?, officeCountry: String?) {
-        submitMutation { repository.updateWorkLocationPreferences(homeCountry, officeCountry) }
-    }
-
     fun createLabel(name: String, color: String) {
         submitMutation { repository.createLabel(name, color) }
-    }
-
-    fun updateLabel(labelId: String, name: String, color: String) {
-        submitMutation { repository.updateLabel(labelId = labelId, name = name, color = color) }
-    }
-
-    fun deleteLabel(labelId: String) {
-        submitMutation { repository.deleteLabel(labelId) }
-    }
-
-    fun createTemplate(text: String, labelId: String?, startTime: java.time.LocalTime, stopTime: java.time.LocalTime) {
-        submitMutation {
-            repository.createTemplate(
-                text = text,
-                labelId = labelId,
-                startTime = startTime,
-                stopTime = stopTime
-            )
-        }
-    }
-
-    fun updateTemplate(
-        templateId: String,
-        text: String,
-        labelId: String?,
-        startTime: java.time.LocalTime,
-        stopTime: java.time.LocalTime
-    ) {
-        submitMutation {
-            repository.updateTemplate(
-                templateId = templateId,
-                text = text,
-                labelId = labelId,
-                startTime = startTime,
-                stopTime = stopTime
-            )
-        }
-    }
-
-    fun deleteTemplate(templateId: String) {
-        submitMutation { repository.deleteTemplate(templateId) }
     }
 
     /**
@@ -482,36 +435,6 @@ class DashboardViewModel(
     private suspend fun completeLogout() {
         repository.completeLogout()
         _uiState.value = DashboardUiState.LoggedOut
-    }
-
-    fun deleteAccount() {
-        val owner = currentOwner()
-        viewModelScope.launch {
-            _actionsState.value = _actionsState.value.copy(isDeletingAccount = true, deleteAccountError = null)
-            val result = repository.deleteAccount()
-            if (!ownsState(owner)) return@launch
-            when (result) {
-                is MutationResult.Success -> {
-                    _uiState.value = DashboardUiState.LoggedOut
-                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
-                }
-                MutationResult.LoggedOut -> {
-                    _uiState.value = DashboardUiState.LoggedOut
-                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
-                }
-                MutationResult.Superseded -> {
-                    _actionsState.value = _actionsState.value.copy(isDeletingAccount = false)
-                }
-                is MutationResult.ValidationError -> {
-                    _actionsState.value =
-                        _actionsState.value.copy(isDeletingAccount = false, deleteAccountError = result.message)
-                }
-                is MutationResult.Error -> {
-                    _actionsState.value =
-                        _actionsState.value.copy(isDeletingAccount = false, deleteAccountError = result.message)
-                }
-            }
-        }
     }
 
     // A write that succeeded is known, so apply it before the follow-up read: if that read fails,

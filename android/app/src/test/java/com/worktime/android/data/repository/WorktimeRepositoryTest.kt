@@ -11,7 +11,6 @@ import com.worktime.android.data.model.FeatureFlags
 import com.worktime.android.data.model.Identity
 import com.worktime.android.data.model.LabelListResponse
 import com.worktime.android.data.model.LabelMutationRequest
-import com.worktime.android.data.model.LabelPatchRequest
 import com.worktime.android.data.model.LabelRecord
 import com.worktime.android.data.model.NextShifts
 import com.worktime.android.data.model.SyncStatusResponse
@@ -20,16 +19,9 @@ import com.worktime.android.data.model.TaskMutationRequest
 import com.worktime.android.data.model.TaskRecord
 import com.worktime.android.data.model.TeamStatus
 import com.worktime.android.data.model.TemplateListResponse
-import com.worktime.android.data.model.TemplateMutationRequest
-import com.worktime.android.data.model.TemplatePatchRequest
 import com.worktime.android.data.model.TemplateRecord
-import com.worktime.android.data.model.TimeOffEntryListResponse
-import com.worktime.android.data.model.TimeOffEntryMutationRequest
-import com.worktime.android.data.model.TimeOffEntryPatchRequest
-import com.worktime.android.data.model.TimeOffEntryRecord
 import com.worktime.android.data.model.TimeOffSummary
 import com.worktime.android.data.model.UserPreferencesRead
-import com.worktime.android.data.model.UserPreferencesWrite
 import com.worktime.android.data.model.WorkContext
 import com.worktime.android.data.model.WorkLocationListResponse
 import com.worktime.android.data.model.WorkLocationMutationRequest
@@ -39,19 +31,12 @@ import io.mockk.every
 import io.mockk.mockk
 import java.io.IOException
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.OffsetDateTime
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -73,7 +58,7 @@ class WorktimeRepositoryTest {
         assertTrue(repository.getRunningTask() is MutationResult.Error)
         assertTrue(repository.listLabels() is MutationResult.Error)
         // Token-only requests go through a separate helper that must also catch the failure.
-        assertTrue(repository.listTimeOffEntries(null, null) is MutationResult.Error)
+        assertTrue(repository.listTemplates() is MutationResult.Error)
         assertTrue(repository.registerFcmToken("fcm") is MutationResult.Error)
     }
 
@@ -210,63 +195,6 @@ class WorktimeRepositoryTest {
 
         assertTrue(result is MutationResult.Success)
         assertEquals("DE", (result as MutationResult.Success).value.countryCode)
-    }
-
-    @Test
-    fun deleteAccountReturnsLoggedOutWhenNoTokenExists() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = null)
-            )
-
-        val result = repository.deleteAccount()
-
-        assertEquals(MutationResult.LoggedOut, result)
-    }
-
-    @Test
-    fun deleteAccountLogsOutOnSuccess() = runTest {
-        val sessionController = FakeSessionController(token = "token-123")
-        val repository = WorktimeRepository(api = FakeApi(), sessionController = sessionController)
-        repository.loadDashboard()
-
-        val result = repository.deleteAccount()
-
-        assertTrue(result is MutationResult.Success)
-        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
-    }
-
-    @Test
-    fun deleteAccountLogsOutOnUnauthorized() = runTest {
-        val sessionController = FakeSessionController(token = "token-123")
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(deleteAccountThrowable = httpException(401)),
-                sessionController = sessionController
-            )
-        repository.loadDashboard()
-
-        val result = repository.deleteAccount()
-
-        assertEquals(MutationResult.LoggedOut, result)
-        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
-    }
-
-    @Test
-    fun deleteAccountReturnsErrorAndDoesNotLogOutOnFailure() = runTest {
-        val sessionController = FakeSessionController(token = "token-123")
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(deleteAccountThrowable = httpException(500)),
-                sessionController = sessionController
-            )
-        repository.loadDashboard()
-
-        val result = repository.deleteAccount()
-
-        assertEquals(MutationResult.Error("Request failed (500)"), result)
-        assertTrue(sessionController.sessionState.value is SessionState.Authenticated)
     }
 
     @Test
@@ -420,19 +348,11 @@ class WorktimeRepositoryTest {
     }
 
     @Test
-    fun workLocationPreferencesCanBeCreatedWhenNoDocumentExists() = runTest {
-        val api = FakeApi()
-        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
+    fun loadWorkLocationPreferencesDefaultsWhenNoDocumentExists() = runTest {
+        val repository =
+            WorktimeRepository(api = FakeApi(), sessionController = FakeSessionController(token = "token-123"))
 
         assertEquals(MutationResult.Success(WorkLocationPreferences()), repository.loadWorkLocationPreferences())
-        assertEquals(
-            MutationResult.Success(WorkLocationPreferences(homeCountry = "BE")),
-            repository.updateWorkLocationPreferences(homeCountry = "be", officeCountry = null)
-        )
-        val write = requireNotNull(api.lastPreferencesWritePayload)
-        assertEquals(true, OffsetDateTime.parse(write.clientUpdatedAt).isBefore(OffsetDateTime.now().plusMinutes(1)))
-        val data = write.data
-        assertEquals("BE", data["settings"]?.jsonObject?.get("homeCountry")?.jsonPrimitive?.content)
     }
 
     @Test
@@ -466,40 +386,6 @@ class WorktimeRepositoryTest {
     }
 
     @Test
-    fun updateWorkLocationPreferencesPreservesExistingPreferencesBlob() = runTest {
-        val api =
-            FakeApi(
-                preferencesResponse =
-                UserPreferencesRead(
-                    data =
-                    JsonObject(
-                        mapOf(
-                            "activeTab" to JsonPrimitive("today"),
-                            "settings" to
-                                JsonObject(
-                                    mapOf(
-                                        "theme" to JsonPrimitive("dark"),
-                                        "homeCountry" to JsonPrimitive("BE")
-                                    )
-                                )
-                        )
-                    )
-                )
-            )
-        val repository = WorktimeRepository(api = api, sessionController = FakeSessionController(token = "token-123"))
-
-        val result = repository.updateWorkLocationPreferences(homeCountry = "de", officeCountry = "nl")
-
-        assertEquals(MutationResult.Success(WorkLocationPreferences(homeCountry = "DE", officeCountry = "NL")), result)
-        val data = requireNotNull(api.lastPreferencesWritePayload).data
-        assertEquals("today", data["activeTab"]?.jsonPrimitive?.content)
-        val settings = data["settings"]?.jsonObject
-        assertEquals("dark", settings?.get("theme")?.jsonPrimitive?.content)
-        assertEquals("DE", settings?.get("homeCountry")?.jsonPrimitive?.content)
-        assertEquals("NL", settings?.get("officeCountry")?.jsonPrimitive?.content)
-    }
-
-    @Test
     fun createLabelReturnsValidationErrorOnConflict() = runTest {
         val repository =
             WorktimeRepository(
@@ -529,57 +415,6 @@ class WorktimeRepositoryTest {
     }
 
     @Test
-    fun updateLabelReturnsSuccess() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-        repository.loadDashboard()
-
-        val result = repository.updateLabel("label-1", name = "Renamed")
-
-        assertTrue(result is MutationResult.Success)
-    }
-
-    @Test
-    fun deleteLabelReturnsValidationErrorWhenInUse() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(labelThrowable = httpException(409)),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-        repository.loadDashboard()
-
-        val result = repository.deleteLabel("label-1")
-
-        assertEquals(
-            MutationResult.ValidationError("Label is in use by tasks or templates and cannot be deleted"),
-            result
-        )
-    }
-
-    @Test
-    fun createTemplateReturnsSuccess() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-        repository.loadDashboard()
-
-        val result =
-            repository.createTemplate(
-                text = "Deep work",
-                labelId = null,
-                startTime = LocalTime.parse("09:00:00"),
-                stopTime = LocalTime.parse("11:00:00")
-            )
-
-        assertTrue(result is MutationResult.Success)
-    }
-
-    @Test
     fun listTemplatesReturnsItems() = runTest {
         val repository =
             WorktimeRepository(
@@ -594,169 +429,6 @@ class WorktimeRepositoryTest {
         assertTrue(result is MutationResult.Success)
         assertEquals(1, (result as MutationResult.Success).value.size)
     }
-
-    @Test
-    fun deleteTemplateReturnsSuccess() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-        repository.loadDashboard()
-
-        val result = repository.deleteTemplate("template-1")
-
-        assertEquals(MutationResult.Success(Unit), result)
-    }
-
-    @Test
-    fun createTimeOffEntryReturnsLoggedOutWhenNoToken() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = null)
-            )
-
-        val result =
-            repository.createTimeOffEntry(
-                TimeOffDraft.SingleDate(
-                    date = LocalDate.parse("2026-06-01"),
-                    entryType = "vacation",
-                    entryFlag = "full_day"
-                )
-            )
-
-        assertEquals(MutationResult.LoggedOut, result)
-    }
-
-    @Test
-    fun createTimeOffEntryDoesNotRequireDashboardLoad() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        val result =
-            repository.createTimeOffEntry(
-                TimeOffDraft.DateRange(
-                    startDate = LocalDate.parse("2026-06-01"),
-                    endDate = LocalDate.parse("2026-06-05"),
-                    entryType = "vacation",
-                    entryFlag = "full_day"
-                )
-            )
-
-        assertTrue(result is MutationResult.Success)
-        assertEquals("range", (result as MutationResult.Success).value.entryKind)
-    }
-
-    @Test
-    fun createTimeOffEntryReturnsValidationErrorForBadRequest() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(timeOffThrowable = httpException(400)),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        val result =
-            repository.createTimeOffEntry(
-                TimeOffDraft.Weekly(weekday = 1, entryType = "vacation", entryFlag = "full_day")
-            )
-
-        assertEquals(MutationResult.ValidationError("Request validation failed"), result)
-    }
-
-    @Test
-    fun listTimeOffEntriesReturnsItems() = runTest {
-        val repository =
-            WorktimeRepository(
-                api =
-                FakeApi(
-                    timeOffListResponse = TimeOffEntryListResponse(items = listOf(sampleTimeOffEntry()), total = 1)
-                ),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        val result = repository.listTimeOffEntries()
-
-        assertTrue(result is MutationResult.Success)
-        assertEquals(1, (result as MutationResult.Success).value.size)
-    }
-
-    @Test
-    fun updateTimeOffEntryReturnsSuccess() = runTest {
-        val api = FakeApi()
-        val repository =
-            WorktimeRepository(
-                api = api,
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        val result =
-            repository.updateTimeOffEntry(
-                "entry-1",
-                TimeOffDraft.SingleDate(
-                    date = LocalDate.parse("2026-06-02"),
-                    entryType = "sick",
-                    entryFlag = "full_day"
-                )
-            )
-
-        assertTrue(result is MutationResult.Success)
-    }
-
-    @Test
-    fun updateTimeOffEntrySendsExplicitNullWhenNoteIsCleared() = runTest {
-        val api = FakeApi()
-        val repository =
-            WorktimeRepository(
-                api = api,
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        repository.updateTimeOffEntry(
-            "entry-1",
-            TimeOffDraft.SingleDate(
-                date = LocalDate.parse("2026-06-02"),
-                entryType = "sick",
-                entryFlag = "full_day",
-                note = null
-            )
-        )
-
-        val payload = requireNotNull(api.lastTimeOffPatchPayload)
-        assertEquals(JsonNull, payload.note)
-        assertTrue(patchJson.encodeToString(payload).contains("\"note\":null"))
-    }
-
-    @Test
-    fun deleteTimeOffEntryReturnsSuccess() = runTest {
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(),
-                sessionController = FakeSessionController(token = "token-123")
-            )
-
-        val result = repository.deleteTimeOffEntry("entry-1")
-
-        assertEquals(MutationResult.Success(Unit), result)
-    }
-
-    @Test
-    fun deleteTimeOffEntryReturnsLoggedOutOnUnauthorized() = runTest {
-        val sessionController = FakeSessionController(token = "token-123")
-        val repository =
-            WorktimeRepository(
-                api = FakeApi(timeOffThrowable = httpException(401)),
-                sessionController = sessionController
-            )
-
-        val result = repository.deleteTimeOffEntry("entry-1")
-
-        assertEquals(MutationResult.LoggedOut, result)
-        assertEquals(SessionState.LoggedOut, sessionController.sessionState.value)
-    }
 }
 
 internal class FakeApi(
@@ -770,17 +442,9 @@ internal class FakeApi(
     private val labelListResponse: LabelListResponse = LabelListResponse(items = emptyList(), total = 0),
     private val templateThrowable: Throwable? = null,
     private val templateListResponse: TemplateListResponse = TemplateListResponse(items = emptyList(), total = 0),
-    private val timeOffThrowable: Throwable? = null,
-    private val timeOffListResponse: TimeOffEntryListResponse =
-        TimeOffEntryListResponse(items = emptyList(), total = 0),
-    private val deleteAccountThrowable: Throwable? = null,
     private val preferencesResponse: UserPreferencesRead? = null,
     private val fcmTokenThrowable: Throwable? = null
 ) : WorktimeApi {
-    var lastTimeOffPatchPayload: TimeOffEntryPatchRequest? = null
-        private set
-    var lastPreferencesWritePayload: UserPreferencesWrite? = null
-        private set
     var lastRegisteredFcmToken: String? = null
         private set
     var lastUnregisteredFcmToken: String? = null
@@ -874,72 +538,9 @@ internal class FakeApi(
         return labelListResponse
     }
 
-    override suspend fun updateLabel(authorization: String, labelId: String, payload: LabelPatchRequest): LabelRecord {
-        labelThrowable?.let { throw it }
-        return sampleLabel(id = labelId, name = payload.name ?: "Label")
-    }
-
-    override suspend fun deleteLabel(authorization: String, labelId: String) {
-        labelThrowable?.let { throw it }
-    }
-
-    override suspend fun createTemplate(authorization: String, payload: TemplateMutationRequest): TemplateRecord {
-        templateThrowable?.let { throw it }
-        return sampleTemplate(text = payload.text)
-    }
-
     override suspend fun listTemplates(authorization: String): TemplateListResponse {
         templateThrowable?.let { throw it }
         return templateListResponse
-    }
-
-    override suspend fun updateTemplate(
-        authorization: String,
-        templateId: String,
-        payload: TemplatePatchRequest
-    ): TemplateRecord {
-        templateThrowable?.let { throw it }
-        return sampleTemplate(id = templateId, text = payload.text ?: "Template")
-    }
-
-    override suspend fun deleteTemplate(authorization: String, templateId: String) {
-        templateThrowable?.let { throw it }
-    }
-
-    override suspend fun upsertTimeOffEntry(
-        authorization: String,
-        payload: TimeOffEntryMutationRequest
-    ): Response<TimeOffEntryRecord> {
-        timeOffThrowable?.let { throw it }
-        return Response.success(sampleTimeOffEntry(entryKind = payload.entryKind, entryType = payload.entryType))
-    }
-
-    override suspend fun listTimeOffEntries(
-        authorization: String,
-        startDate: String?,
-        endDate: String?
-    ): TimeOffEntryListResponse {
-        timeOffThrowable?.let { throw it }
-        return timeOffListResponse
-    }
-
-    override suspend fun getTimeOffEntry(authorization: String, entryId: String): TimeOffEntryRecord {
-        timeOffThrowable?.let { throw it }
-        return sampleTimeOffEntry(entryId = entryId)
-    }
-
-    override suspend fun updateTimeOffEntry(
-        authorization: String,
-        entryId: String,
-        payload: TimeOffEntryPatchRequest
-    ): TimeOffEntryRecord {
-        timeOffThrowable?.let { throw it }
-        lastTimeOffPatchPayload = payload
-        return sampleTimeOffEntry(entryId = entryId, entryType = payload.entryType ?: "vacation")
-    }
-
-    override suspend fun deleteTimeOffEntry(authorization: String, entryId: String) {
-        timeOffThrowable?.let { throw it }
     }
 
     override suspend fun getSyncStatus(authorization: String): SyncStatusResponse = SyncStatusResponse(
@@ -952,15 +553,6 @@ internal class FakeApi(
         } else {
             Response.success(preferencesResponse)
         }
-
-    override suspend fun putPreferences(authorization: String, payload: UserPreferencesWrite): UserPreferencesRead {
-        lastPreferencesWritePayload = payload
-        return UserPreferencesRead(data = payload.data)
-    }
-
-    override suspend fun deleteAccount(authorization: String) {
-        deleteAccountThrowable?.let { throw it }
-    }
 
     override suspend fun registerFcmToken(authorization: String, payload: FcmTokenRequest): FcmTokenResponse {
         fcmTokenThrowable?.let { throw it }
@@ -1086,29 +678,7 @@ private fun sampleTemplate(id: String = "template-1", text: String = "Deep work"
     createdAt = "2026-05-26T12:00:00Z"
 )
 
-private fun sampleTimeOffEntry(
-    entryId: String = "entry-1",
-    entryKind: String = "date",
-    entryType: String = "vacation"
-): TimeOffEntryRecord = TimeOffEntryRecord(
-    id = 1,
-    entryId = entryId,
-    userId = 1,
-    entryKind = entryKind,
-    date = "2026-06-01",
-    startDate = null,
-    endDate = null,
-    weekday = null,
-    entryType = entryType,
-    entryFlag = "full_day",
-    note = null,
-    createdAt = "2026-05-26T12:00:00Z",
-    updatedAt = "2026-05-26T12:00:00Z"
-)
-
 internal fun httpException(code: Int): HttpException {
     val response = Response.error<String>(code, "".toResponseBody("text/plain".toMediaType()))
     return HttpException(response)
 }
-
-private val patchJson = Json { explicitNulls = false }
