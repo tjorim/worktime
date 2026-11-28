@@ -257,6 +257,7 @@ Application UI imports use `@/components/ui/<component>`. Direct Base UI subpath
 
 ### Workflow
 
+- Match review effort to risk: low-risk changes (docs, UI polish, derived read-only views) get one quick review and only real bugs are fixed; keep the full review and fix loop for money, auth, data models, files, exports and permissions.
 - Open a pull request as a draft while the work is in progress and mark it ready for review once it is complete and its checks pass locally, so reviewers and CI only see finished work; push once per pull request where you can rather than after every small change.
 - Do not commit automatically unless explicitly asked
 - Attach screenshots for all visible states to the PR when making UI changes. Commit images only when
@@ -350,7 +351,7 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   or `satisfies Model` at a browser response boundary. The generic JSON helpers in `frontend/src/mocks/response.ts` use
   `NoInfer` and default to `never`, so a payload never infers its own contract. The source guard
   `frontend/tests/mocks/fixtureContracts.test.ts` fails on a fixture that is unchecked or erased, and
-  `frontend/tests/types/apiFixtures.ts` holds compile-only negative checks.
+  `frontend/tests/utils/apiFixtures.ts` holds compile-only negative checks.
 - A deliberately malformed, error, external-provider or control fixture is exempt only through the helper that names why
   (`uncheckedJson("malformed", ...)`, `uncheckedBody(...)`) or a `fixture-contract: <reason>` comment at the call site.
 
