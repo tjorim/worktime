@@ -68,7 +68,27 @@ if settings.SENTRY_DSN:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
             traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
-            send_default_pii=False,
+            # sentry-sdk 3 removed ``send_default_pii``; this restates its "off" behavior.
+            # Requests authenticate with bearer tokens, so cookies are not needed at all.
+            data_collection={
+                "user_info": False,
+                "cookies": {"mode": "off"},
+                "http_headers": {
+                    "request": {
+                        "mode": "denylist",
+                        "terms": ["forwarded", "-ip", "remote-", "via", "-user"],
+                    }
+                },
+                "url_query_params": {
+                    "mode": "denylist",
+                    "terms": ["forwarded", "-ip", "remote-", "via", "-user"],
+                },
+                "graphql": {"document": False, "variables": False},
+                "gen_ai": {"inputs": False, "outputs": False},
+                "mcp": {"inputs": False, "outputs": False},
+                "database_query_data": False,
+                "queues": False,
+            },
         )
         logger.info("✓ Sentry error tracking initialized")
     except ImportError:
