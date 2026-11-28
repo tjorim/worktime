@@ -41,7 +41,7 @@ dev = [
   "rfc3339-validator==0.1.4",
   "ruff==0.17.6",
   "sentry-sdk[fastapi]==3.0.0",
-  "ty==0.0.109",
+  "ty==0.0.110",
 ]
 
 [tool.hatch.build.targets.wheel]
