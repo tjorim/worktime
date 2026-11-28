@@ -257,6 +257,7 @@ Application UI imports use `@/components/ui/<component>`. Direct Base UI subpath
 
 ### Workflow
 
+- Open a pull request as a draft while the work is in progress and mark it ready for review once it is complete and its checks pass locally, so reviewers and CI only see finished work; push once per pull request where you can rather than after every small change.
 - Do not commit automatically unless explicitly asked
 - Attach screenshots for all visible states to the PR when making UI changes. Commit images only when
   they are used in repository documentation or the Play Store listing.
