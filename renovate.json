@@ -8,21 +8,10 @@
   ],
   "packageRules": [
     {
-      "matchDatasources": ["npm"],
-      "matchPackageNames": ["dayjs"],
-      "groupName": "dayjs"
-    },
-    {
       "description": ["vite-plugin-pwa generates the service worker that workbox-window registers"],
       "matchDatasources": ["npm"],
       "matchPackageNames": ["vite-plugin-pwa", "workbox-window"],
       "groupName": "pwa"
-    },
-    {
-      "description": ["Schedule-X calendar component and its plugins"],
-      "matchDatasources": ["npm"],
-      "matchPackageNames": ["@schedule-x/*"],
-      "groupName": "schedule-x"
     },
     {
       "description": ["frontend/**"],
