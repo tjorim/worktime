@@ -264,8 +264,8 @@ importers:
         version: 14.0.3
     devDependencies:
       '@axe-core/playwright':
-        specifier: ^4.14.0
-        version: 4.14.0(playwright-core@1.65.1)
+        specifier: ^4.14.1
+        version: 4.14.1(playwright-core@1.65.1)
       '@inlang/paraglide-js':
         specifier: ^3.2.2
         version: 3.2.2(typescript@7.0.2)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.4)(tsx@4.23.15)(yaml@2.9.1))
@@ -380,8 +380,8 @@ packages:
     peerDependencies:
       ajv: '>=8'
 
-  '@axe-core/playwright@4.14.0':
-    resolution: {integrity: sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ==}
+  '@axe-core/playwright@4.14.1':
+    resolution: {integrity: sha512-cSN1ijrWLnlOof22sPN4RtWGSoPpt7GzOVyOKomyhnPsy1fPNoRdBiJAUziuCRs8KoK50kKufiMUFt7itAuwOg==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       playwright-core: '>= 1.0.0'
@@ -5489,7 +5489,7 @@ snapshots:
       jsonpointer: 5.0.1
       leven: 3.1.0
 
-  '@axe-core/playwright@4.14.0(playwright-core@1.65.1)':
+  '@axe-core/playwright@4.14.1(playwright-core@1.65.1)':
     dependencies:
       axe-core: 4.14.1
       playwright-core: 1.65.1
